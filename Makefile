@@ -20,7 +20,7 @@ proto:
 
 gen: generate
 
-SEMVER ?= 0.6.1
+SEMVER ?= 0.6.2
 
 release:
 	@$(GIT) tag v$(SEMVER)
