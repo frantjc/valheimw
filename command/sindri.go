@@ -3,7 +3,6 @@ package command
 import (
 	"compress/gzip"
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -26,15 +25,16 @@ import (
 // NewSindri is the entrypoint for Sindri.
 func NewSindri() *cobra.Command {
 	var (
-		verbosity int
-		airgap    bool
-		port      int64
-		opts      = &valheim.Opts{
+		verbosity          int
+		root, state        string
+		beta, betaPassword string
+		mods               []string
+		airgap             bool
+		opts               = &valheim.Opts{
 			Password: os.Getenv("VALHEIM_PASSWORD"),
 		}
-		root, state string
-		mods        []string
-		cmd         = &cobra.Command{
+		addr string
+		cmd  = &cobra.Command{
 			Use:           "sindri",
 			Version:       sindri.GetSemver(),
 			SilenceErrors: true,
@@ -60,6 +60,7 @@ func NewSindri() *cobra.Command {
 					thunderstore.NewClient(thunderstoreURL),
 					sindri.WithRootDir(root),
 					sindri.WithStateDir(state),
+					sindri.WithBeta(beta, betaPassword),
 				)
 				if err != nil {
 					return err
@@ -107,7 +108,6 @@ func NewSindri() *cobra.Command {
 				}
 				sindri.LogExec(ctx, subCmd)
 
-				addr := fmt.Sprintf(":%d", port)
 				l, err := net.Listen("tcp", addr)
 				if err != nil {
 					return err
@@ -201,14 +201,17 @@ func NewSindri() *cobra.Command {
 	_ = cmd.MarkFlagDirname("state")
 
 	cmd.Flags().StringArrayVarP(&mods, "mod", "m", nil, "Thunderstore mods (case-sensitive)")
-
-	cmd.Flags().Int64Var(&opts.Port, "valheim-port", 0, "port for Valheim (0 to use default)")
-	cmd.Flags().StringVar(&opts.World, "valheim-world", "sindri", "world for Valheim")
-	cmd.Flags().StringVar(&opts.Name, "valheim-name", "sindri", "name for Valheim")
-
-	cmd.Flags().Int64Var(&port, "port", 8080, "port for Sindri")
-
 	cmd.Flags().BoolVarP(&airgap, "airgap", "a", false, "do not redownload Valheim or mods")
+
+	cmd.Flags().StringVar(&addr, "addr", ":8080", "address for Sindri")
+
+	cmd.Flags().Int64Var(&opts.Port, "port", 0, "port for Valheim (0 to use default)")
+	cmd.Flags().StringVar(&opts.World, "world", "sindri", "world for Valheim")
+	cmd.Flags().StringVar(&opts.Name, "name", "sindri", "name for Valheim")
+	cmd.Flags().BoolVar(&opts.Public, "public", false, "make Valheim server public")
+
+	cmd.Flags().StringVar(&beta, "beta", "", "Steam beta branch")
+	cmd.Flags().StringVar(&betaPassword, "beta-password", "", "Steam beta password")
 
 	return cmd
 }

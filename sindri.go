@@ -43,12 +43,13 @@ type Sindri struct {
 	BepInEx            *thunderstore.Package
 	ThunderstoreClient *thunderstore.Client
 
-	mu                *sync.Mutex
-	stateDir, rootDir string
-	img               v1.Image
-	tag               *name.Tag
-	metadata          *Metadata
-	initialized       bool
+	mu                 *sync.Mutex
+	stateDir, rootDir  string
+	img                v1.Image
+	tag                *name.Tag
+	metadata           *Metadata
+	initialized        bool
+	beta, betaPassword string
 }
 
 // Opt is an option to pass when creating
@@ -68,6 +69,14 @@ func WithRootDir(dir string) Opt {
 func WithStateDir(dir string) Opt {
 	return func(s *Sindri) {
 		s.stateDir = dir
+	}
+}
+
+// WithBeta makes Sindri use the given Steam beta.
+func WithBeta(beta string, password string) Opt {
+	return func(s *Sindri) {
+		s.beta = beta
+		s.betaPassword = password
 	}
 }
 
@@ -126,6 +135,8 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 	cmd, err := steamcmd.NewCommand(ctx, &steamcmd.Commands{
 		ForceInstallDir: tmp,
 		AppUpdate:       s.SteamAppID,
+		Beta:            s.beta,
+		BetaPassword:    s.betaPassword,
 		Validate:        true,
 	})
 	if err != nil {

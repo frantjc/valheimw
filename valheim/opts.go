@@ -12,6 +12,7 @@ type Opts struct {
 	Name     string
 	SaveDir  string
 	Password string
+	Public   bool
 }
 
 // ToArgs transforms Opts into an array
@@ -37,6 +38,10 @@ func (o *Opts) ToArgs() []string {
 
 	if o.Password != "" {
 		args = append(args, "-password", o.Password)
+	}
+
+	if o.Public {
+		args = append(args, "-public", "1")
 	}
 
 	return args
