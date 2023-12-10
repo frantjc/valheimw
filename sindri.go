@@ -131,6 +131,7 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(tmp)
 
 	cmd, err := steamcmd.NewCommand(ctx, &steamcmd.Commands{
 		ForceInstallDir: tmp,
@@ -175,16 +176,12 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 
 	s.metadata.BaseLayerDigest = digest.String()
 
-	if err = s.save(); err != nil {
-		return err
-	}
-
-	return os.RemoveAll(tmp)
+	return s.save()
 }
 
-// AddMod installs or updates the given mod and its dependencies
-// using thunderstore.io.
-func (s *Sindri) AddMod(ctx context.Context, mod string) (*thunderstore.Package, error) {
+// AddMods installs or updates the given mods and their
+// dependencies using thunderstore.io.
+func (s *Sindri) AddMods(ctx context.Context, mods ...string) ([]thunderstore.Package, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -192,7 +189,7 @@ func (s *Sindri) AddMod(ctx context.Context, mod string) (*thunderstore.Package,
 		return nil, err
 	}
 
-	return s.addMod(ctx, mod)
+	return s.addMods(ctx, mods...)
 }
 
 // RemoveMod removes the given mod.
@@ -344,136 +341,139 @@ func (s *Sindri) modLayers() ([]v1.Layer, error) {
 	})
 }
 
-func (s *Sindri) addMod(ctx context.Context, mod string) (*thunderstore.Package, error) {
-	pkg, err := thunderstore.ParsePackage(mod)
-	if err != nil {
-		return nil, err
-	}
+func (s *Sindri) addMods(ctx context.Context, mods ...string) ([]thunderstore.Package, error) {
+	pkgs := []thunderstore.Package{}
 
-	// The pkg doesn't need a version to get the metadata
-	// or the archive, but we want the version so we know
-	// what version is installed, so we make sure that we
-	// have it. We also need to know its dependencies.
-	meta, err := s.ThunderstoreClient.GetPackageMetadata(ctx, pkg)
-	if err != nil {
-		return nil, err
-	}
-
-	if pkg.Version == "" && meta.Latest != nil {
-		pkg = &meta.Latest.Package
-	}
-
-	versionlessStr := pkg.Versionless().String()
-
-	current, ok := s.metadata.Mods[versionlessStr]
-	if ok {
-		if current.Version == pkg.Version {
-			return pkg, nil
-		}
-	}
-
-	isBepInEx := versionlessStr == s.BepInEx.Versionless().String()
-
-	tmp, err := os.MkdirTemp(s.stateDir, pkg.Fullname()+"-*")
-	if err != nil {
-		return nil, err
-	}
-
-	// Every mod except BepInEx itself is dependent on BepInEx because
-	// we use BepInEx to make Valheim load the mod.
-	dependencies := meta.Dependencies
-	if !(isBepInEx || fn.Some(dependencies, func(dep string, _ int) bool {
-		return strings.HasPrefix(dep, s.BepInEx.Versionless().String())
-	})) {
-		dependencies = append(dependencies, s.BepInEx.Fullname())
-	}
-
-	for _, depFullname := range dependencies {
-		if _, err := s.addMod(ctx, depFullname); err != nil {
+	for _, mod := range mods {
+		pkg, err := thunderstore.ParsePackage(mod)
+		if err != nil {
 			return nil, err
 		}
-	}
 
-	zrc, err := s.ThunderstoreClient.GetPackageZip(ctx, pkg)
-	if err != nil {
-		return nil, err
-	}
-	defer zrc.Close()
-
-	zr, err := zip.NewReader(zrc, zrc.Size())
-	if err != nil {
-		return nil, err
-	}
-
-	zr.File = fn.Reduce(zr.File, func(acc []*zip.File, cur *zip.File, _ int) []*zip.File {
-		norm := strings.ReplaceAll(cur.Name, "\\", "/")
-
-		if isBepInEx {
-			name, err := filepath.Rel(s.BepInEx.Name, norm)
-			if err != nil {
-				return acc
-			}
-
-			if strings.Contains(name, "..") {
-				return acc
-			}
-
-			cur.Name = name
-		} else {
-			cur.Name = filepath.Join("BepInEx/plugins", pkg.Fullname(), norm)
-		}
-
-		return append(acc, cur)
-	}, []*zip.File{})
-
-	if err := xzip.Extract(zr, tmp); err != nil {
-		return nil, err
-	}
-
-	layer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-		return xtar.Compress(tmp), nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	digest, err := layer.Digest()
-	if err != nil {
-		return nil, err
-	}
-
-	if ok && current.LayerDigest == digest.String() {
-		return pkg, nil
-	}
-
-	layers, err := s.filteredLayers(func(l v1.Layer) (bool, error) {
-		digest, err := l.Digest()
+		// The pkg doesn't need a version to get the metadata
+		// or the archive, but we want the version so we know
+		// what version is installed, so we make sure that we
+		// have it. We also need to know its dependencies.
+		meta, err := s.ThunderstoreClient.GetPackageMetadata(ctx, pkg)
 		if err != nil {
-			return false, err
+			return nil, err
 		}
 
-		return !ok || digest.String() != current.LayerDigest, nil
-	})
-	if err != nil {
-		return nil, err
+		if pkg.Version == "" && meta.Latest != nil {
+			pkg = &meta.Latest.Package
+		}
+
+		versionlessStr := pkg.Versionless().String()
+
+		current, ok := s.metadata.Mods[versionlessStr]
+		if ok {
+			if current.Version == pkg.Version {
+				pkgs = append(pkgs, *pkg)
+				continue
+			}
+		}
+
+		isBepInEx := versionlessStr == s.BepInEx.Versionless().String()
+
+		tmp, err := os.MkdirTemp(s.stateDir, pkg.Fullname()+"-*")
+		if err != nil {
+			return nil, err
+		}
+
+		// Every mod except BepInEx itself is dependent on BepInEx because
+		// we use BepInEx to make Valheim load the mod.
+		dependencies := meta.Dependencies
+		if !(isBepInEx || fn.Some(dependencies, func(dep string, _ int) bool {
+			return strings.HasPrefix(dep, s.BepInEx.Versionless().String())
+		})) {
+			dependencies = append(dependencies, s.BepInEx.Fullname())
+		}
+
+		if _, err := s.addMods(ctx, dependencies...); err != nil {
+			return nil, err
+		}
+
+		zrc, err := s.ThunderstoreClient.GetPackageZip(ctx, pkg)
+		if err != nil {
+			return nil, err
+		}
+		defer zrc.Close()
+
+		zr, err := zip.NewReader(zrc, zrc.Size())
+		if err != nil {
+			return nil, err
+		}
+
+		zr.File = fn.Reduce(zr.File, func(acc []*zip.File, cur *zip.File, _ int) []*zip.File {
+			norm := strings.ReplaceAll(cur.Name, "\\", "/")
+
+			if isBepInEx {
+				name, err := filepath.Rel(s.BepInEx.Name, norm)
+				if err != nil {
+					return acc
+				}
+
+				if strings.Contains(name, "..") {
+					return acc
+				}
+
+				cur.Name = name
+			} else {
+				cur.Name = filepath.Join("BepInEx/plugins", pkg.Fullname(), norm)
+			}
+
+			return append(acc, cur)
+		}, []*zip.File{})
+
+		if err := xzip.Extract(zr, tmp); err != nil {
+			return nil, err
+		}
+
+		layer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+			return xtar.Compress(tmp), nil
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		digest, err := layer.Digest()
+		if err != nil {
+			return nil, err
+		}
+
+		if ok && current.LayerDigest == digest.String() {
+			pkgs = append(pkgs, *pkg)
+			continue
+		}
+
+		layers, err := s.filteredLayers(func(l v1.Layer) (bool, error) {
+			digest, err := l.Digest()
+			if err != nil {
+				return false, err
+			}
+
+			return !ok || digest.String() != current.LayerDigest, nil
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		layers = append(layers, layer)
+
+		if s.img, err = mutate.AppendLayers(s.img, layers...); err != nil {
+			return nil, err
+		}
+
+		s.metadata.Mods[versionlessStr] = ModMetadata{
+			Version:     pkg.Version,
+			LayerDigest: digest.String(),
+		}
+		defer os.RemoveAll(tmp)
+
+		pkgs = append(pkgs, *pkg)
 	}
 
-	layers = append(layers, layer)
-
-	if s.img, err = mutate.AppendLayers(s.img, layers...); err != nil {
-		return nil, err
-	}
-
-	s.metadata.Mods[versionlessStr] = ModMetadata{
-		Version:     pkg.Version,
-		LayerDigest: digest.String(),
-	}
-
-	if err = s.save(); err != nil {
-		return nil, err
-	}
-
-	return pkg, os.RemoveAll(tmp)
+	return pkgs, s.save()
 }
 
 func (s *Sindri) init(opts ...Opt) error {

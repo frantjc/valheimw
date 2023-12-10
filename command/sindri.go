@@ -67,18 +67,19 @@ func NewSindri() *cobra.Command {
 				}
 
 				if !airgap {
-					log.Info("installing Valheim")
+					// Mods first because they're going to be smaller
+					// most of the time so it makes the whole process
+					// a bit faster.
+					log.Info("downloading mods " + strings.Join(mods, ", "))
 
-					if err = s.AppUpdate(ctx); err != nil {
+					if _, err = s.AddMods(ctx, mods...); err != nil {
 						return err
 					}
 
-					for _, mod := range mods {
-						log.Info("installing mod " + mod)
+					log.Info("downloading Valheim")
 
-						if _, err = s.AddMod(ctx, mod); err != nil {
-							return err
-						}
+					if err = s.AppUpdate(ctx); err != nil {
+						return err
 					}
 				}
 
