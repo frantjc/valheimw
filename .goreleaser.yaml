@@ -1,7 +1,7 @@
 builds:
   - main: ./cmd/sindri
     ldflags:
-      - -s -w -X github.com/frantjc/homelab.Semver={{ .Version }}
+      - -s -w -X github.com/frantjc/sindri.Semver={{ .Version }}
     env:
       - CGO_ENABLED=0
     goos:
