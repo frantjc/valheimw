@@ -1,0 +1,27 @@
+builds:
+  - main: ./cmd/sindri
+    ldflags:
+      - -s -w -X github.com/frantjc/homelab.Semver={{ .Version }}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+    hooks:
+      post:
+        - upx {{ .Path }}
+changelog:
+  use: github
+  filters:
+    exclude:
+      - merge conflict
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+dockers:
+  - image_templates:
+      - ghcr.io/frantjc/sindri:{{ .Version }}
+      - ghcr.io/frantjc/sindri:{{ .Major }}.{{ .Minor }}
+      - ghcr.io/frantjc/sindri:{{ .Major }}
+      - ghcr.io/frantjc/sindri:latest

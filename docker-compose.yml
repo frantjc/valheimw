@@ -1,0 +1,21 @@
+version: "3.4"
+
+services:
+  sindri:
+    image: ghcr.io/frantjc/sindri:${TAG:-latest}
+    build: .
+    ports:
+      - 8080:8080
+      - 2456:2456/udp
+    volumes:
+      - ./hack/var/lib/sindri:/var/lib/sindri
+    command:
+      - -VV
+      - --state
+      - /run/sindri
+      - --root
+      - /var/lib/sindri
+      - --mod
+      - Nexus/FarmGrid
+    environment:
+      VALHEIM_PASSWORD: ${VALHEIM_PASSWORD:-mustbe5charsandnotcontainedinworld}

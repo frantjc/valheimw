@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package proto.v1;
+
+option go_package = "github.com/frantjc/sindri/proto/v1";
+
+message UpdateGameRequest {}
+
+message UpdateGameResponse {}
+
+message AddModRequest {
+  string namespace = 1;
+  string name = 2;
+  optional string version = 3;
+}
+
+message AddModResponse {
+  string namespace = 1;
+  string name = 2;
+  string version = 3;
+}
+
+service SindriService {
+  rpc UpdateGame(UpdateGameRequest) returns (UpdateGameResponse) {}
+  rpc AddMod(AddModRequest) returns (AddModResponse) {}
+}

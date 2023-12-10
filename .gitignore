@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# terraform
+.terraform/
+*terraform.tfstate.*
+
+# IDE
+.vscode/
+.idea/
+
+# secret
+.kube/
+
+# goreleaser
+dist/
+
+# go
+vendor/
+
+hack/

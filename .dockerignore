@@ -1,0 +1,40 @@
+# macOS
+.DS_Store
+
+# buf
+buf*.yaml
+
+# terraform
+.terraform/
+*terraform.tfstate.*
+
+# IDE
+.vscode/
+.idea/
+
+# secret
+.kube/
+
+# goreleaser
+dist/
+
+# go
+vendor/
+
+# git-crypt
+.git-crypt/
+
+# GitHub
+.github/
+
+# Helm
+values*.yaml
+
+# Docker
+*Dockerfile
+*compose.*
+
+# misc
+.*
+hack/
+*.md

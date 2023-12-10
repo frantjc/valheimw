@@ -1,0 +1,26 @@
+run:
+  timeout: 5m
+linters:
+  enable:
+    # - dupl
+    - exportloopref
+    - gocyclo
+    - gosec
+    - gocritic
+    - importas
+    - megacheck
+    - nakedret
+    - nolintlint
+    - prealloc
+    - revive
+    - unconvert
+    # test
+    - tenv
+    - testpackage
+    - thelper
+    # auto-fix
+    - godot
+    - gofmt
+    - goimports
+    - misspell
+    - whitespace
