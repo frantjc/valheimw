@@ -26,4 +26,4 @@ release:
 	@$(GIT) push --tags
 
 
-.PHONY: all fmt generate lint proto gen
+.PHONY: all fmt generate lint proto gen release
