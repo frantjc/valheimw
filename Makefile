@@ -1,6 +1,7 @@
 BUF ?= buf
 GO ?= go
 GOLANGCI-LINT ?= golangci-lint
+GIT ?= git
 
 all: fmt lint
 
