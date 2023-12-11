@@ -15,7 +15,7 @@ require (
 require (
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/frantjc/go-ingress v0.1.0
-	github.com/google/go-containerregistry v0.16.1
+	github.com/google/go-containerregistry v0.17.0
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
