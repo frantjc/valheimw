@@ -19,6 +19,7 @@ Flags:
       --name string            name for Valheim (default "sindri")
       --port int               port for Valheim (0 to use default)
       --public                 make Valheim server public
+      --rm stringArray         Thunderstore mods to remove (case-sensitive)
   -r, --root string            root directory for Sindri. Valheim savedir resides here (default "~/.local/share/sindri/root")
   -s, --state string           state directory for Sindri (default "~/.local/share/sindri/state")
   -V, --verbose count          verbosity for Sindri
