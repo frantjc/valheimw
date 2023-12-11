@@ -39,18 +39,18 @@ docker run \
     # tied to the container's filesystem, making it easy
     # to lose if the container is destroyed.
     --volume $(pwd)/sindri:/var/lib/sindri \
-    ghcr.io/frantjc/sindri:0.6.5 \
+    ghcr.io/frantjc/sindri:0.7.0 \
         --root /var/lib/sindri
 ```
 
 ### State directory
 
-Sindri also uses a state directory (default `$XDG_RUNTIME_DIR/sindri`) for ephemeral data. This is not important to be kept the same nor does it have to be kept around.
+Sindri also uses a state directory (default `$XDG_RUNTIME_DIR/sindri`) for ephemeral data. This is not important to be kept the same nor does it need to be kept around.
 
 ```sh
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
-    ghcr.io/frantjc/sindri:0.6.5 \
+    ghcr.io/frantjc/sindri:0.7.0 \
         --root /var/lib/sindri \
         --state /run/sindri
 ```
@@ -64,7 +64,7 @@ The desired list of mods can be passed to Sindri via `--mod`.
 ```sh
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
-    ghcr.io/frantjc/sindri:0.6.5 \
+    ghcr.io/frantjc/sindri:0.7.0 \
         --root /var/lib/sindri \
         --state /run/sindri \
         --mod Nexus/FarmGrid
@@ -77,6 +77,16 @@ cd "C:\Program Files (x86)\Steam\steamapps\common\Valheim"
 curl http://your-sindri-address/mods.tar.gz | tar -xzf -
 ```
 
+Sindri can remove mods from a previous run as well.
+
+```sh
+docker run \
+    --volume $(pwd)/sindri:/var/lib/sindri \
+    ghcr.io/frantjc/sindri:0.7.0 \
+        --root /var/lib/sindri \
+        --rm Nexus/FarmGrid
+```
+
 ### Valheim options
 
 Valheim arguments other than `-savedir` (sourced from `--root`) and `-password` (required and sourced from the environment variable `VALHEIM_PASSWORD`) can be passed through Sindri by flags of the same name. If not provided, `--world` and `--name` default to "sindri", while `--port` will not be passed to Valheim if not provided. Lastly, `--public` only needs to be defined, it does not need the value of "1".
@@ -84,10 +94,9 @@ Valheim arguments other than `-savedir` (sourced from `--root`) and `-password` 
 ```sh
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
-    --env VALHEIM_PASSWORD=mustbemorethan5characters \
-    ghcr.io/frantjc/sindri:0.6.5 \
+    --env VALHEIM_PASSWORD=mustbe5chars \
+    ghcr.io/frantjc/sindri:0.7.0 \
         --root /var/lib/sindri \
-        --state /run/sindri \
         --mod Nexus/FarmGrid \
         --port 3567 \
         --world "My world" \
@@ -102,10 +111,9 @@ Sindri can run a beta version of Valheim by using `--beta` and `--beta-password`
 ```sh
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
-    --env VALHEIM_PASSWORD=mustbemorethan5characters \
-    ghcr.io/frantjc/sindri:0.6.5 \
+    --env VALHEIM_PASSWORD=mustbe5chars \
+    ghcr.io/frantjc/sindri:0.7.0 \
         --root /var/lib/sindri \
-        --state /run/sindri \
         --beta public-test \
         --beta-password yesimadebackups
 ```
@@ -117,9 +125,8 @@ Sindri can start up faster on subsequent runs, by skipping redownloading Valheim
 ```sh
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
-    --env VALHEIM_PASSWORD=mustbemorethan5characters \
-    ghcr.io/frantjc/sindri:0.6.5 \
+    --env VALHEIM_PASSWORD=mustbe5chars \
+    ghcr.io/frantjc/sindri:0.7.0 \
         --root /var/lib/sindri \
-        --state /run/sindri \
         --airgap
 ```

@@ -15,7 +15,7 @@ func Extract(zr *zip.Reader, dir string) error {
 
 		//nolint:gosec
 		path := filepath.Join(dir, f.Name)
-		if err := os.MkdirAll(filepath.Dir(path), 0600); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			return err
 		}
 

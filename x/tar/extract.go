@@ -96,7 +96,7 @@ func Extract(r io.Reader, dir string) error {
 				_ = os.Chtimes(abs, modTime, modTime)
 			}
 		case mode.IsDir():
-			if err := os.MkdirAll(abs, 0600); err != nil {
+			if err := os.MkdirAll(abs, 0755); err != nil {
 				return err
 			}
 

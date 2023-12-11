@@ -1,6 +1,7 @@
 package command
 
 import (
+	"archive/tar"
 	"compress/gzip"
 	"context"
 	"io"
@@ -22,13 +23,30 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	txt    = []byte("To uninstall mods added by Sindri, remove winhttp.dll, start_server_bepinex.sh, start_game_bepinex.sh, doorstop_libs, doorstop_config.ini, changelog.txt and BepInEx.\n")
+	lenTxt = int64(len(txt))
+)
+
+func writeTxt(w io.Writer) {
+	tw := tar.NewWriter(w)
+	_ = tw.WriteHeader(&tar.Header{
+		Typeflag: tar.TypeReg,
+		Name:     "sindri.txt",
+		Size:     lenTxt,
+		Mode:     0755,
+	})
+	_, _ = tw.Write(txt)
+	_ = tw.Flush()
+}
+
 // NewSindri is the entrypoint for Sindri.
 func NewSindri() *cobra.Command {
 	var (
 		addr               string
 		airgap, modsOnly   bool
 		beta, betaPassword string
-		mods               []string
+		mods, rmMods       []string
 		root, state        string
 		verbosity          int
 		opts               = &valheim.Opts{
@@ -72,7 +90,7 @@ func NewSindri() *cobra.Command {
 					// a bit faster.
 					log.Info("downloading mods " + strings.Join(mods, ", "))
 
-					if _, err = s.AddMods(ctx, mods...); err != nil {
+					if err = s.AddMods(ctx, mods...); err != nil {
 						return err
 					}
 
@@ -85,28 +103,32 @@ func NewSindri() *cobra.Command {
 					}
 				}
 
-				rc, err := s.Extract()
+				if err = s.RemoveMods(ctx, rmMods...); err != nil {
+					return err
+				}
+
+				moddedValheimTar, err := s.Extract()
 				if err != nil {
 					return err
 				}
-				defer rc.Close()
+				defer moddedValheimTar.Close()
 
-				tmp, err := os.MkdirTemp(state, "")
+				tmpDir, err := os.MkdirTemp(state, "")
 				if err != nil {
 					return err
 				}
 
-				if err = xtar.Extract(rc, tmp); err != nil {
+				if err = xtar.Extract(moddedValheimTar, tmpDir); err != nil {
 					return err
 				}
 
-				if err = rc.Close(); err != nil {
+				if err = moddedValheimTar.Close(); err != nil {
 					return err
 				}
 
 				opts.SaveDir = filepath.Join(root, "valheim")
 
-				subCmd, err := valheim.NewCommand(ctx, tmp, opts)
+				subCmd, err := valheim.NewCommand(ctx, tmpDir, opts)
 				if err != nil {
 					return err
 				}
@@ -130,6 +152,7 @@ func NewSindri() *cobra.Command {
 
 						w.Header().Add("Content-Type", "application/tar")
 
+						writeTxt(w)
 						_, _ = io.Copy(w, rc)
 					})
 					modTgzHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -148,6 +171,7 @@ func NewSindri() *cobra.Command {
 						}
 						defer gzw.Close()
 
+						writeTxt(gzw)
 						_, _ = io.Copy(gzw, rc)
 					})
 					modHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -205,6 +229,7 @@ func NewSindri() *cobra.Command {
 	_ = cmd.MarkFlagDirname("state")
 
 	cmd.Flags().StringArrayVarP(&mods, "mod", "m", nil, "Thunderstore mods (case-sensitive)")
+	cmd.Flags().StringArrayVar(&rmMods, "rm", nil, "Thunderstore mods to remove (case-sensitive)")
 	cmd.Flags().BoolVar(&modsOnly, "mods-only", false, "do not redownload Valheim")
 	cmd.Flags().BoolVar(&airgap, "airgap", false, "do not redownload Valheim or mods")
 

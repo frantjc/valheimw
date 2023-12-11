@@ -2,7 +2,7 @@ version: "3.4"
 
 services:
   sindri:
-    image: ghcr.io/frantjc/sindri:${TAG:-0.6.5}
+    image: ghcr.io/frantjc/sindri:${TAG:-0.7.0}
     # build: .
     ports:
       - 8080:8080
@@ -16,5 +16,6 @@ services:
       - --root=/var/lib/sindri
       - --mod=Nexus/FarmGrid
       - --mod=RandyKnapp/EquipmentAndQuickSlots
+      - --rm=RandyKnapp/EquipmentAndQuickSlots
     environment:
-      VALHEIM_PASSWORD: ${VALHEIM_PASSWORD:-mustbe5charsandnotcontainedinworld}
+      VALHEIM_PASSWORD: ${VALHEIM_PASSWORD:-mustbe5chars}
