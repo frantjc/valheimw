@@ -70,9 +70,9 @@ var (
 	Username = os.Getenv("STEAMCMD_USERNAME")
 )
 
-// NewCommand builds am *exec.Cmd to execute
+// NewCommand builds an *exec.Cmd to execute
 // `steamcmd` with the given Commands.
-func NewCommand(ctx context.Context, cmds *Commands) (*exec.Cmd, error) {
+func Run(ctx context.Context, cmds *Commands) (*exec.Cmd, error) {
 	if !IsInstalled() {
 		return nil, fmt.Errorf("steamcmd not installed")
 	}

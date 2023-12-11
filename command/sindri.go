@@ -25,16 +25,16 @@ import (
 // NewSindri is the entrypoint for Sindri.
 func NewSindri() *cobra.Command {
 	var (
-		verbosity          int
-		root, state        string
+		addr               string
+		airgap, modsOnly   bool
 		beta, betaPassword string
 		mods               []string
-		airgap             bool
+		root, state        string
+		verbosity          int
 		opts               = &valheim.Opts{
 			Password: os.Getenv("VALHEIM_PASSWORD"),
 		}
-		addr string
-		cmd  = &cobra.Command{
+		cmd = &cobra.Command{
 			Use:           "sindri",
 			Version:       sindri.GetSemver(),
 			SilenceErrors: true,
@@ -76,10 +76,12 @@ func NewSindri() *cobra.Command {
 						return err
 					}
 
-					log.Info("downloading Valheim")
+					if !modsOnly {
+						log.Info("downloading Valheim")
 
-					if err = s.AppUpdate(ctx); err != nil {
-						return err
+						if err = s.AppUpdate(ctx); err != nil {
+							return err
+						}
 					}
 				}
 
@@ -87,6 +89,7 @@ func NewSindri() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				defer rc.Close()
 
 				tmp, err := os.MkdirTemp(state, "")
 				if err != nil {
@@ -195,14 +198,15 @@ func NewSindri() *cobra.Command {
 	cmd.SetVersionTemplate("{{ .Name }}{{ .Version }} " + runtime.Version() + "\n")
 	cmd.Flags().CountVarP(&verbosity, "verbose", "V", "verbosity for Sindri")
 
-	cmd.Flags().StringVarP(&root, "root", "r", filepath.Join(xdg.CacheHome, "sindri/root"), "root directory for Sindri. Valheim savedir resides here")
+	cmd.Flags().StringVarP(&root, "root", "r", filepath.Join(xdg.DataHome, "sindri"), "root directory for Sindri. Valheim savedir resides here")
 	_ = cmd.MarkFlagDirname("root")
 
-	cmd.Flags().StringVarP(&state, "state", "s", filepath.Join(xdg.CacheHome, "sindri/state"), "state directory for Sindri")
+	cmd.Flags().StringVarP(&state, "state", "s", filepath.Join(xdg.RuntimeDir, "sindri"), "state directory for Sindri")
 	_ = cmd.MarkFlagDirname("state")
 
 	cmd.Flags().StringArrayVarP(&mods, "mod", "m", nil, "Thunderstore mods (case-sensitive)")
-	cmd.Flags().BoolVarP(&airgap, "airgap", "a", false, "do not redownload Valheim or mods")
+	cmd.Flags().BoolVar(&modsOnly, "mods-only", false, "do not redownload Valheim")
+	cmd.Flags().BoolVar(&airgap, "airgap", false, "do not redownload Valheim or mods")
 
 	cmd.Flags().StringVar(&addr, "addr", ":8080", "address for Sindri")
 

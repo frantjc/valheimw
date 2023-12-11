@@ -50,25 +50,21 @@ func LogExec(ctx context.Context, cmd *exec.Cmd) {
 	)
 
 	cmd.Stdout = xio.WriterFunc(func(b []byte) (int, error) {
-		go func() {
-			for _, p := range bytes.Split(b, []byte("\n")) {
-				if len(p) > 0 {
-					log.Info(strings.TrimSpace(string(p)))
-				}
+		for _, p := range bytes.Split(b, []byte("\n")) {
+			if len(p) > 0 {
+				log.Info(strings.TrimSpace(string(p)))
 			}
-		}()
+		}
 
 		return len(b), nil
 	})
 
 	cmd.Stderr = xio.WriterFunc(func(b []byte) (int, error) {
-		go func() {
-			for _, p := range bytes.Split(b, []byte("\n")) {
-				if len(p) > 0 {
-					log.Error(stderr, strings.TrimSpace(string(p)))
-				}
+		for _, p := range bytes.Split(b, []byte("\n")) {
+			if len(p) > 0 {
+				log.Error(stderr, strings.TrimSpace(string(p)))
 			}
-		}()
+		}
 
 		return len(b), nil
 	})

@@ -8,6 +8,5 @@
 FROM steamcmd/steamcmd:debian-12
 WORKDIR /
 ENTRYPOINT ["/sindri"]
-CMD ["-s", "/run/sindri", "-r", "/var/lib/sindri"]
 # COPY --from=build sindri /
 COPY sindri /

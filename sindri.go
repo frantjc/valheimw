@@ -133,7 +133,7 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 	}
 	defer os.RemoveAll(tmp)
 
-	cmd, err := steamcmd.NewCommand(ctx, &steamcmd.Commands{
+	cmd, err := steamcmd.Run(ctx, &steamcmd.Commands{
 		ForceInstallDir: tmp,
 		AppUpdate:       s.SteamAppID,
 		Beta:            s.beta,
@@ -143,7 +143,6 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	LogExec(ctx, cmd)
 
 	if err = cmd.Run(); err != nil {
 		return err
@@ -190,51 +189,6 @@ func (s *Sindri) AddMods(ctx context.Context, mods ...string) ([]thunderstore.Pa
 	}
 
 	return s.addMods(ctx, mods...)
-}
-
-// RemoveMod removes the given mod.
-//
-// TODO: Handle removing a mod's dependencies as well? Don't allow
-// removing a mod that is a specifically added one's dependency?
-func (s *Sindri) RemoveMod(_ context.Context, mod string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	pkg, err := thunderstore.ParsePackage(mod)
-	if err != nil {
-		return err
-	}
-
-	if pkg.Versionless().String() == s.BepInEx.Versionless().String() {
-		return fmt.Errorf("cannot remove BepInEx mod")
-	}
-
-	if err := s.init(); err != nil {
-		return err
-	}
-
-	current, ok := s.metadata.Mods[pkg.Versionless().String()]
-	if !ok {
-		return nil
-	}
-
-	layers, err := s.filteredLayers(func(l v1.Layer) (bool, error) {
-		digest, err := l.Digest()
-		if err != nil {
-			return false, err
-		}
-
-		return digest.String() == current.LayerDigest, nil
-	})
-	if err != nil {
-		return err
-	}
-
-	if s.img, err = mutate.AppendLayers(empty.Image, layers...); err != nil {
-		return err
-	}
-
-	return s.save()
 }
 
 // Extract returns an io.ReadCloser containing a tarball
