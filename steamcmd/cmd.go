@@ -12,7 +12,7 @@ import (
 	xsyscall "github.com/frantjc/sindri/x/syscall"
 )
 
-// IsInstalled checks whether `steamcmd“ is installed
+// IsInstalled checks whether `steamcmd` is installed
 // and findable or not.
 func IsInstalled() bool {
 	bin, err := exec.LookPath("steamcmd")

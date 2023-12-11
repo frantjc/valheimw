@@ -1,7 +1,6 @@
 package command
 
 import (
-	"archive/tar"
 	"compress/gzip"
 	"context"
 	"io"
@@ -17,28 +16,12 @@ import (
 	"github.com/adrg/xdg"
 	"github.com/frantjc/go-ingress"
 	"github.com/frantjc/sindri"
+	"github.com/frantjc/sindri/internal/clienthelper"
 	"github.com/frantjc/sindri/thunderstore"
 	"github.com/frantjc/sindri/valheim"
 	xtar "github.com/frantjc/sindri/x/tar"
 	"github.com/spf13/cobra"
 )
-
-var (
-	txt    = []byte("To uninstall mods added by Sindri, remove winhttp.dll, start_server_bepinex.sh, start_game_bepinex.sh, doorstop_libs, doorstop_config.ini, changelog.txt and BepInEx.\n")
-	lenTxt = int64(len(txt))
-)
-
-func writeTxt(w io.Writer) {
-	tw := tar.NewWriter(w)
-	_ = tw.WriteHeader(&tar.Header{
-		Typeflag: tar.TypeReg,
-		Name:     "sindri.txt",
-		Size:     lenTxt,
-		Mode:     0755,
-	})
-	_, _ = tw.Write(txt)
-	_ = tw.Flush()
-}
 
 // NewSindri is the entrypoint for Sindri.
 func NewSindri() *cobra.Command {
@@ -152,8 +135,9 @@ func NewSindri() *cobra.Command {
 
 						w.Header().Add("Content-Type", "application/tar")
 
-						writeTxt(w)
-						_, _ = io.Copy(w, rc)
+						if _, err = io.Copy(w, clienthelper.NewTarPrefixReader(r)); err == nil {
+							_, _ = io.Copy(w, rc)
+						}
 					})
 					modTgzHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						rc, err := s.ExtractMods()
@@ -171,8 +155,9 @@ func NewSindri() *cobra.Command {
 						}
 						defer gzw.Close()
 
-						writeTxt(gzw)
-						_, _ = io.Copy(gzw, rc)
+						if _, err = io.Copy(gzw, clienthelper.NewTarPrefixReader(r)); err == nil {
+							_, _ = io.Copy(gzw, rc)
+						}
 					})
 					modHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/gzip") {
