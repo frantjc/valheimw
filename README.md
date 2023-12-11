@@ -71,13 +71,6 @@ docker run \
         --mod Nexus/FarmGrid
 ```
 
-After Sindri is running, you can download the mods from it (the exact versions!) for your Valheim client.
-
-```sh
-cd "C:\Program Files (x86)\Steam\steamapps\common\Valheim"
-curl http://your-sindri-address/mods.tar.gz | tar -xzf -
-```
-
 Sindri can remove mods from a previous run as well.
 
 ```sh
@@ -86,6 +79,27 @@ docker run \
     ghcr.io/frantjc/sindri:0.7.0 \
         --root /var/lib/sindri \
         --rm Nexus/FarmGrid
+```
+
+### Distributing mods to clients
+
+After Sindri is running, you can download the mods from it (the exact versions!) for your Valheim client.
+
+```powershell
+cd "C:\Program Files (x86)\Steam\steamapps\common\Valheim"
+curl -fSs http://your-sindri-address/mods.tar.gz | tar -xzf -
+```
+
+After the initial install, you Sindri supplies some helpful scripts to use to update and uninstall it, respectively:
+
+```powershell
+cd "C:\Program Files (x86)\Steam\steamapps\common\Valheim"
+update-sindri
+```
+
+```powershell
+cd "C:\Program Files (x86)\Steam\steamapps\common\Valheim"
+uninstall-sindri
 ```
 
 ### Valheim options
