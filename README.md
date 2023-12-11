@@ -29,7 +29,7 @@ Flags:
 
 ### Root directory
 
-Sindri is tied to its root directory, meaning that if you stop Sindri and then start it back up with the same root directory, it will pick back up where it left off: same mod list (plus any that have been added), same world, etc. If any manual changes are made to this directory, all bets are off.
+Sindri is tied to its root directory, meaning that if you stop Sindri and then start it back up with the same root directory, it will pick back up where it left off: same mod list, same world, etc. However, if any manual changes are made to this directory, all bets are off.
 
 By default, the root directory will be `$XDG_DATA_HOME/sindri` per the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html). This can be overridden with `--root`.
 
