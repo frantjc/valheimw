@@ -121,7 +121,7 @@ docker run \
 
 ### Make it faster
 
-Sindri can start up faster on subsequent runs, by skipping redownloading Valheim and mods by using `--mods-only` or `--airgap`.
+Sindri can be made to start up faster on subsequent runs by skipping redownloading Valheim and/or mods by using `--airgap` or `--mods-only`.
 
 ```sh
 docker run \
