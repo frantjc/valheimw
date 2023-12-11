@@ -1,6 +1,6 @@
 # sindri [![godoc](https://pkg.go.dev/badge/github.com/frantjc/sindri.svg)](https://pkg.go.dev/github.com/frantjc/sindri) [![goreportcard](https://goreportcard.com/badge/github.com/frantjc/sindri)](https://goreportcard.com/report/github.com/frantjc/sindri) ![license](https://shields.io/github/license/frantjc/sindri)
 
-Easily run a dedicated Valheim server with mods from [thunderstore.io](https://valheim.thunderstore.io/).
+Easily run a dedicated Valheim server with mods from [thunderstore.io](https://valheim.thunderstore.io/) and a way to easily share those mods with Valheim clients.
 
 ## usage
 
