@@ -67,7 +67,6 @@ docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     ghcr.io/frantjc/sindri:0.7.0 \
         --root /var/lib/sindri \
-        --state /run/sindri \
         --mod Nexus/FarmGrid
 ```
 
@@ -90,7 +89,7 @@ cd "C:\Program Files (x86)\Steam\steamapps\common\Valheim"
 curl -fSs http://your-sindri-address/mods.tar.gz | tar -xzf -
 ```
 
-After the initial install, you Sindri supplies some helpful scripts to use to update and uninstall it, respectively:
+After the initial install, Sindri supplies some helpful scripts to use to update and uninstall it, respectively:
 
 ```powershell
 cd "C:\Program Files (x86)\Steam\steamapps\common\Valheim"
