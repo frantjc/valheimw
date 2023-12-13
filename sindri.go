@@ -193,7 +193,10 @@ func (s *Sindri) AddMods(ctx context.Context, mods ...string) error {
 		return err
 	}
 
-	for _, mod := range append(mods, s.BepInEx.Versionless().String()) {
+	for _, mod := range append(
+		fn.Unique(mods),
+		s.BepInEx.Versionless().String(),
+	) {
 		pkg, err := thunderstore.ParsePackage(mod)
 		if err != nil {
 			return err
@@ -386,81 +389,97 @@ func (s *Sindri) save() error {
 }
 
 func (s *Sindri) extractModsAndDependenciesToDir(ctx context.Context, dir string, mods ...string) error {
-	for _, mod := range mods {
-		pkg, err := thunderstore.ParsePackage(mod)
-		if err != nil {
-			return err
-		}
+	errC := make(chan error, 1)
 
-		var (
-			modKey      = pkg.Versionless().String()
-			bepInExKey  = s.BepInEx.Versionless().String()
-			isBepInEx   = modKey == bepInExKey
-			modMeta, ok = s.metadata.Mods[modKey]
-		)
-		if ok {
-			if modMeta.Version == pkg.Version {
-				continue
-			}
-		}
-
-		fmt.Println(modKey+" == ", bepInExKey+" ?", isBepInEx)
-
-		// The pkg doesn't need a version to get the metadata
-		// or the archive, but we want the version so we know
-		// what version is installed, so we make sure that we
-		// have it. We also need to know its dependencies.
-		pkgMeta, err := s.ThunderstoreClient.GetPackageMetadata(ctx, pkg)
-		if err != nil {
-			return err
-		}
-
-		var (
-			dependencies = fn.Filter(pkgMeta.Dependencies, func(dependency string, _ int) bool {
-				return !strings.HasPrefix(dependency, bepInExKey)
-			})
-		)
-		if err := s.extractModsAndDependenciesToDir(ctx, dir, dependencies...); err != nil {
-			return err
-		}
-
-		if pkg.Version == "" && pkgMeta.Latest != nil {
-			pkg = &pkgMeta.Latest.Package
-		}
-
-		pkgZip, err := s.ThunderstoreClient.GetPackageZip(ctx, pkg)
-		if err != nil {
-			return err
-		}
-		defer pkgZip.Close()
-
-		pkgZipRdr, err := zip.NewReader(pkgZip, pkgZip.Size())
-		if err != nil {
-			return err
-		}
-
-		pkgZipRdr.File = fn.Reduce(pkgZipRdr.File, func(acc []*zip.File, cur *zip.File, _ int) []*zip.File {
-			norm := strings.ReplaceAll(cur.Name, "\\", "/")
-
-			if isBepInEx {
-				name, err := filepath.Rel(s.BepInEx.Name, norm)
-				if err != nil {
-					return acc
-				}
-
-				if strings.Contains(name, "..") {
-					return acc
-				}
-
-				cur.Name = name
-			} else {
-				cur.Name = filepath.Join("BepInEx/plugins", pkg.Fullname(), norm)
+	for _, m := range mods {
+		go func(mod string) {
+			pkg, err := thunderstore.ParsePackage(mod)
+			if err != nil {
+				errC <- err
+				return
 			}
 
-			return append(acc, cur)
-		}, []*zip.File{})
+			var (
+				modKey      = pkg.Versionless().String()
+				bepInExKey  = s.BepInEx.Versionless().String()
+				isBepInEx   = modKey == bepInExKey
+				modMeta, ok = s.metadata.Mods[modKey]
+			)
+			if ok {
+				if modMeta.Version == pkg.Version {
+					return
+				}
+			}
 
-		if err := xzip.Extract(pkgZipRdr, dir); err != nil {
+			// The pkg doesn't need a version to get the metadata
+			// or the archive, but we want the version so we know
+			// what version is installed, so we make sure that we
+			// have it. We also need to know its dependencies.
+			pkgMeta, err := s.ThunderstoreClient.GetPackageMetadata(ctx, pkg)
+			if err != nil {
+				errC <- err
+				return
+			}
+
+			var (
+				dependencies = fn.Filter(pkgMeta.Dependencies, func(dependency string, _ int) bool {
+					return !strings.HasPrefix(dependency, bepInExKey)
+				})
+			)
+			if err := s.extractModsAndDependenciesToDir(ctx, dir, dependencies...); err != nil {
+				errC <- err
+				return
+			}
+
+			if pkg.Version == "" && pkgMeta.Latest != nil {
+				pkg = &pkgMeta.Latest.Package
+			}
+
+			pkgZip, err := s.ThunderstoreClient.GetPackageZip(ctx, pkg)
+			if err != nil {
+				errC <- err
+				return
+			}
+			defer pkgZip.Close()
+
+			pkgZipRdr, err := zip.NewReader(pkgZip, pkgZip.Size())
+			if err != nil {
+				errC <- err
+				return
+			}
+
+			pkgZipRdr.File = fn.Reduce(pkgZipRdr.File, func(acc []*zip.File, cur *zip.File, _ int) []*zip.File {
+				norm := strings.ReplaceAll(cur.Name, "\\", "/")
+
+				if isBepInEx {
+					name, err := filepath.Rel(s.BepInEx.Name, norm)
+					if err != nil {
+						return acc
+					}
+
+					if strings.Contains(name, "..") {
+						return acc
+					}
+
+					cur.Name = name
+				} else {
+					cur.Name = filepath.Join("BepInEx/plugins", pkg.Fullname(), norm)
+				}
+
+				return append(acc, cur)
+			}, []*zip.File{})
+
+			if err := xzip.Extract(pkgZipRdr, dir); err != nil {
+				errC <- err
+				return
+			}
+
+			errC <- nil
+		}(m)
+	}
+
+	for i := 0; i < len(mods); i++ {
+		if err := <-errC; err != nil {
 			return err
 		}
 	}

@@ -123,68 +123,7 @@ func NewSindri() *cobra.Command {
 				}
 				defer l.Close()
 
-				var (
-					errC          = make(chan error, 1)
-					modTarHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						rc, err := s.ExtractMods()
-						if err != nil {
-							w.WriteHeader(http.StatusInternalServerError)
-							return
-						}
-						defer rc.Close()
-
-						w.Header().Add("Content-Type", "application/tar")
-
-						if _, err = io.Copy(w, clienthelper.NewTarPrefixReader(r)); err == nil {
-							_, _ = io.Copy(w, rc)
-						}
-					})
-					modTgzHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						rc, err := s.ExtractMods()
-						if err != nil {
-							w.WriteHeader(http.StatusInternalServerError)
-							return
-						}
-						defer rc.Close()
-
-						w.Header().Add("Content-Type", "application/gzip")
-
-						gzw, err := gzip.NewWriterLevel(w, gzip.BestCompression)
-						if err != nil {
-							gzw = gzip.NewWriter(w)
-						}
-						defer gzw.Close()
-
-						if _, err = io.Copy(gzw, clienthelper.NewTarPrefixReader(r)); err == nil {
-							_, _ = io.Copy(gzw, rc)
-						}
-					})
-					modHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/gzip") {
-							modTgzHandler(w, r)
-							return
-						} else if strings.Contains(accept, "application/tar") {
-							modTarHandler(w, r)
-							return
-						}
-
-						w.WriteHeader(http.StatusNotAcceptable)
-					})
-					srv = &http.Server{
-						Addr:              addr,
-						ReadHeaderTimeout: time.Second * 5,
-						BaseContext: func(_ net.Listener) context.Context {
-							return ctx
-						},
-						Handler: ingress.New(
-							ingress.ExactPath("/mods.tar", modTarHandler),
-							ingress.ExactPath("/mods.gz", modTgzHandler),
-							ingress.ExactPath("/mods.tgz", modTgzHandler),
-							ingress.ExactPath("/mods.tar.gz", modTgzHandler),
-							ingress.ExactPath("/mods", modHdrHandler),
-						),
-					}
-				)
+				errC := make(chan error, 1)
 
 				go func() {
 					log.Info("running Valheim")
@@ -192,12 +131,76 @@ func NewSindri() *cobra.Command {
 					errC <- subCmd.Run()
 				}()
 
-				go func() {
-					log.Info("listening on " + addr)
+				if packages, err := s.Mods(); len(packages) > 0 || err != nil {
+					var (
+						modTarHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							rc, err := s.ExtractMods()
+							if err != nil {
+								w.WriteHeader(http.StatusInternalServerError)
+								return
+							}
+							defer rc.Close()
 
-					errC <- srv.Serve(l)
-				}()
-				defer srv.Close()
+							w.Header().Add("Content-Type", "application/tar")
+
+							if _, err = io.Copy(w, clienthelper.NewTarPrefixReader(r)); err == nil {
+								_, _ = io.Copy(w, rc)
+							}
+						})
+						modTgzHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							rc, err := s.ExtractMods()
+							if err != nil {
+								w.WriteHeader(http.StatusInternalServerError)
+								return
+							}
+							defer rc.Close()
+
+							w.Header().Add("Content-Type", "application/gzip")
+
+							gzw, err := gzip.NewWriterLevel(w, gzip.BestCompression)
+							if err != nil {
+								gzw = gzip.NewWriter(w)
+							}
+							defer gzw.Close()
+
+							if _, err = io.Copy(gzw, clienthelper.NewTarPrefixReader(r)); err == nil {
+								_, _ = io.Copy(gzw, rc)
+							}
+						})
+						modHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/gzip") {
+								modTgzHandler(w, r)
+								return
+							} else if strings.Contains(accept, "application/tar") {
+								modTarHandler(w, r)
+								return
+							}
+
+							w.WriteHeader(http.StatusNotAcceptable)
+						})
+						srv = &http.Server{
+							Addr:              addr,
+							ReadHeaderTimeout: time.Second * 5,
+							BaseContext: func(_ net.Listener) context.Context {
+								return ctx
+							},
+							Handler: ingress.New(
+								ingress.ExactPath("/mods.tar", modTarHandler),
+								ingress.ExactPath("/mods.gz", modTgzHandler),
+								ingress.ExactPath("/mods.tgz", modTgzHandler),
+								ingress.ExactPath("/mods.tar.gz", modTgzHandler),
+								ingress.ExactPath("/mods", modHdrHandler),
+							),
+						}
+					)
+
+					go func() {
+						log.Info("listening on " + addr)
+
+						errC <- srv.Serve(l)
+					}()
+					defer srv.Close()
+				}
 
 				return <-errC
 			},

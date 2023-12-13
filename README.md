@@ -40,7 +40,9 @@ docker run \
     # tied to the container's filesystem, making it easy
     # to lose if the container is destroyed.
     --volume $(pwd)/sindri:/var/lib/sindri \
-    ghcr.io/frantjc/sindri:0.7.0 \
+    # Valheim listens on port 2456 for UDP traffic by default.
+    --publish 2456:2456/udp \
+    ghcr.io/frantjc/sindri:0.7.1 \
         --root /var/lib/sindri
 ```
 
@@ -51,7 +53,8 @@ Sindri also uses a state directory (default `$XDG_RUNTIME_DIR/sindri`) for ephem
 ```sh
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
-    ghcr.io/frantjc/sindri:0.7.0 \
+    --publish 2456:2456/udp \
+    ghcr.io/frantjc/sindri:0.7.1 \
         --root /var/lib/sindri \
         --state /run/sindri
 ```
@@ -65,9 +68,9 @@ The desired list of mods can be passed to Sindri via `--mod`.
 ```sh
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
-    ghcr.io/frantjc/sindri:0.7.0 \
+    --publish 2456:2456/udp \
+    ghcr.io/frantjc/sindri:0.7.1 \
         --root /var/lib/sindri \
-        --state /run/sindri \
         --mod Nexus/FarmGrid
 ```
 
@@ -76,21 +79,33 @@ Sindri can remove mods from a previous run as well.
 ```sh
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
-    ghcr.io/frantjc/sindri:0.7.0 \
+    --publish 2456:2456/udp \
+    ghcr.io/frantjc/sindri:0.7.1 \
         --root /var/lib/sindri \
         --rm Nexus/FarmGrid
 ```
 
 ### Distributing mods to clients
 
-After Sindri is running, you can download the mods from it (the exact versions!) for your Valheim client.
+After Sindri is running, if it has any mods, you can download them from it (the exact versions!) for your Valheim client. It listens on `:8080` by default which can be overridden with `--addr`.
+
+```sh
+docker run \
+    --volume $(pwd)/sindri:/var/lib/sindri \
+    --publish 2456:2456/udp \
+    --publish 8080:8080 \
+    ghcr.io/frantjc/sindri:0.7.1 \
+        --root /var/lib/sindri
+```
+
+Then you can use your HTTP client of choice to download a `.tar` with the mods.
 
 ```powershell
 cd "C:\Program Files (x86)\Steam\steamapps\common\Valheim"
 curl -fSs http://your-sindri-address/mods.tar.gz | tar -xzf -
 ```
 
-After the initial install, you Sindri supplies some helpful scripts to use to update and uninstall it, respectively:
+After the initial install, you Sindri supplies some helpful scripts to use to update and uninstall it, respectively.
 
 ```powershell
 cd "C:\Program Files (x86)\Steam\steamapps\common\Valheim"
@@ -109,8 +124,11 @@ Valheim arguments other than `-savedir` (sourced from `--root`) and `-password` 
 ```sh
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
+    # Make sure to publish the correct port if you change
+    --publish 3567:3567/udp \
+    --publish 8080:8080 \
     --env VALHEIM_PASSWORD=mustbe5chars \
-    ghcr.io/frantjc/sindri:0.7.0 \
+    ghcr.io/frantjc/sindri:0.7.1 \
         --root /var/lib/sindri \
         --mod Nexus/FarmGrid \
         --port 3567 \
@@ -126,8 +144,10 @@ Sindri can run a beta version of Valheim by using `--beta` and `--beta-password`
 ```sh
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
+    --publish 3567:3567/udp \
+    --publish 8080:8080 \
     --env VALHEIM_PASSWORD=mustbe5chars \
-    ghcr.io/frantjc/sindri:0.7.0 \
+    ghcr.io/frantjc/sindri:0.7.1 \
         --root /var/lib/sindri \
         --beta public-test \
         --beta-password yesimadebackups
@@ -140,8 +160,10 @@ Sindri can be made to start up faster on subsequent runs by skipping redownloadi
 ```sh
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
+    --publish 3567:3567/udp \
+    --publish 8080:8080 \
     --env VALHEIM_PASSWORD=mustbe5chars \
-    ghcr.io/frantjc/sindri:0.7.0 \
+    ghcr.io/frantjc/sindri:0.7.1 \
         --root /var/lib/sindri \
         --airgap
 ```
