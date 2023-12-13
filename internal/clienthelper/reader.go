@@ -10,12 +10,12 @@ import (
 )
 
 var (
-	//go:embed uninstall.sh
-	uninstallSh []byte
+	//go:embed uninstall.sh.tpl
+	uninstallShTpl []byte
 	//go:embed update.sh.tpl
 	updateShTpl []byte
-	//go:embed uninstall.cmd
-	uninstallCmd []byte
+	//go:embed uninstall.cmd.tpl
+	uninstallCmdTpl []byte
 	//go:embed update.cmd.tpl
 	updateCmdTpl []byte
 	//go:embed readme.txt.tpl
@@ -116,7 +116,7 @@ func NewTarPrefixReader(r *http.Request) io.Reader {
 
 		if err := writeFile(
 			string(uninstallShName),
-			template(uninstallSh),
+			template(uninstallShTpl),
 			0755,
 		); err != nil {
 			_ = pw.CloseWithError(err)
@@ -134,7 +134,7 @@ func NewTarPrefixReader(r *http.Request) io.Reader {
 
 		if err := writeFile(
 			string(uninstallCmdName),
-			template(uninstallCmd),
+			template(uninstallCmdTpl),
 			0755,
 		); err != nil {
 			_ = pw.CloseWithError(err)
