@@ -1,22 +1,14 @@
-BUF ?= buf
 GO ?= go
 GOLANGCI-LINT ?= golangci-lint
 GIT ?= git
 
-all: fmt lint
+all: generate
 
-fmt:
-	@$(BUF) format -w
-	@$(GO) $@ ./...
-
-generate:
+fmt generate:
 	@$(GO) $@ ./...
 
 lint:
 	@$(GOLANGCI-LINT) run --fix
-
-proto:
-	@$(BUF) generate
 
 gen: generate
 

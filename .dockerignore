@@ -1,9 +1,6 @@
 # macOS
 .DS_Store
 
-# buf
-buf*.yaml
-
 # terraform
 .terraform/
 *terraform.tfstate.*

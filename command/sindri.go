@@ -200,6 +200,8 @@ func NewSindri() *cobra.Command {
 						errC <- srv.Serve(l)
 					}()
 					defer srv.Close()
+				} else {
+					log.Info("no mods, not serving mod download endpoints")
 				}
 
 				return <-errC

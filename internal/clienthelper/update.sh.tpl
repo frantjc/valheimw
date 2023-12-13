@@ -36,8 +36,8 @@ if ! curl -fSs $PROTOCOL://$HOST/mods.gz | tar -C $VALHEIM_DIR -xzf -; then
 fi
 
 FILES_TO_CLEANUP=(
-    "$VALHEIM_DIR/__UNINSTALL_SINDRI_CMD_NAME__"
-    "$VALHEIM_DIR/__UNINSTALL_SINDRI_CMD_NAME__"
+    "$VALHEIM_DIR/__UNINSTALL_CMD_NAME__"
+    "$VALHEIM_DIR/__UNINSTALL_CMD_NAME__"
 )
 
 echo "Cleaning up unnecessary Sindri files..."

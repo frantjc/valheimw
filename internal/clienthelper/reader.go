@@ -10,16 +10,24 @@ import (
 )
 
 var (
-	//go:embed uninstall-sindri.sh
+	//go:embed uninstall.sh
 	uninstallSh []byte
-	//go:embed update-sindri.sh.tpl
+	//go:embed update.sh.tpl
 	updateShTpl []byte
-	//go:embed uninstall-sindri.cmd
+	//go:embed uninstall.cmd
 	uninstallCmd []byte
-	//go:embed update-sindri.cmd.tpl
+	//go:embed update.cmd.tpl
 	updateCmdTpl []byte
-	//go:embed sindri.txt.tpl
-	txtTpl []byte
+	//go:embed readme.txt.tpl
+	readmeTxtTpl []byte
+)
+
+var (
+	readmeTxtName    = []byte("sindri.txt")
+	uninstallShName  = []byte("uninstall-sindri")
+	updateShName     = []byte("update-sindri")
+	uninstallCmdName = []byte("uninstall-sindri.cmd")
+	updateCmdName    = []byte("update-sindri.cmd")
 )
 
 // NewTarPrefixReader returns an io.Reader containing tar entries
@@ -63,12 +71,7 @@ func NewTarPrefixReader(r *http.Request) io.Reader {
 
 			return tw.Flush()
 		}
-		readmeName             = []byte("sindri.txt")
-		uninstallSindriShName  = []byte("uninstall-sindri")
-		updateSindriShName     = []byte("update-sindri")
-		uninstallSindriCmdName = []byte("uninstall-sindri.cmd")
-		updateSindriCmdName    = []byte("update-sindri.cmd")
-		template               = func(b []byte) []byte {
+		template = func(b []byte) []byte {
 			b = bytes.ReplaceAll(
 				b,
 				[]byte("__HOST__"), host,
@@ -81,27 +84,27 @@ func NewTarPrefixReader(r *http.Request) io.Reader {
 
 			b = bytes.ReplaceAll(
 				b,
-				[]byte("__README_NAME__"), readmeName,
+				[]byte("__README_TXT_NAME__"), readmeTxtName,
 			)
 
 			b = bytes.ReplaceAll(
 				b,
-				[]byte("__UNINSTALL_SINDRI_SH_NAME__"), uninstallSindriShName,
+				[]byte("__UNINSTALL_SH_NAME__"), uninstallShName,
 			)
 
 			b = bytes.ReplaceAll(
 				b,
-				[]byte("__UPDATE_SINDRI_SH_NAME__"), updateSindriShName,
+				[]byte("__UPDATE_SH_NAME__"), updateShName,
 			)
 
 			b = bytes.ReplaceAll(
 				b,
-				[]byte("__UNINSTALL_SINDRI_CMD_NAME__"), uninstallSindriCmdName,
+				[]byte("__UNINSTALL_CMD_NAME__"), uninstallCmdName,
 			)
 
 			b = bytes.ReplaceAll(
 				b,
-				[]byte("__UPDATE_SINDRI_CMD_NAME__"), updateSindriCmdName,
+				[]byte("__UPDATE_CMD_NAME__"), updateCmdName,
 			)
 
 			return b
@@ -112,7 +115,7 @@ func NewTarPrefixReader(r *http.Request) io.Reader {
 		defer pw.Close()
 
 		if err := writeFile(
-			"uninstall-sindri",
+			string(uninstallShName),
 			template(uninstallSh),
 			0755,
 		); err != nil {
@@ -121,7 +124,7 @@ func NewTarPrefixReader(r *http.Request) io.Reader {
 		}
 
 		if err := writeFile(
-			"update-sindri",
+			string(updateShName),
 			template(updateShTpl),
 			0755,
 		); err != nil {
@@ -130,7 +133,7 @@ func NewTarPrefixReader(r *http.Request) io.Reader {
 		}
 
 		if err := writeFile(
-			"uninstall-sindri.cmd",
+			string(uninstallCmdName),
 			template(uninstallCmd),
 			0755,
 		); err != nil {
@@ -139,7 +142,7 @@ func NewTarPrefixReader(r *http.Request) io.Reader {
 		}
 
 		if err := writeFile(
-			"update-sindri.cmd",
+			string(updateCmdName),
 			template(updateCmdTpl),
 			0755,
 		); err != nil {
@@ -148,8 +151,8 @@ func NewTarPrefixReader(r *http.Request) io.Reader {
 		}
 
 		if err := writeFile(
-			"sindri.txt",
-			template(txtTpl),
+			string(readmeTxtName),
+			template(readmeTxtTpl),
 			0644,
 		); err != nil {
 			_ = pw.CloseWithError(err)
