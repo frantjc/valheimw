@@ -116,7 +116,7 @@ docker run \
     # Make sure to publish the correct port if you change it.
     --publish 3567:3567/udp \
     --publish 8080:8080 \
-    --env VALHEIM_PASSWORD=mustbe5chars \
+    --env VALHEIM_PASSWORD=atleast5chars \
     ghcr.io/frantjc/sindri:1.0.0 \
         --root /var/lib/sindri \
         --mod Nexus/FarmGrid \
@@ -135,7 +135,7 @@ docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
-    --env VALHEIM_PASSWORD=mustbe5chars \
+    --env VALHEIM_PASSWORD=atleast5chars \
     ghcr.io/frantjc/sindri:1.0.0 \
         --root /var/lib/sindri \
         --beta public-test \
@@ -151,7 +151,7 @@ docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
-    --env VALHEIM_PASSWORD=mustbe5chars \
+    --env VALHEIM_PASSWORD=atleast5chars \
     ghcr.io/frantjc/sindri:1.0.0 \
         --root /var/lib/sindri \
         --airgap

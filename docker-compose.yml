@@ -21,4 +21,4 @@ services:
       # - --permit=frantjc
       # - --rm=RandyKnapp/EquipmentAndQuickSlots
     environment:
-      VALHEIM_PASSWORD: ${VALHEIM_PASSWORD:-mustbe5chars}
+      VALHEIM_PASSWORD: ${VALHEIM_PASSWORD:-atleast5chars}
