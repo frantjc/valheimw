@@ -140,6 +140,7 @@ func NewSindri() *cobra.Command {
 							return
 						}
 
+						w.Header().Add("Content-Type", "application/json")
 						_, _ = w.Write([]byte(`{"seed":"` + seed + `"}`))
 					})
 					seedTxtHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -149,6 +150,7 @@ func NewSindri() *cobra.Command {
 							return
 						}
 
+						w.Header().Add("Content-Type", "text/plain")
 						_, _ = w.Write([]byte(seed))
 					})
 					seedHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
