@@ -42,7 +42,7 @@ docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     # Valheim listens on port 2456 for UDP traffic by default.
     --publish 2456:2456/udp \
-    ghcr.io/frantjc/sindri:0.7.1 \
+    ghcr.io/frantjc/sindri:1.0.0 \
         --root /var/lib/sindri
 ```
 
@@ -54,7 +54,7 @@ Sindri also uses a state directory (default `$XDG_RUNTIME_DIR/sindri`) for ephem
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     --publish 2456:2456/udp \
-    ghcr.io/frantjc/sindri:0.7.1 \
+    ghcr.io/frantjc/sindri:1.0.0 \
         --root /var/lib/sindri \
         --state /run/sindri
 ```
@@ -69,7 +69,7 @@ The desired list of mods can be passed to Sindri via `--mod`.
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     --publish 2456:2456/udp \
-    ghcr.io/frantjc/sindri:0.7.1 \
+    ghcr.io/frantjc/sindri:1.0.0 \
         --root /var/lib/sindri \
         --mod Nexus/FarmGrid
 ```
@@ -80,7 +80,7 @@ Sindri can remove mods from a previous run as well.
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     --publish 2456:2456/udp \
-    ghcr.io/frantjc/sindri:0.7.1 \
+    ghcr.io/frantjc/sindri:1.0.0 \
         --root /var/lib/sindri \
         --rm Nexus/FarmGrid
 ```
@@ -94,7 +94,7 @@ docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     --publish 2456:2456/udp \
     --publish 8080:8080 \
-    ghcr.io/frantjc/sindri:0.7.1 \
+    ghcr.io/frantjc/sindri:1.0.0 \
         --root /var/lib/sindri
 ```
 
@@ -128,7 +128,7 @@ docker run \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
     --env VALHEIM_PASSWORD=mustbe5chars \
-    ghcr.io/frantjc/sindri:0.7.1 \
+    ghcr.io/frantjc/sindri:1.0.0 \
         --root /var/lib/sindri \
         --mod Nexus/FarmGrid \
         --port 3567 \
@@ -147,7 +147,7 @@ docker run \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
     --env VALHEIM_PASSWORD=mustbe5chars \
-    ghcr.io/frantjc/sindri:0.7.1 \
+    ghcr.io/frantjc/sindri:1.0.0 \
         --root /var/lib/sindri \
         --beta public-test \
         --beta-password yesimadebackups
@@ -163,7 +163,7 @@ docker run \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
     --env VALHEIM_PASSWORD=mustbe5chars \
-    ghcr.io/frantjc/sindri:0.7.1 \
+    ghcr.io/frantjc/sindri:1.0.0 \
         --root /var/lib/sindri \
         --airgap
 ```
