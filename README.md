@@ -4,24 +4,26 @@ Easily run a dedicated Valheim server with mods from [thunderstore.io](https://v
 
 ## usage
 
-```
-Usage:
+```Usage:
   sindri [flags]
 
 Flags:
       --addr string            address for Sindri (default ":8080")
+      --admin ints             Valheim server admin Steam IDs
       --airgap                 do not redownload Valheim or mods
+      --ban ints               Valheim server banned Steam IDs
       --beta string            Steam beta branch
       --beta-password string   Steam beta password
   -h, --help                   help for sindri
   -m, --mod stringArray        Thunderstore mods (case-sensitive)
       --mods-only              do not redownload Valheim
       --name string            name for Valheim (default "sindri")
+      --permit ints            Valheim server permitted Steam IDs
       --port int               port for Valheim (0 to use default)
       --public                 make Valheim server public
       --rm stringArray         Thunderstore mods to remove (case-sensitive)
-  -r, --root string            root directory for Sindri. Valheim savedir resides here (default "~/.local/share/sindri/root")
-  -s, --state string           state directory for Sindri (default "~/.local/share/sindri/state")
+  -r, --root string            root directory for Sindri. Valheim savedir resides here (default "~/.local/share/sindri")
+  -s, --state string           state directory for Sindri (default "~/.local/share/sindri")
   -V, --verbose count          verbosity for Sindri
   -v, --version                version for sindri
       --world string           world for Valheim (default "sindri")
