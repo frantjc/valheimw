@@ -31,7 +31,7 @@ Flags:
 
 ### Root directory
 
-Sindri is tied to its root directory, meaning that if you stop Sindri and then start it back up with the same root directory, it will pick back up where it left off: same mod list, same world, etc. However, if any manual changes are made to this directory, all bets are off.
+Sindri is tied to its root directory, meaning that if you stop Sindri and then start it back up with the same root directory, it will pick back up where it left off: same mod list, same world, etc.
 
 By default, the root directory will be `$XDG_DATA_HOME/sindri` per the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html). This can be overridden with `--root`.
 
@@ -46,19 +46,6 @@ docker run \
     --publish 2456:2456/udp \
     ghcr.io/frantjc/sindri:1.0.0 \
         --root /var/lib/sindri
-```
-
-### State directory
-
-Sindri also uses a state directory (default `$XDG_RUNTIME_DIR/sindri`) for ephemeral data. This is not important to be kept the same nor does it need to be kept around.
-
-```sh
-docker run \
-    --volume $(pwd)/sindri:/var/lib/sindri \
-    --publish 2456:2456/udp \
-    ghcr.io/frantjc/sindri:1.0.0 \
-        --root /var/lib/sindri \
-        --state /run/sindri
 ```
 
 ### Mods
@@ -126,7 +113,7 @@ Valheim arguments other than `-savedir` (sourced from `--root`) and `-password` 
 ```sh
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
-    # Make sure to publish the correct port if you change
+    # Make sure to publish the correct port if you change it.
     --publish 3567:3567/udp \
     --publish 8080:8080 \
     --env VALHEIM_PASSWORD=mustbe5chars \
@@ -157,7 +144,7 @@ docker run \
 
 ### Make it faster
 
-Sindri can be made to start up faster on subsequent runs by skipping redownloading Valheim and/or mods by using `--airgap` or `--mods-only`.
+Sindri can be made to start up faster on subsequent runs by skipping redownloading Valheim and/or mods by using `--airgap` and/or `--mods-only`.
 
 ```sh
 docker run \
