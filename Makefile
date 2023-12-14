@@ -2,7 +2,7 @@ GO ?= go
 GOLANGCI-LINT ?= golangci-lint
 GIT ?= git
 
-all: generate
+all: fmt lint
 
 fmt generate:
 	@$(GO) $@ ./...

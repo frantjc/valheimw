@@ -56,6 +56,16 @@ func NewSindri() *cobra.Command {
 					return err
 				}
 
+				root, err := filepath.Abs(root)
+				if err != nil {
+					return err
+				}
+
+				state, err := filepath.Abs(state)
+				if err != nil {
+					return err
+				}
+
 				s, err := sindri.New(
 					valheim.SteamAppID,
 					valheim.BepInEx,
@@ -141,6 +151,7 @@ func NewSindri() *cobra.Command {
 						}
 
 						w.Header().Add("Content-Type", "application/json")
+
 						_, _ = w.Write([]byte(`{"seed":"` + seed + `"}`))
 					})
 					seedTxtHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -151,6 +162,7 @@ func NewSindri() *cobra.Command {
 						}
 
 						w.Header().Add("Content-Type", "text/plain")
+
 						_, _ = w.Write([]byte(seed))
 					})
 					seedHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -277,9 +289,9 @@ func NewSindri() *cobra.Command {
 	cmd.Flags().StringVar(&opts.Name, "name", "sindri", "name for Valheim")
 	cmd.Flags().BoolVar(&opts.Public, "public", false, "make Valheim server public")
 
-	cmd.Flags().IntSliceVar(&playerLists.Admins, "admin", nil, "Valheim server admin Steam IDs")
-	cmd.Flags().IntSliceVar(&playerLists.Banned, "ban", nil, "Valheim server banned Steam IDs")
-	cmd.Flags().IntSliceVar(&playerLists.Permitted, "permit", nil, "Valheim server permitted Steam IDs")
+	cmd.Flags().Int64SliceVar(&playerLists.AdminIDs, "admin", nil, "Valheim server admin Steam IDs")
+	cmd.Flags().Int64SliceVar(&playerLists.BannedIDs, "ban", nil, "Valheim server banned Steam IDs")
+	cmd.Flags().Int64SliceVar(&playerLists.PermittedIDs, "permit", nil, "Valheim server permitted Steam IDs")
 
 	cmd.Flags().StringVar(&beta, "beta", "", "Steam beta branch")
 	cmd.Flags().StringVar(&betaPassword, "beta-password", "", "Steam beta password")

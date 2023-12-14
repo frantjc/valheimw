@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	xos "github.com/frantjc/sindri/x/os"
@@ -38,10 +39,25 @@ func NewCommand(ctx context.Context, dir string, opts *Opts) (*exec.Cmd, error) 
 		)
 		// Potential BepInEx stuff
 		doorstopLibs     = filepath.Join(dir, "doorstop_libs")
-		libdoorstop      = filepath.Join(doorstopLibs, "libdoorstop_x86.so")
+		libdoorstop      = filepath.Join(doorstopLibs, "libdoorstop")
 		bepInExPreloader = filepath.Join(dir, "BepInEx/core/BepInEx.Preloader.dll")
 		unstrippedCorlib = filepath.Join(dir, "unstripped_corlib")
 	)
+
+	if strings.Contains(runtime.GOARCH, "amd64") {
+		libdoorstop += "_x64"
+	} else {
+		libdoorstop += "_x86"
+	}
+
+	switch runtime.GOOS {
+	case "windows":
+		return nil, fmt.Errorf("incompatible OS %s", runtime.GOOS)
+	case "darwin":
+		libdoorstop += ".dylib"
+	default:
+		libdoorstop += ".so"
+	}
 
 	cmd.Dir = dir
 	cmd.Env = os.Environ()

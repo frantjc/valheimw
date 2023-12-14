@@ -19,15 +19,15 @@ var (
 )
 
 type PlayerLists struct {
-	Admins    []int
-	Banned    []int
-	Permitted []int
+	AdminIDs     []int64
+	BannedIDs    []int64
+	PermittedIDs []int64
 }
 
-func ReadPlayerList(r io.Reader) ([]int, error) {
+func ReadPlayerList(r io.Reader) ([]int64, error) {
 	var (
-		scanner = bufio.NewScanner(r)
-		players = []int{}
+		scanner   = bufio.NewScanner(r)
+		playerIDs = []int64{}
 	)
 
 	for scanner.Scan() {
@@ -45,17 +45,17 @@ func ReadPlayerList(r io.Reader) ([]int, error) {
 			continue
 		}
 
-		if player, err := strconv.Atoi(line); err == nil {
-			players = append(players, player)
+		if playerID, err := strconv.Atoi(line); err == nil {
+			playerIDs = append(playerIDs, int64(playerID))
 		}
 	}
 
-	return players, scanner.Err()
+	return playerIDs, scanner.Err()
 }
 
-func WritePlayerList(w io.Writer, players []int) error {
-	for _, player := range players {
-		if _, err := fmt.Fprintln(w, player); err != nil {
+func WritePlayerList(w io.Writer, playerIDs []int64) error {
+	for _, playerID := range playerIDs {
+		if _, err := fmt.Fprintln(w, playerID); err != nil {
 			return err
 		}
 	}
@@ -64,34 +64,32 @@ func WritePlayerList(w io.Writer, players []int) error {
 }
 
 func WritePlayerLists(savedir string, playerLists *PlayerLists) error {
-	if err := WritePlayerListFile(filepath.Join(savedir, AdminListName), playerLists.Admins); err != nil {
+	if err := WritePlayerListFile(filepath.Join(savedir, AdminListName), playerLists.AdminIDs); err != nil {
 		return err
 	}
 
-	if err := WritePlayerListFile(filepath.Join(savedir, BannedListName), playerLists.Banned); err != nil {
+	if err := WritePlayerListFile(filepath.Join(savedir, BannedListName), playerLists.BannedIDs); err != nil {
 		return err
 	}
 
-	return WritePlayerListFile(filepath.Join(savedir, PermittedListName), playerLists.Permitted)
+	return WritePlayerListFile(filepath.Join(savedir, PermittedListName), playerLists.PermittedIDs)
 }
 
-func WritePlayerListFile(name string, players []int) error {
-	if len(players) > 0 {
+func WritePlayerListFile(name string, playerIDs []int64) error {
+	if len(playerIDs) > 0 {
 		f, err := os.Create(name)
 		if err != nil {
 			return err
 		}
 
-		currentPlayers, err := ReadPlayerList(f)
+		currentPlayerIDs, err := ReadPlayerList(f)
 		if err != nil {
 			return err
 		}
 
-		players = fn.Filter(players, func(player int, _ int) bool {
-			return !fn.Includes(currentPlayers, player)
-		})
+		playerIDs = fn.Unique(append(currentPlayerIDs, playerIDs...))
 
-		return WritePlayerList(f, players)
+		return WritePlayerList(f, playerIDs)
 	}
 
 	return nil

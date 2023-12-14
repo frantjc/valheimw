@@ -4,7 +4,6 @@ linters:
   enable:
     - dupl
     - exportloopref
-    - gocyclo
     - gosec
     - gocritic
     - importas

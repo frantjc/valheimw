@@ -400,11 +400,6 @@ func (s *Sindri) ExtractMods() (io.ReadCloser, error) {
 }
 
 func (s *Sindri) save() error {
-	var (
-		tmpDbPath    = filepath.Join(s.rootDir, "sindri.tmp.db")
-		metadataName = s.metadataName()
-	)
-
 	metadataLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
 		var (
 			buf = new(bytes.Buffer)
@@ -418,7 +413,7 @@ func (s *Sindri) save() error {
 
 		if err = tw.WriteHeader(&tar.Header{
 			Typeflag: tar.TypeReg,
-			Name:     metadataName,
+			Name:     s.metadataName(),
 			Size:     int64(len(b)),
 			Mode:     0644,
 			ModTime:  xtar.ModTime,
@@ -497,11 +492,7 @@ func (s *Sindri) save() error {
 		return err
 	}
 
-	if err := tarball.WriteToFile(tmpDbPath, name.MustParseReference(ImageRef), s.img); err != nil {
-		return err
-	}
-
-	if err := os.Rename(tmpDbPath, s.dbPath()); err != nil {
+	if err := tarball.WriteToFile(s.dbPath(), name.MustParseReference(ImageRef), s.img); err != nil {
 		return err
 	}
 
@@ -651,7 +642,6 @@ func (s *Sindri) modLayers() ([]v1.Layer, error) {
 	return filteredLayers, nil
 }
 
-//nolint:gocyclo
 func (s *Sindri) init(opts ...Opt) error {
 	switch {
 	case s.SteamAppID == "":

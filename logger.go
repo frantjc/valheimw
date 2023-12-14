@@ -19,8 +19,8 @@ type Logger = logr.Logger
 
 // WithLogger returns a Context from the parent Context
 // with the given Logger inside of it.
-func WithLogger(ctx context.Context, logger Logger) context.Context {
-	return logr.NewContext(ctx, logger)
+func WithLogger(ctx context.Context, log Logger) context.Context {
+	return logr.NewContext(ctx, log)
 }
 
 // LoggerFrom returns a Logger embedded within the given Context
@@ -46,7 +46,7 @@ var (
 )
 
 // LogExec redirects a command's stdout and stderr
-// to the Logger in the given Context.
+// to the given Logger.
 func LogExec(log Logger, cmd *exec.Cmd) {
 	log = log.WithValues("bin", cmd.Path)
 
