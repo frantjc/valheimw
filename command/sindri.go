@@ -32,6 +32,7 @@ func NewSindri() *cobra.Command {
 		mods, rmMods       []string
 		root, state        string
 		verbosity          int
+		playerLists        = &valheim.PlayerLists{}
 		opts               = &valheim.Opts{
 			Password: os.Getenv("VALHEIM_PASSWORD"),
 		}
@@ -68,13 +69,15 @@ func NewSindri() *cobra.Command {
 				}
 
 				if !airgap {
-					// Mods first because they're going to be smaller
-					// most of the time so it makes the whole process
-					// a bit faster.
-					log.Info("downloading mods " + strings.Join(mods, ", "))
+					if len(mods) > 0 {
+						// Mods first because they're going to be smaller
+						// most of the time so it makes the whole process
+						// a bit faster.
+						log.Info("downloading mods " + strings.Join(append(mods, s.BepInEx.Fullname()), ", "))
 
-					if err = s.AddMods(ctx, mods...); err != nil {
-						return err
+						if err = s.AddMods(ctx, mods...); err != nil {
+							return err
+						}
 					}
 
 					if !modsOnly {
@@ -96,12 +99,12 @@ func NewSindri() *cobra.Command {
 				}
 				defer moddedValheimTar.Close()
 
-				tmpDir, err := os.MkdirTemp(state, "")
+				runDir, err := os.MkdirTemp(state, "")
 				if err != nil {
 					return err
 				}
 
-				if err = xtar.Extract(moddedValheimTar, tmpDir); err != nil {
+				if err = xtar.Extract(moddedValheimTar, runDir); err != nil {
 					return err
 				}
 
@@ -109,27 +112,60 @@ func NewSindri() *cobra.Command {
 					return err
 				}
 
-				opts.SaveDir = filepath.Join(root, "valheim")
+				opts.SaveDir = root
 
-				subCmd, err := valheim.NewCommand(ctx, tmpDir, opts)
-				if err != nil {
+				if err := valheim.WritePlayerLists(opts.SaveDir, playerLists); err != nil {
 					return err
 				}
-				sindri.LogExec(ctx, subCmd)
-
-				l, err := net.Listen("tcp", addr)
-				if err != nil {
-					return err
-				}
-				defer l.Close()
 
 				errC := make(chan error, 1)
+
+				subCmd, err := valheim.NewCommand(ctx, runDir, opts)
+				if err != nil {
+					return err
+				}
+				sindri.LogExec(log, subCmd)
 
 				go func() {
 					log.Info("running Valheim")
 
 					errC <- subCmd.Run()
 				}()
+
+				var (
+					seedJSONHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						seed, err := valheim.ReadSeed(opts)
+						if err != nil {
+							w.WriteHeader(http.StatusInternalServerError)
+							return
+						}
+
+						_, _ = w.Write([]byte(`{"seed":"` + seed + `"}`))
+					})
+					seedTxtHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						seed, err := valheim.ReadSeed(opts)
+						if err != nil {
+							w.WriteHeader(http.StatusInternalServerError)
+							return
+						}
+
+						_, _ = w.Write([]byte(seed))
+					})
+					seedHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/json") {
+							seedJSONHandler(w, r)
+						} else if strings.Contains(accept, "text/plain") {
+							seedTxtHandler(w, r)
+						}
+
+						w.WriteHeader(http.StatusNotAcceptable)
+					})
+					paths = []ingress.Path{
+						ingress.ExactPath("/seed.json", seedJSONHandler),
+						ingress.ExactPath("/seed.txt", seedTxtHandler),
+						ingress.ExactPath("/seed", seedHdrHandler),
+					}
+				)
 
 				if packages, err := s.Mods(); len(packages) > 0 || err != nil {
 					var (
@@ -178,31 +214,40 @@ func NewSindri() *cobra.Command {
 
 							w.WriteHeader(http.StatusNotAcceptable)
 						})
-						srv = &http.Server{
-							Addr:              addr,
-							ReadHeaderTimeout: time.Second * 5,
-							BaseContext: func(_ net.Listener) context.Context {
-								return ctx
-							},
-							Handler: ingress.New(
-								ingress.ExactPath("/mods.tar", modTarHandler),
-								ingress.ExactPath("/mods.gz", modTgzHandler),
-								ingress.ExactPath("/mods.tgz", modTgzHandler),
-								ingress.ExactPath("/mods.tar.gz", modTgzHandler),
-								ingress.ExactPath("/mods", modHdrHandler),
-							),
-						}
 					)
 
-					go func() {
-						log.Info("listening on " + addr)
-
-						errC <- srv.Serve(l)
-					}()
-					defer srv.Close()
+					paths = append(paths,
+						ingress.ExactPath("/mods.tar", modTarHandler),
+						ingress.ExactPath("/mods.gz", modTgzHandler),
+						ingress.ExactPath("/mods.tgz", modTgzHandler),
+						ingress.ExactPath("/mods.tar.gz", modTgzHandler),
+						ingress.ExactPath("/mods", modHdrHandler),
+					)
 				} else {
 					log.Info("no mods, not serving mod download endpoints")
 				}
+
+				srv := &http.Server{
+					Addr:              addr,
+					ReadHeaderTimeout: time.Second * 5,
+					BaseContext: func(_ net.Listener) context.Context {
+						return ctx
+					},
+					Handler: ingress.New(paths...),
+				}
+
+				l, err := net.Listen("tcp", addr)
+				if err != nil {
+					return err
+				}
+				defer l.Close()
+
+				go func() {
+					log.Info("listening on " + addr)
+
+					errC <- srv.Serve(l)
+				}()
+				defer srv.Close()
 
 				return <-errC
 			},
@@ -229,6 +274,10 @@ func NewSindri() *cobra.Command {
 	cmd.Flags().StringVar(&opts.World, "world", "sindri", "world for Valheim")
 	cmd.Flags().StringVar(&opts.Name, "name", "sindri", "name for Valheim")
 	cmd.Flags().BoolVar(&opts.Public, "public", false, "make Valheim server public")
+
+	cmd.Flags().IntSliceVar(&playerLists.Admins, "admin", nil, "Valheim server admin Steam IDs")
+	cmd.Flags().IntSliceVar(&playerLists.Banned, "ban", nil, "Valheim server banned Steam IDs")
+	cmd.Flags().IntSliceVar(&playerLists.Permitted, "permit", nil, "Valheim server permitted Steam IDs")
 
 	cmd.Flags().StringVar(&beta, "beta", "", "Steam beta branch")
 	cmd.Flags().StringVar(&betaPassword, "beta-password", "", "Steam beta password")

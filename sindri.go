@@ -1,7 +1,9 @@
 package sindri
 
 import (
+	"archive/tar"
 	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,6 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"golang.org/x/exp/maps"
 )
 
 // ModMetadata stores metadata about an added mod.
@@ -33,8 +36,8 @@ type ModMetadata struct {
 // Metadata stores metadata about a downloaded game
 // and added mods.
 type Metadata struct {
-	BaseLayerDigest string                 `json:"baseLayerDigest,omitempty"`
-	Mods            map[string]ModMetadata `json:"mods,omitempty"`
+	SteamAppLayerDigest string                 `json:"steamAppLayerDigest,omitempty"`
+	Mods                map[string]ModMetadata `json:"mods,omitempty"`
 }
 
 // Sindri manages the files of a game and its mods.
@@ -85,6 +88,9 @@ const (
 	// stores a game and its mods' files at inside
 	// of it's .tar file.
 	ImageRef = "frantj.cc/sindri"
+	// MetadataLayerDigestLabel is the image config file label
+	// that Sindri stores Metadata at.
+	MetadataLayerDigestLabel = "cc.frantj.sindri.metadata-layer-digest"
 )
 
 // New creates a new Sindri instance with the given
@@ -127,14 +133,14 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 		return err
 	}
 
-	tmp, err := os.MkdirTemp(s.stateDir, "base-*")
+	steamcmdForceInstallDir, err := os.MkdirTemp(s.stateDir, "steamapp-*")
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmp)
+	defer os.RemoveAll(steamcmdForceInstallDir)
 
 	cmd, err := steamcmd.Run(ctx, &steamcmd.Commands{
-		ForceInstallDir: tmp,
+		ForceInstallDir: steamcmdForceInstallDir,
 		AppUpdate:       s.SteamAppID,
 		Beta:            s.beta,
 		BetaPassword:    s.betaPassword,
@@ -148,32 +154,32 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 		return err
 	}
 
-	layer, err := xcontainerregistry.LayerFromDir(tmp)
+	steamAppLayer, err := xcontainerregistry.LayerFromDir(steamcmdForceInstallDir)
 	if err != nil {
 		return err
 	}
 
-	digest, err := layer.Digest()
+	steamAppLayerDigest, err := steamAppLayer.Digest()
 	if err != nil {
 		return err
 	}
 
-	if s.metadata.BaseLayerDigest == digest.String() {
+	// If the digest hasn't changed, we don't need to spend
+	// any more time on this.
+	if s.metadata.SteamAppLayerDigest == steamAppLayerDigest.String() {
 		return nil
 	}
 
-	layers, err := s.modLayers()
+	modLayers, err := s.modLayers()
 	if err != nil {
 		return err
 	}
 
-	layers = append(layers, layer)
-
-	if s.img, err = mutate.AppendLayers(empty.Image, layers...); err != nil {
+	if s.img, err = mutate.AppendLayers(empty.Image, append(modLayers, steamAppLayer)...); err != nil {
 		return err
 	}
 
-	s.metadata.BaseLayerDigest = digest.String()
+	s.metadata.SteamAppLayerDigest = steamAppLayerDigest.String()
 
 	return s.save()
 }
@@ -181,6 +187,10 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 // AddMods installs or updates the given mods and their
 // dependencies using thunderstore.io.
 func (s *Sindri) AddMods(ctx context.Context, mods ...string) error {
+	if len(mods) == 0 {
+		return nil
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -206,35 +216,39 @@ func (s *Sindri) AddMods(ctx context.Context, mods ...string) error {
 			modKey      = pkg.Versionless().String()
 			modMeta, ok = s.metadata.Mods[modKey]
 		)
+		// If the mod version hasn't changed, no need to
+		// spend any time on it.
 		if ok {
 			if modMeta.Version == pkg.Version {
 				continue
 			}
 		}
 
-		tmpDir, err := os.MkdirTemp(s.stateDir, pkg.Fullname()+"-*")
+		pkgUnzipDir, err := os.MkdirTemp(s.stateDir, pkg.Fullname()+"-*")
 		if err != nil {
 			return err
 		}
-		defer os.RemoveAll(tmpDir)
+		defer os.RemoveAll(pkgUnzipDir)
 
-		if err := s.extractModsAndDependenciesToDir(ctx, tmpDir, mod); err != nil {
+		if err := s.extractModsAndDependenciesToDir(ctx, pkgUnzipDir, mod); err != nil {
 			return err
 		}
 
 		modLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-			return xtar.Compress(tmpDir), nil
+			return xtar.Compress(pkgUnzipDir), nil
 		})
 		if err != nil {
 			return err
 		}
 
-		digest, err := modLayer.Digest()
+		modLayerDigest, err := modLayer.Digest()
 		if err != nil {
 			return err
 		}
 
-		if ok && modMeta.LayerDigest == digest.String() {
+		// If the digest hasn't changed, we don't need to spend
+		// any more time on this.
+		if ok && modMeta.LayerDigest == modLayerDigest.String() {
 			continue
 		}
 
@@ -256,7 +270,7 @@ func (s *Sindri) AddMods(ctx context.Context, mods ...string) error {
 
 		s.metadata.Mods[modKey] = ModMetadata{
 			Version:     pkg.Version,
-			LayerDigest: digest.String(),
+			LayerDigest: modLayerDigest.String(),
 		}
 	}
 
@@ -269,6 +283,10 @@ func (s *Sindri) AddMods(ctx context.Context, mods ...string) error {
 
 // RemoveMods removes the given mods.
 func (s *Sindri) RemoveMods(_ context.Context, mods ...string) error {
+	if len(mods) == 0 {
+		return nil
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -312,6 +330,7 @@ func (s *Sindri) RemoveMods(_ context.Context, mods ...string) error {
 			}
 		}
 
+		delete(s.metadata.Mods, modKey)
 		layers = fileteredLayers
 	}
 
@@ -328,7 +347,37 @@ func (s *Sindri) Extract() (io.ReadCloser, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return mutate.Extract(s.img), nil
+	layers, err := s.img.Layers()
+	if err != nil {
+		return nil, err
+	}
+
+	configFile, err := s.img.ConfigFile()
+	if err != nil {
+		return nil, err
+	}
+
+	metadataLayerDigest := configFile.Config.Labels[MetadataLayerDigestLabel]
+
+	filteredLayers := []v1.Layer{}
+
+	for _, layer := range layers {
+		digest, err := layer.Digest()
+		if err != nil {
+			return nil, err
+		}
+
+		if digest.String() != metadataLayerDigest {
+			filteredLayers = append(filteredLayers, layer)
+		}
+	}
+
+	img, err := mutate.AppendLayers(empty.Image, filteredLayers...)
+	if err != nil {
+		return nil, err
+	}
+
+	return mutate.Extract(img), nil
 }
 
 // ExtractMods returns an io.ReadCloser containing a tarball
@@ -337,12 +386,12 @@ func (s *Sindri) ExtractMods() (io.ReadCloser, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	layers, err := s.modLayers()
+	modLayers, err := s.modLayers()
 	if err != nil {
 		return nil, err
 	}
 
-	img, err := mutate.AppendLayers(empty.Image, layers...)
+	img, err := mutate.AppendLayers(empty.Image, modLayers...)
 	if err != nil {
 		return nil, err
 	}
@@ -352,38 +401,116 @@ func (s *Sindri) ExtractMods() (io.ReadCloser, error) {
 
 func (s *Sindri) save() error {
 	var (
-		tmpTarPath = filepath.Join(s.rootDir, "sindri.tmp.tar")
-		tmpDbPath  = filepath.Join(s.rootDir, "sindri.tmp.json")
+		tmpDbPath    = filepath.Join(s.rootDir, "sindri.tmp.db")
+		metadataName = s.metadataName()
 	)
 
-	if err := tarball.WriteToFile(tmpTarPath, name.MustParseReference(ImageRef), s.img); err != nil {
-		return err
-	}
+	metadataLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+		var (
+			buf = new(bytes.Buffer)
+			tw  = tar.NewWriter(buf)
+		)
 
-	if err := os.Rename(tmpTarPath, s.tarPath()); err != nil {
-		return err
-	}
+		b, err := json.Marshal(s.metadata)
+		if err != nil {
+			return nil, err
+		}
 
-	img, err := tarball.ImageFromPath(s.tarPath(), s.tag)
+		if err = tw.WriteHeader(&tar.Header{
+			Typeflag: tar.TypeReg,
+			Name:     metadataName,
+			Size:     int64(len(b)),
+			Mode:     0644,
+			ModTime:  xtar.ModTime,
+		}); err != nil {
+			return nil, err
+		}
+
+		if _, err = tw.Write(b); err != nil {
+			return nil, err
+		}
+
+		if err = tw.Close(); err != nil {
+			return nil, err
+		}
+
+		return io.NopCloser(buf), nil
+	})
 	if err != nil {
 		return err
 	}
 
-	s.img = img
-
-	db, err := os.Create(tmpDbPath)
+	metadataLayerDigest, err := metadataLayer.Digest()
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
-	if err = json.NewEncoder(db).Encode(s.metadata); err != nil {
+	configFile, err := s.img.ConfigFile()
+	if err != nil {
+		configFile = &v1.ConfigFile{
+			Config: v1.Config{
+				Labels: make(map[string]string),
+			},
+		}
+	}
+
+	oldMetadataLayerDigest := configFile.Config.Labels[MetadataLayerDigestLabel]
+
+	layers, err := s.img.Layers()
+	if err != nil {
+		return err
+	}
+
+	newLayers := []v1.Layer{metadataLayer}
+
+	for _, layer := range layers {
+		digest, err := layer.Digest()
+		if err != nil {
+			return err
+		}
+
+		if digest.String() != oldMetadataLayerDigest {
+			newLayers = append(newLayers, layer)
+		}
+	}
+
+	if s.img, err = mutate.AppendLayers(empty.Image, newLayers...); err != nil {
+		return err
+	}
+
+	configFile, err = s.img.ConfigFile()
+	if err != nil {
+		configFile = &v1.ConfigFile{
+			Config: v1.Config{
+				Labels: make(map[string]string),
+			},
+		}
+	} else if configFile.Config.Labels == nil {
+		configFile.Config.Labels = map[string]string{}
+	}
+
+	maps.Copy(configFile.Config.Labels, map[string]string{
+		MetadataLayerDigestLabel: metadataLayerDigest.String(),
+	})
+
+	if s.img, err = mutate.ConfigFile(s.img, configFile); err != nil {
+		return err
+	}
+
+	if err := tarball.WriteToFile(tmpDbPath, name.MustParseReference(ImageRef), s.img); err != nil {
 		return err
 	}
 
 	if err := os.Rename(tmpDbPath, s.dbPath()); err != nil {
 		return err
 	}
+
+	img, err := tarball.ImageFromPath(s.dbPath(), s.tag)
+	if err != nil {
+		return err
+	}
+
+	s.img = img
 
 	return nil
 }
@@ -401,8 +528,6 @@ func (s *Sindri) extractModsAndDependenciesToDir(ctx context.Context, dir string
 
 			var (
 				modKey      = pkg.Versionless().String()
-				bepInExKey  = s.BepInEx.Versionless().String()
-				isBepInEx   = modKey == bepInExKey
 				modMeta, ok = s.metadata.Mods[modKey]
 			)
 			if ok {
@@ -422,6 +547,8 @@ func (s *Sindri) extractModsAndDependenciesToDir(ctx context.Context, dir string
 			}
 
 			var (
+				bepInExKey   = s.BepInEx.Versionless().String()
+				isBepInEx    = modKey == bepInExKey
 				dependencies = fn.Filter(pkgMeta.Dependencies, func(dependency string, _ int) bool {
 					return !strings.HasPrefix(dependency, bepInExKey)
 				})
@@ -488,11 +615,11 @@ func (s *Sindri) extractModsAndDependenciesToDir(ctx context.Context, dir string
 }
 
 func (s *Sindri) dbPath() string {
-	return filepath.Join(s.rootDir, "sindri.json")
+	return filepath.Join(s.rootDir, "sindri.db")
 }
 
-func (s *Sindri) tarPath() string {
-	return filepath.Join(s.rootDir, "sindri.tar")
+func (s *Sindri) metadataName() string {
+	return "sindri.metadata.json"
 }
 
 func (s *Sindri) modLayers() ([]v1.Layer, error) {
@@ -500,6 +627,13 @@ func (s *Sindri) modLayers() ([]v1.Layer, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	configFile, err := s.img.ConfigFile()
+	if err != nil {
+		return nil, err
+	}
+
+	metadataLayerDigest := configFile.Config.Labels[MetadataLayerDigestLabel]
 
 	filteredLayers := []v1.Layer{}
 
@@ -509,7 +643,7 @@ func (s *Sindri) modLayers() ([]v1.Layer, error) {
 			return nil, err
 		}
 
-		if digest.String() != s.metadata.BaseLayerDigest {
+		if d := digest.String(); d != s.metadata.SteamAppLayerDigest && d != metadataLayerDigest {
 			filteredLayers = append(filteredLayers, layer)
 		}
 	}
@@ -517,6 +651,7 @@ func (s *Sindri) modLayers() ([]v1.Layer, error) {
 	return filteredLayers, nil
 }
 
+//nolint:gocyclo
 func (s *Sindri) init(opts ...Opt) error {
 	switch {
 	case s.SteamAppID == "":
@@ -570,21 +705,65 @@ func (s *Sindri) init(opts ...Opt) error {
 		return err
 	}
 
-	if fi, err := os.Stat(s.tarPath()); err == nil && !fi.IsDir() && fi.Size() > 0 {
-		if s.img, err = tarball.ImageFromPath(s.tarPath(), s.tag); err != nil {
+	if fi, err := os.Stat(s.dbPath()); err == nil && !fi.IsDir() && fi.Size() > 0 {
+		if s.img, err = tarball.ImageFromPath(s.dbPath(), s.tag); err != nil {
 			return err
 		}
 	}
 
-	if fi, err := os.Stat(s.dbPath()); err == nil && !fi.IsDir() && fi.Size() > 0 {
-		db, err := os.Open(s.dbPath())
+	configFile, err := s.img.ConfigFile()
+	if err != nil {
+		return err
+	}
+
+	if metadataLayerDigest, ok := configFile.Config.Labels[MetadataLayerDigestLabel]; ok {
+		layers, err := s.img.Layers()
 		if err != nil {
 			return err
 		}
-		defer db.Close()
 
-		if err = json.NewDecoder(db).Decode(s.metadata); err != nil {
-			return err
+		var (
+			found        = false
+			metadataName = s.metadataName()
+		)
+
+		for _, layer := range layers {
+			digest, err := layer.Digest()
+			if err != nil {
+				return err
+			}
+
+			if digest.String() == metadataLayerDigest {
+				found = true
+
+				rc, err := layer.Uncompressed()
+				if err != nil {
+					return err
+				}
+				defer rc.Close()
+
+				metadataTarReader := tar.NewReader(rc)
+				for {
+					hdr, err := metadataTarReader.Next()
+					if err == io.EOF {
+						return fmt.Errorf("unable to find metadata in metadata layer")
+					} else if err != nil {
+						return err
+					}
+
+					if hdr.Name == metadataName {
+						if err = json.NewDecoder(metadataTarReader).Decode(s.metadata); err != nil {
+							return err
+						}
+
+						break
+					}
+				}
+			}
+		}
+
+		if !found {
+			return fmt.Errorf("unable to find metadata layer")
 		}
 	}
 

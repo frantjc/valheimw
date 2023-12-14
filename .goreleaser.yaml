@@ -20,7 +20,8 @@ changelog:
       - Merge remote-tracking branch
       - Merge branch
 dockers:
-  - image_templates:
+  - dockerfile: goreleaser.Dockerfile
+    image_templates:
       - ghcr.io/frantjc/sindri:{{ .Version }}
       - ghcr.io/frantjc/sindri:{{ .Major }}.{{ .Minor }}
       - ghcr.io/frantjc/sindri:{{ .Major }}

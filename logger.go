@@ -41,13 +41,14 @@ func NewLogger() Logger {
 	return zapr.NewLogger(zapLogger)
 }
 
+var (
+	errStderr = fmt.Errorf("stderr")
+)
+
 // LogExec redirects a command's stdout and stderr
 // to the Logger in the given Context.
-func LogExec(ctx context.Context, cmd *exec.Cmd) {
-	var (
-		log    = LoggerFrom(ctx).WithValues("bin", cmd.Path)
-		stderr = fmt.Errorf("stderr")
-	)
+func LogExec(log Logger, cmd *exec.Cmd) {
+	log = log.WithValues("bin", cmd.Path)
 
 	cmd.Stdout = xio.WriterFunc(func(b []byte) (int, error) {
 		for _, p := range bytes.Split(b, []byte("\n")) {
@@ -62,7 +63,7 @@ func LogExec(ctx context.Context, cmd *exec.Cmd) {
 	cmd.Stderr = xio.WriterFunc(func(b []byte) (int, error) {
 		for _, p := range bytes.Split(b, []byte("\n")) {
 			if len(p) > 0 {
-				log.Error(stderr, strings.TrimSpace(string(p)))
+				log.Error(errStderr, strings.TrimSpace(string(p)))
 			}
 		}
 
