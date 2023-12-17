@@ -4,29 +4,47 @@ Easily run a dedicated Valheim server with mods from [thunderstore.io](https://v
 
 ## usage
 
-```Usage:
+```sh
+Usage:
   sindri [flags]
 
 Flags:
-      --addr string            address for Sindri (default ":8080")
-      --admin ints             Valheim server admin Steam IDs
-      --airgap                 do not redownload Valheim or mods
-      --ban ints               Valheim server banned Steam IDs
-      --beta string            Steam beta branch
-      --beta-password string   Steam beta password
-  -h, --help                   help for sindri
-  -m, --mod stringArray        Thunderstore mods (case-sensitive)
-      --mods-only              do not redownload Valheim
-      --name string            name for Valheim (default "sindri")
-      --permit ints            Valheim server permitted Steam IDs
-      --port int               port for Valheim (0 to use default)
-      --public                 make Valheim server public
-      --rm stringArray         Thunderstore mods to remove (case-sensitive)
-  -r, --root string            root directory for Sindri. Valheim savedir resides here (default "~/.local/share/sindri")
-  -s, --state string           state directory for Sindri (default "~/.local/share/sindri")
-  -V, --verbose count          verbosity for Sindri
-  -v, --version                version for sindri
-      --world string           world for Valheim (default "sindri")
+      --addr string              address for sindri (default ":8080")
+      --admin int64Slice         Valheim server admin Steam IDs (default [])
+      --backup-long duration     Valheim server -backuplong duration
+      --backup-short duration    Valheim server -backupshort duration
+      --backups int              Valheim server -backup amount
+      --ban int64Slice           Valheim server banned Steam IDs (default [])
+      --beta string              Steam beta branch
+      --beta-password string     Steam beta password
+      --combat-modifier          Valheim server -modifier combat
+      --crossplay                Valheim server enable -crossplay
+      --death-penalty-modifier   Valheim server -modifier deathpenalty
+  -h, --help                     help for sindri
+      --instance-id string       Valheim server -instanceid
+  -m, --mod stringArray          Thunderstore mods (case-sensitive)
+      --mods-only                do not redownload Valheim
+      --name string              Valheim server -name (default "sindri")
+      --no-build-cost            Valheim server -setkey nobuildcost
+      --no-download              do not redownload Valheim or mods
+      --no-map                   Valheim server -setkey nomap
+      --passive-mobs             Valheim server -setkey passivemobs
+      --permit int64Slice        Valheim server permitted Steam IDs (default [])
+      --player-events            Valheim server -setkey playerevents
+      --port int                 Valheim server -port (0 to use default)
+      --portal-modifier          Valheim server -modifier portals
+      --preset                   Valheim server -preset
+      --public                   Valheim server make -public
+      --raid-modifier            Valheim server -modifier raids
+      --resource-modifier        Valheim server -modifier resources
+      --rm stringArray           Thunderstore mods to remove (case-sensitive)
+  -r, --root string              root directory for sindri (-savedir resides here) (default "~/.local/share/sindri")
+      --save-interval duration   Valheim server -saveinterval duration
+  -s, --state string             state directory for sindri (default "~/.local/share/sindri")
+  -V, --verbose count            verbosity for sindri
+  -v, --version                  version for sindri
+      --world string             Valheim server -world (default "sindri")
+
 ```
 
 ### Root directory
@@ -44,7 +62,7 @@ docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     # Valheim listens on port 2456 for UDP traffic by default.
     --publish 2456:2456/udp \
-    ghcr.io/frantjc/sindri:1.1.0 \
+    ghcr.io/frantjc/sindri:1.1.1 \
         --root /var/lib/sindri
 ```
 
@@ -58,7 +76,7 @@ The desired list of mods can be passed to Sindri via `--mod`.
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     --publish 2456:2456/udp \
-    ghcr.io/frantjc/sindri:1.1.0 \
+    ghcr.io/frantjc/sindri:1.1.1 \
         --root /var/lib/sindri \
         --mod Nexus/FarmGrid
 ```
@@ -69,7 +87,7 @@ Sindri can remove mods from a previous run as well.
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     --publish 2456:2456/udp \
-    ghcr.io/frantjc/sindri:1.1.0 \
+    ghcr.io/frantjc/sindri:1.1.1 \
         --root /var/lib/sindri \
         --rm Nexus/FarmGrid
 ```
@@ -83,7 +101,7 @@ docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     --publish 2456:2456/udp \
     --publish 8080:8080 \
-    ghcr.io/frantjc/sindri:1.1.0 \
+    ghcr.io/frantjc/sindri:1.1.1 \
         --root /var/lib/sindri
 ```
 
@@ -117,7 +135,7 @@ docker run \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
     --env VALHEIM_PASSWORD=atleast5chars \
-    ghcr.io/frantjc/sindri:1.1.0 \
+    ghcr.io/frantjc/sindri:1.1.1 \
         --root /var/lib/sindri \
         --mod Nexus/FarmGrid \
         --port 3567 \
@@ -136,7 +154,7 @@ docker run \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
     --env VALHEIM_PASSWORD=atleast5chars \
-    ghcr.io/frantjc/sindri:1.1.0 \
+    ghcr.io/frantjc/sindri:1.1.1 \
         --root /var/lib/sindri \
         --beta public-test \
         --beta-password yesimadebackups
@@ -144,7 +162,7 @@ docker run \
 
 ### Make it faster
 
-Sindri can be made to start up faster on subsequent runs by skipping redownloading Valheim and/or mods by using `--airgap` and/or `--mods-only`.
+Sindri can be made to start up faster on subsequent runs by skipping redownloading Valheim and/or mods by using `--no-download` and/or `--mods-only`.
 
 ```sh
 docker run \
@@ -152,7 +170,7 @@ docker run \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
     --env VALHEIM_PASSWORD=atleast5chars \
-    ghcr.io/frantjc/sindri:1.1.0 \
+    ghcr.io/frantjc/sindri:1.1.1 \
         --root /var/lib/sindri \
-        --airgap
+        --no-download
 ```

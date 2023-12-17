@@ -139,6 +139,7 @@ func NewSindri() *cobra.Command {
 					return err
 				}
 				sindri.LogExec(log, subCmd)
+				defer os.RemoveAll(runDir)
 
 				go func() {
 					log.Info("running Valheim")
@@ -291,19 +292,19 @@ func NewSindri() *cobra.Command {
 
 	cmd.Flags().StringVar(&addr, "addr", ":8080", "address for sindri")
 
-	cmd.Flags().StringVar(&opts.Name, "name", "sindri", "name for Valheim")
-	cmd.Flags().Int64Var(&opts.Port, "port", 0, "port for Valheim (0 to use default)")
-	cmd.Flags().StringVar(&opts.World, "world", "sindri", "world for Valheim")
-	cmd.Flags().BoolVar(&opts.Public, "public", false, "make Valheim server public")
+	cmd.Flags().StringVar(&opts.Name, "name", "sindri", "Valheim server -name")
+	cmd.Flags().Int64Var(&opts.Port, "port", 0, "Valheim server -port (0 to use default)")
+	cmd.Flags().StringVar(&opts.World, "world", "sindri", "Valheim server -world")
+	cmd.Flags().BoolVar(&opts.Public, "public", false, "Valheim server make -public")
 
-	cmd.Flags().DurationVar(&opts.SaveInterval, "save-interval", 0, "Valheim world save duration")
-	cmd.Flags().Int64Var(&opts.Backups, "backups", 0, "Valheim world backup amount")
-	cmd.Flags().DurationVar(&opts.BackupShort, "backup-short", 0, "Valheim world backup short")
-	cmd.Flags().DurationVar(&opts.BackupLong, "backup-long", 0, "Valheim world backup long")
+	cmd.Flags().DurationVar(&opts.SaveInterval, "save-interval", 0, "Valheim server -saveinterval duration")
+	cmd.Flags().Int64Var(&opts.Backups, "backups", 0, "Valheim server -backup amount")
+	cmd.Flags().DurationVar(&opts.BackupShort, "backup-short", 0, "Valheim server -backupshort duration")
+	cmd.Flags().DurationVar(&opts.BackupLong, "backup-long", 0, "Valheim server -backuplong duration")
 
-	cmd.Flags().BoolVar(&opts.Crossplay, "crossplay", false, "enable crossplay on Valheim server")
+	cmd.Flags().BoolVar(&opts.Crossplay, "crossplay", false, "Valheim server enable -crossplay")
 
-	cmd.Flags().StringVar(&opts.InstanceID, "instance-id", "", "Valheim server instance ID")
+	cmd.Flags().StringVar(&opts.InstanceID, "instance-id", "", "Valheim server -instanceid")
 
 	cmd.Flags().Var(
 		anyflag.NewValue(
@@ -400,10 +401,10 @@ func NewSindri() *cobra.Command {
 		"Valheim server -modifier portals",
 	)
 
-	cmd.Flags().BoolVar(&opts.NoBuildCost, "no-build-cost", false, "Valheim server setkey nobuildcost")
-	cmd.Flags().BoolVar(&opts.PlayerEvents, "player-events", false, "Valheim server setkey playerevents")
-	cmd.Flags().BoolVar(&opts.PassiveMobs, "passive-mobs", false, "Valheim server setkey passivemobs")
-	cmd.Flags().BoolVar(&opts.NoMap, "no-map", false, "Valheim server setkey nomap")
+	cmd.Flags().BoolVar(&opts.NoBuildCost, "no-build-cost", false, "Valheim server -setkey nobuildcost")
+	cmd.Flags().BoolVar(&opts.PlayerEvents, "player-events", false, "Valheim server -setkey playerevents")
+	cmd.Flags().BoolVar(&opts.PassiveMobs, "passive-mobs", false, "Valheim server -setkey passivemobs")
+	cmd.Flags().BoolVar(&opts.NoMap, "no-map", false, "Valheim server -setkey nomap")
 
 	cmd.Flags().Int64SliceVar(&playerLists.AdminIDs, "admin", nil, "Valheim server admin Steam IDs")
 	cmd.Flags().Int64SliceVar(&playerLists.BannedIDs, "ban", nil, "Valheim server banned Steam IDs")
