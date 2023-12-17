@@ -8,6 +8,10 @@ import (
 
 type Preset string
 
+func (p Preset) String() string {
+	return string(p)
+}
+
 var (
 	PresetNormal    Preset = "normal"
 	PresetCasual    Preset = "casual"
@@ -20,6 +24,10 @@ var (
 
 type CombatModifier string
 
+func (m CombatModifier) String() string {
+	return string(m)
+}
+
 var (
 	CombatModifierVeryEasy CombatModifier = "veryeasy"
 	CombatModifierEasy     CombatModifier = "easy"
@@ -28,6 +36,10 @@ var (
 )
 
 type DeathPenaltyModifier string
+
+func (m DeathPenaltyModifier) String() string {
+	return string(m)
+}
 
 var (
 	DeathPenaltyModifierCasual   DeathPenaltyModifier = "casual"
@@ -39,15 +51,23 @@ var (
 
 type ResourceModifier string
 
+func (m ResourceModifier) String() string {
+	return string(m)
+}
+
 var (
-	ResourceModifierMuchLess DeathPenaltyModifier = "muchless"
-	ResourceModifierLess     DeathPenaltyModifier = "less"
-	ResourceModifierMore     DeathPenaltyModifier = "more"
-	ResourceModifierMuchMore DeathPenaltyModifier = "muchmore"
-	ResourceModifierMost     DeathPenaltyModifier = "most"
+	ResourceModifierMuchLess ResourceModifier = "muchless"
+	ResourceModifierLess     ResourceModifier = "less"
+	ResourceModifierMore     ResourceModifier = "more"
+	ResourceModifierMuchMore ResourceModifier = "muchmore"
+	ResourceModifierMost     ResourceModifier = "most"
 )
 
 type RaidModifier string
+
+func (m RaidModifier) String() string {
+	return string(m)
+}
 
 var (
 	RaidModifierNone     RaidModifier = "none"
@@ -58,6 +78,10 @@ var (
 )
 
 type PortalModifier string
+
+func (m PortalModifier) String() string {
+	return string(m)
+}
 
 var (
 	PortalModifierCasual   PortalModifier = "casual"

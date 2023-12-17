@@ -20,10 +20,11 @@ import (
 	"github.com/frantjc/sindri/thunderstore"
 	"github.com/frantjc/sindri/valheim"
 	xtar "github.com/frantjc/sindri/x/tar"
+	"github.com/mmatczuk/anyflag"
 	"github.com/spf13/cobra"
 )
 
-// NewSindri is the entrypoint for Sindri.
+// NewSindri is the entrypoint for `sindri`.
 func NewSindri() *cobra.Command {
 	var (
 		addr                 string
@@ -80,9 +81,8 @@ func NewSindri() *cobra.Command {
 
 				if !noDownload {
 					if len(mods) > 0 {
-						// Mods first because they're going to be smaller
-						// most of the time so it makes the whole process
-						// a bit faster.
+						// Mods first because they're going to be smaller most of
+						// the time so it makes the whole process a bit faster.
 						log.Info("downloading mods " + strings.Join(append(mods, s.BepInEx.Fullname()), ", "))
 
 						if err = s.AddMods(ctx, mods...); err != nil {
@@ -99,8 +99,12 @@ func NewSindri() *cobra.Command {
 					}
 				}
 
-				if err = s.RemoveMods(ctx, rmMods...); err != nil {
-					return err
+				if len(rmMods) > 0 {
+					log.Info("removing mods " + strings.Join(rmMods, ", "))
+
+					if err = s.RemoveMods(ctx, rmMods...); err != nil {
+						return err
+					}
 				}
 
 				moddedValheimTar, err := s.Extract()
@@ -300,6 +304,101 @@ func NewSindri() *cobra.Command {
 	cmd.Flags().BoolVar(&opts.Crossplay, "crossplay", false, "enable crossplay on Valheim server")
 
 	cmd.Flags().StringVar(&opts.InstanceID, "instance-id", "", "Valheim server instance ID")
+
+	cmd.Flags().Var(
+		anyflag.NewValue(
+			"",
+			&opts.Preset,
+			anyflag.EnumParser(
+				valheim.PresetCasual,
+				valheim.PresetEasy,
+				valheim.PresetNormal,
+				valheim.PresetHard,
+				valheim.PresetHardcore,
+				valheim.PresetImmersive,
+				valheim.PresetHammer,
+			),
+		),
+		"preset",
+		"Valheim server -preset",
+	)
+
+	cmd.Flags().Var(
+		anyflag.NewValue(
+			"",
+			&opts.CombatModifier,
+			anyflag.EnumParser(
+				valheim.CombatModifierVeryEasy,
+				valheim.CombatModifierEasy,
+				valheim.CombatModifierHard,
+				valheim.CombatModifierVeryHard,
+			),
+		),
+		"combat-modifier",
+		"Valheim server -modifier combat",
+	)
+
+	cmd.Flags().Var(
+		anyflag.NewValue(
+			"",
+			&opts.DeathPenaltyModifier,
+			anyflag.EnumParser(
+				valheim.DeathPenaltyModifierCasual,
+				valheim.DeathPenaltyModifierVeryEasy,
+				valheim.DeathPenaltyModifierEasy,
+				valheim.DeathPenaltyModifierHard,
+				valheim.DeathPenaltyModifierHardcore,
+			),
+		),
+		"death-penalty-modifier",
+		"Valheim server -modifier deathpenalty",
+	)
+
+	cmd.Flags().Var(
+		anyflag.NewValue(
+			"",
+			&opts.ResourceModifier,
+			anyflag.EnumParser(
+				valheim.ResourceModifierMuchLess,
+				valheim.ResourceModifierLess,
+				valheim.ResourceModifierMore,
+				valheim.ResourceModifierMuchMore,
+				valheim.ResourceModifierMost,
+			),
+		),
+		"resource-modifier",
+		"Valheim server -modifier resources",
+	)
+
+	cmd.Flags().Var(
+		anyflag.NewValue(
+			"",
+			&opts.RaidModifier,
+			anyflag.EnumParser(
+				valheim.RaidModifierNone,
+				valheim.RaidModifierMuchLess,
+				valheim.RaidModifierLess,
+				valheim.RaidModifierMore,
+				valheim.RaidModifierMuchMore,
+			),
+		),
+		"raid-modifier",
+		"Valheim server -modifier raids",
+	)
+
+	cmd.Flags().Var(
+		anyflag.NewValue(
+			"",
+			&opts.PortalModifier,
+			anyflag.EnumParser(
+				valheim.PortalModifierCasual,
+				valheim.PortalModifierHard,
+				valheim.PortalModifierVeryHard,
+			),
+		),
+		"portal-modifier",
+		"Valheim server -modifier portals",
+	)
 
 	cmd.Flags().BoolVar(&opts.NoBuildCost, "no-build-cost", false, "Valheim server setkey nobuildcost")
 	cmd.Flags().BoolVar(&opts.PlayerEvents, "player-events", false, "Valheim server setkey playerevents")
