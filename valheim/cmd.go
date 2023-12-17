@@ -26,6 +26,9 @@ func NewCommand(ctx context.Context, dir string, opts *Opts) (*exec.Cmd, error) 
 			filepath.Join(dir, "valheim_server.x86_64"),
 			append(
 				opts.ToArgs(),
+				// Unclear if these do anything or where I got them,
+				// but once upon a time I was lead to believe that
+				// they improve performance.
 				"-batchmode",
 				"-nographics",
 				"-screen-width", "640",

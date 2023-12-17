@@ -26,14 +26,14 @@ import (
 // NewSindri is the entrypoint for Sindri.
 func NewSindri() *cobra.Command {
 	var (
-		addr               string
-		airgap, modsOnly   bool
-		beta, betaPassword string
-		mods, rmMods       []string
-		root, state        string
-		verbosity          int
-		playerLists        = &valheim.PlayerLists{}
-		opts               = &valheim.Opts{
+		addr                 string
+		noDownload, modsOnly bool
+		beta, betaPassword   string
+		mods, rmMods         []string
+		root, state          string
+		verbosity            int
+		playerLists          = &valheim.PlayerLists{}
+		opts                 = &valheim.Opts{
 			Password: os.Getenv("VALHEIM_PASSWORD"),
 		}
 		cmd = &cobra.Command{
@@ -78,7 +78,7 @@ func NewSindri() *cobra.Command {
 					return err
 				}
 
-				if !airgap {
+				if !noDownload {
 					if len(mods) > 0 {
 						// Mods first because they're going to be smaller
 						// most of the time so it makes the whole process
@@ -269,25 +269,42 @@ func NewSindri() *cobra.Command {
 	)
 
 	cmd.SetVersionTemplate("{{ .Name }}{{ .Version }} " + runtime.Version() + "\n")
-	cmd.Flags().CountVarP(&verbosity, "verbose", "V", "verbosity for Sindri")
+	cmd.Flags().CountVarP(&verbosity, "verbose", "V", "verbosity for sindri")
 
-	cmd.Flags().StringVarP(&root, "root", "r", filepath.Join(xdg.DataHome, "sindri"), "root directory for Sindri. Valheim savedir resides here")
+	cmd.Flags().StringVarP(&root, "root", "r", filepath.Join(xdg.DataHome, "sindri"), "root directory for sindri (-savedir resides here)")
 	_ = cmd.MarkFlagDirname("root")
 
-	cmd.Flags().StringVarP(&state, "state", "s", filepath.Join(xdg.RuntimeDir, "sindri"), "state directory for Sindri")
+	cmd.Flags().StringVarP(&state, "state", "s", filepath.Join(xdg.RuntimeDir, "sindri"), "state directory for sindri")
 	_ = cmd.MarkFlagDirname("state")
 
 	cmd.Flags().StringArrayVarP(&mods, "mod", "m", nil, "Thunderstore mods (case-sensitive)")
 	cmd.Flags().StringArrayVar(&rmMods, "rm", nil, "Thunderstore mods to remove (case-sensitive)")
 	cmd.Flags().BoolVar(&modsOnly, "mods-only", false, "do not redownload Valheim")
-	cmd.Flags().BoolVar(&airgap, "airgap", false, "do not redownload Valheim or mods")
+	cmd.Flags().BoolVar(&noDownload, "airgap", false, "do not redownload Valheim or mods")
+	cmd.Flags().BoolVar(&noDownload, "no-download", false, "do not redownload Valheim or mods")
+	_ = cmd.Flags().MarkHidden("airgap")
+	_ = cmd.Flags().MarkDeprecated("airgap", "please use --no-download instead of --airgap")
 
-	cmd.Flags().StringVar(&addr, "addr", ":8080", "address for Sindri")
+	cmd.Flags().StringVar(&addr, "addr", ":8080", "address for sindri")
 
+	cmd.Flags().StringVar(&opts.Name, "name", "sindri", "name for Valheim")
 	cmd.Flags().Int64Var(&opts.Port, "port", 0, "port for Valheim (0 to use default)")
 	cmd.Flags().StringVar(&opts.World, "world", "sindri", "world for Valheim")
-	cmd.Flags().StringVar(&opts.Name, "name", "sindri", "name for Valheim")
 	cmd.Flags().BoolVar(&opts.Public, "public", false, "make Valheim server public")
+
+	cmd.Flags().DurationVar(&opts.SaveInterval, "save-interval", 0, "Valheim world save duration")
+	cmd.Flags().Int64Var(&opts.Backups, "backups", 0, "Valheim world backup amount")
+	cmd.Flags().DurationVar(&opts.BackupShort, "backup-short", 0, "Valheim world backup short")
+	cmd.Flags().DurationVar(&opts.BackupLong, "backup-long", 0, "Valheim world backup long")
+
+	cmd.Flags().BoolVar(&opts.Crossplay, "crossplay", false, "enable crossplay on Valheim server")
+
+	cmd.Flags().StringVar(&opts.InstanceID, "instance-id", "", "Valheim server instance ID")
+
+	cmd.Flags().BoolVar(&opts.NoBuildCost, "no-build-cost", false, "Valheim server setkey nobuildcost")
+	cmd.Flags().BoolVar(&opts.PlayerEvents, "player-events", false, "Valheim server setkey playerevents")
+	cmd.Flags().BoolVar(&opts.PassiveMobs, "passive-mobs", false, "Valheim server setkey passivemobs")
+	cmd.Flags().BoolVar(&opts.NoMap, "no-map", false, "Valheim server setkey nomap")
 
 	cmd.Flags().Int64SliceVar(&playerLists.AdminIDs, "admin", nil, "Valheim server admin Steam IDs")
 	cmd.Flags().Int64SliceVar(&playerLists.BannedIDs, "ban", nil, "Valheim server banned Steam IDs")
