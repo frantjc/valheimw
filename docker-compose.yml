@@ -12,7 +12,7 @@ services:
       - ./hack/run/sindri:/run/sindri
     command:
       - -VV
-      # - --airgap
+      # - --no-download
       - --state=/run/sindri
       - --root=/var/lib/sindri
       # - --mod=Nexus/FarmGrid
