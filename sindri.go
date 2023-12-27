@@ -341,9 +341,9 @@ func (s *Sindri) RemoveMods(_ context.Context, mods ...string) error {
 	return s.save()
 }
 
-// Extract returns an io.ReadCloser containing a tarball
-// containing the files of the game and its mods.
-func (s *Sindri) Extract() (io.ReadCloser, error) {
+// Extract returns an io.ReadCloser of a tarball
+// containing the files of the game and the given mods.
+func (s *Sindri) Extract(mods ...string) (io.ReadCloser, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -352,12 +352,18 @@ func (s *Sindri) Extract() (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	configFile, err := s.img.ConfigFile()
-	if err != nil {
-		return nil, err
-	}
+	extractLayerDigests := []string{s.metadata.SteamAppLayerDigest}
 
-	metadataLayerDigest := configFile.Config.Labels[MetadataLayerDigestLabel]
+	for _, mod := range mods {
+		pkg, err := thunderstore.ParsePackage(mod)
+		if err != nil {
+			return nil, err
+		}
+
+		if modMeta, ok := s.metadata.Mods[pkg.Versionless().String()]; ok {
+			extractLayerDigests = append(extractLayerDigests, modMeta.LayerDigest)
+		}
+	}
 
 	filteredLayers := []v1.Layer{}
 
@@ -367,7 +373,7 @@ func (s *Sindri) Extract() (io.ReadCloser, error) {
 			return nil, err
 		}
 
-		if digest.String() != metadataLayerDigest {
+		if fn.Includes(extractLayerDigests, digest.String()) {
 			filteredLayers = append(filteredLayers, layer)
 		}
 	}
@@ -382,11 +388,11 @@ func (s *Sindri) Extract() (io.ReadCloser, error) {
 
 // ExtractMods returns an io.ReadCloser containing a tarball
 // containing the files just the game's mods.
-func (s *Sindri) ExtractMods() (io.ReadCloser, error) {
+func (s *Sindri) ExtractMods(mods ...string) (io.ReadCloser, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	modLayers, err := s.modLayers()
+	modLayers, err := s.modLayers(mods...)
 	if err != nil {
 		return nil, err
 	}
@@ -458,15 +464,19 @@ func (s *Sindri) save() error {
 
 	newLayers := []v1.Layer{metadataLayer}
 
-	for _, layer := range layers {
-		digest, err := layer.Digest()
-		if err != nil {
-			return err
-		}
+	if oldMetadataLayerDigest != "" {
+		for _, layer := range layers {
+			digest, err := layer.Digest()
+			if err != nil {
+				return err
+			}
 
-		if digest.String() != oldMetadataLayerDigest {
-			newLayers = append(newLayers, layer)
+			if digest.String() != oldMetadataLayerDigest {
+				newLayers = append(newLayers, layer)
+			}
 		}
+	} else {
+		newLayers = append(newLayers, layers...)
 	}
 
 	if s.img, err = mutate.AppendLayers(empty.Image, newLayers...); err != nil {
@@ -492,7 +502,11 @@ func (s *Sindri) save() error {
 		return err
 	}
 
-	if err := tarball.WriteToFile(s.dbPath(), name.MustParseReference(ImageRef), s.img); err != nil {
+	if err := tarball.WriteToFile(s.tmpDbPath(), name.MustParseReference(ImageRef), s.img); err != nil {
+		return err
+	}
+
+	if err = os.Rename(s.tmpDbPath(), s.dbPath()); err != nil {
 		return err
 	}
 
@@ -609,22 +623,32 @@ func (s *Sindri) dbPath() string {
 	return filepath.Join(s.rootDir, "sindri.db")
 }
 
+func (s *Sindri) tmpDbPath() string {
+	return filepath.Join(s.rootDir, "sindri.tmp.db")
+}
+
 func (s *Sindri) metadataName() string {
 	return "sindri.metadata.json"
 }
 
-func (s *Sindri) modLayers() ([]v1.Layer, error) {
+func (s *Sindri) modLayers(mods ...string) ([]v1.Layer, error) {
 	layers, err := s.img.Layers()
 	if err != nil {
 		return nil, err
 	}
 
-	configFile, err := s.img.ConfigFile()
-	if err != nil {
-		return nil, err
-	}
+	extractLayerDigests := []string{}
 
-	metadataLayerDigest := configFile.Config.Labels[MetadataLayerDigestLabel]
+	for _, mod := range mods {
+		pkg, err := thunderstore.ParsePackage(mod)
+		if err != nil {
+			return nil, err
+		}
+
+		if modMeta, ok := s.metadata.Mods[pkg.Versionless().String()]; ok {
+			extractLayerDigests = append(extractLayerDigests, modMeta.LayerDigest)
+		}
+	}
 
 	filteredLayers := []v1.Layer{}
 
@@ -634,7 +658,7 @@ func (s *Sindri) modLayers() ([]v1.Layer, error) {
 			return nil, err
 		}
 
-		if d := digest.String(); d != s.metadata.SteamAppLayerDigest && d != metadataLayerDigest {
+		if fn.Includes(extractLayerDigests, digest.String()) {
 			filteredLayers = append(filteredLayers, layer)
 		}
 	}

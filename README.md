@@ -62,7 +62,7 @@ docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     # Valheim listens on port 2456 for UDP traffic by default.
     --publish 2456:2456/udp \
-    ghcr.io/frantjc/sindri:1.1.1 \
+    ghcr.io/frantjc/sindri:1.2.0 \
         --root /var/lib/sindri
 ```
 
@@ -76,20 +76,9 @@ The desired list of mods can be passed to Sindri via `--mod`.
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     --publish 2456:2456/udp \
-    ghcr.io/frantjc/sindri:1.1.1 \
+    ghcr.io/frantjc/sindri:1.2.0 \
         --root /var/lib/sindri \
         --mod Nexus/FarmGrid
-```
-
-Sindri can remove mods from a previous run as well.
-
-```sh
-docker run \
-    --volume $(pwd)/sindri:/var/lib/sindri \
-    --publish 2456:2456/udp \
-    ghcr.io/frantjc/sindri:1.1.1 \
-        --root /var/lib/sindri \
-        --rm Nexus/FarmGrid
 ```
 
 ### Distributing mods to clients
@@ -101,7 +90,7 @@ docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     --publish 2456:2456/udp \
     --publish 8080:8080 \
-    ghcr.io/frantjc/sindri:1.1.1 \
+    ghcr.io/frantjc/sindri:1.2.0 \
         --root /var/lib/sindri
 ```
 
@@ -135,7 +124,7 @@ docker run \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
     --env VALHEIM_PASSWORD=atleast5chars \
-    ghcr.io/frantjc/sindri:1.1.1 \
+    ghcr.io/frantjc/sindri:1.2.0 \
         --root /var/lib/sindri \
         --mod Nexus/FarmGrid \
         --port 3567 \
@@ -154,7 +143,7 @@ docker run \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
     --env VALHEIM_PASSWORD=atleast5chars \
-    ghcr.io/frantjc/sindri:1.1.1 \
+    ghcr.io/frantjc/sindri:1.2.0 \
         --root /var/lib/sindri \
         --beta public-test \
         --beta-password yesimadebackups
@@ -170,7 +159,7 @@ docker run \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
     --env VALHEIM_PASSWORD=atleast5chars \
-    ghcr.io/frantjc/sindri:1.1.1 \
+    ghcr.io/frantjc/sindri:1.2.0 \
         --root /var/lib/sindri \
         --no-download
 ```

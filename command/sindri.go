@@ -3,6 +3,7 @@ package command
 import (
 	"compress/gzip"
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -107,7 +108,7 @@ func NewSindri() *cobra.Command {
 					}
 				}
 
-				moddedValheimTar, err := s.Extract()
+				moddedValheimTar, err := s.Extract(mods...)
 				if err != nil {
 					return err
 				}
@@ -132,7 +133,7 @@ func NewSindri() *cobra.Command {
 					return err
 				}
 
-				errC := make(chan error, 1)
+				errC := make(chan error)
 
 				subCmd, err := valheim.NewCommand(ctx, runDir, opts)
 				if err != nil {
@@ -144,7 +145,11 @@ func NewSindri() *cobra.Command {
 				go func() {
 					log.Info("running Valheim")
 
-					errC <- subCmd.Run()
+					if err := subCmd.Run(); err != nil {
+						errC <- fmt.Errorf("valheim: %w", err)
+					} else {
+						errC <- nil
+					}
 				}()
 
 				var (
@@ -186,10 +191,10 @@ func NewSindri() *cobra.Command {
 					}
 				)
 
-				if packages, err := s.Mods(); len(packages) > 0 || err != nil {
+				if len(mods) > 0 {
 					var (
 						modTarHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							rc, err := s.ExtractMods()
+							rc, err := s.ExtractMods(mods...)
 							if err != nil {
 								w.WriteHeader(http.StatusInternalServerError)
 								return
@@ -203,7 +208,7 @@ func NewSindri() *cobra.Command {
 							}
 						})
 						modTgzHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							rc, err := s.ExtractMods()
+							rc, err := s.ExtractMods(mods...)
 							if err != nil {
 								w.WriteHeader(http.StatusInternalServerError)
 								return
@@ -264,7 +269,7 @@ func NewSindri() *cobra.Command {
 				go func() {
 					log.Info("listening on " + addr)
 
-					errC <- srv.Serve(l)
+					errC <- fmt.Errorf("sindri: %s", srv.Serve(l))
 				}()
 				defer srv.Close()
 
