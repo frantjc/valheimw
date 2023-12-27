@@ -7,7 +7,7 @@ require (
 	github.com/frantjc/go-error-code v0.2.0
 	github.com/frantjc/go-fn v0.3.0
 	github.com/frantjc/go-ingress v0.1.0
-	github.com/go-logr/logr v1.3.0
+	github.com/go-logr/logr v1.4.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/google/go-containerregistry v0.17.0
 	github.com/mmatczuk/anyflag v0.0.0-20231026075539-5f42d2f36d96
