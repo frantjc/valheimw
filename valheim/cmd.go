@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	xos "github.com/frantjc/sindri/x/os"
+	xos "github.com/frantjc/x/os"
 )
 
 // NewCommand builds an *exec.Cmd for the Valheim executable
@@ -36,7 +36,7 @@ func NewCommand(ctx context.Context, dir string, opts *Opts) (*exec.Cmd, error) 
 				"-screen-quality", "Fastest",
 			)...,
 		)
-		ldLibraryPath = xos.MakePath(
+		ldLibraryPath = xos.JoinPath(
 			os.Getenv("LD_LIBRARY_PATH"),
 			filepath.Join(dir, "linux64"),
 		)
@@ -72,13 +72,13 @@ func NewCommand(ctx context.Context, dir string, opts *Opts) (*exec.Cmd, error) 
 			"DOORSTOP_ENABLED=TRUE",
 			fmt.Sprintf("DYLD_LIBRARY_PATH=%s", doorstopLibs),
 		)
-		ldLibraryPath = xos.MakePath(ldLibraryPath, doorstopLibs)
+		ldLibraryPath = xos.JoinPath(ldLibraryPath, doorstopLibs)
 	}
 
 	if _, err := os.Stat(libdoorstop); err == nil {
 		cmd.Env = append(
 			cmd.Env,
-			fmt.Sprintf("LD_PRELOAD=%s", xos.MakePath(libdoorstop, os.Getenv("LD_PRELOAD"))),
+			fmt.Sprintf("LD_PRELOAD=%s", xos.JoinPath(libdoorstop, os.Getenv("LD_PRELOAD"))),
 			fmt.Sprintf("DYLD_INSERT_LIBRARIES=%s", libdoorstop),
 		)
 	}

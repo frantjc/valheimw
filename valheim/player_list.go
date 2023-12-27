@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/frantjc/go-fn"
+	xslice "github.com/frantjc/x/slice"
 )
 
 var (
@@ -87,7 +87,7 @@ func WritePlayerListFile(name string, playerIDs []int64) error {
 			return err
 		}
 
-		playerIDs = fn.Unique(append(currentPlayerIDs, playerIDs...))
+		playerIDs = xslice.Unique(append(currentPlayerIDs, playerIDs...))
 
 		return WritePlayerList(f, playerIDs)
 	}

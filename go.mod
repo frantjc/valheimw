@@ -1,12 +1,11 @@
 module github.com/frantjc/sindri
 
-go 1.21
+go 1.21.4
 
 require (
 	github.com/adrg/xdg v0.4.0
-	github.com/frantjc/go-error-code v0.2.0
-	github.com/frantjc/go-fn v0.3.0
-	github.com/frantjc/go-ingress v0.1.0
+	github.com/frantjc/go-ingress v0.1.1
+	github.com/frantjc/x v0.0.0-20231227080902-6c5dc9b6f03f
 	github.com/go-logr/logr v1.4.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/google/go-containerregistry v0.17.0

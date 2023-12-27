@@ -3,7 +3,7 @@ package xcontainerregistry
 import (
 	"io"
 
-	xtar "github.com/frantjc/sindri/x/tar"
+	xtar "github.com/frantjc/x/archive/tar"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )

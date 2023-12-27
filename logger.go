@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	xio "github.com/frantjc/sindri/x/io"
+	xio "github.com/frantjc/x/io"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"

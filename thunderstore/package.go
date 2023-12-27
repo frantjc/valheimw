@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/frantjc/go-fn"
+	xslice "github.com/frantjc/x/slice"
 )
 
 type Package struct {
@@ -20,7 +20,7 @@ func (p *Package) Versionless() *Package {
 
 func (p *Package) Fullname() string {
 	return strings.Join(
-		fn.Filter([]string{p.Namespace, p.Name, p.Version}, func(s string, _ int) bool {
+		xslice.Filter([]string{p.Namespace, p.Name, p.Version}, func(s string, _ int) bool {
 			return s != ""
 		}),
 		"-",
@@ -37,7 +37,7 @@ func ParsePackage(s string) (*Package, error) {
 		lenParts = len(parts)
 	)
 	switch {
-	case fn.Some(parts, func(part string, _ int) bool {
+	case xslice.Some(parts, func(part string, _ int) bool {
 		return part == ""
 	}):
 	case lenParts == 2:
@@ -62,7 +62,7 @@ func ParsePackageFullname(s string) (*Package, error) {
 		lenParts = len(parts)
 	)
 	switch {
-	case fn.Some(parts, func(part string, _ int) bool {
+	case xslice.Some(parts, func(part string, _ int) bool {
 		return part == ""
 	}):
 	case lenParts == 2:

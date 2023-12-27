@@ -3,12 +3,7 @@ package steamcmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
-	"os/user"
-	"syscall"
-
-	xsyscall "github.com/frantjc/sindri/x/syscall"
 )
 
 // IsInstalled checks whether `steamcmd` is installed
@@ -18,12 +13,6 @@ func IsInstalled() bool {
 	return bin != "" && err == nil
 }
 
-var (
-	// Username is the OS username to execute
-	// `steamcmd` as (default current).
-	Username = os.Getenv("STEAMCMD_USERNAME")
-)
-
 // NewCommand builds an *exec.Cmd to execute
 // `steamcmd` with the given Commands.
 func Run(ctx context.Context, cmds *Commands) (*exec.Cmd, error) {
@@ -32,22 +21,7 @@ func Run(ctx context.Context, cmds *Commands) (*exec.Cmd, error) {
 	}
 
 	//nolint:gosec
-	cmd := exec.CommandContext(ctx, "steamcmd", cmds.ToArgs()...)
-	if Username != "" {
-		if usr, err := user.Lookup(Username); err != nil {
-			return nil, err
-		} else if usr != nil {
-			if cmd.SysProcAttr == nil {
-				cmd.SysProcAttr = &syscall.SysProcAttr{}
-			}
-
-			if cmd.SysProcAttr.Credential, err = xsyscall.UserCredential(usr); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return cmd, nil
+	return exec.CommandContext(ctx, "steamcmd", cmds.ToArgs()...), nil
 }
 
 // TODO: implement this to use when not running in a

@@ -20,7 +20,7 @@ import (
 	"github.com/frantjc/sindri/internal/clienthelper"
 	"github.com/frantjc/sindri/thunderstore"
 	"github.com/frantjc/sindri/valheim"
-	xtar "github.com/frantjc/sindri/x/tar"
+	xtar "github.com/frantjc/x/archive/tar"
 	"github.com/mmatczuk/anyflag"
 	"github.com/spf13/cobra"
 )

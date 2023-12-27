@@ -13,12 +13,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/frantjc/go-fn"
 	"github.com/frantjc/sindri/steamcmd"
 	"github.com/frantjc/sindri/thunderstore"
 	xcontainerregistry "github.com/frantjc/sindri/x/containerregistry"
-	xtar "github.com/frantjc/sindri/x/tar"
-	xzip "github.com/frantjc/sindri/x/zip"
+	xtar "github.com/frantjc/x/archive/tar"
+	xzip "github.com/frantjc/x/archive/zip"
+	xslice "github.com/frantjc/x/slice"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -217,7 +217,7 @@ func (s *Sindri) AddMods(ctx context.Context, mods ...string) error {
 	}
 
 	for _, mod := range append(
-		fn.Unique(mods),
+		xslice.Unique(mods),
 		s.BepInEx.Versionless().String(),
 	) {
 		pkg, err := thunderstore.ParsePackage(mod)
@@ -554,7 +554,7 @@ func (s *Sindri) extractModsAndDependenciesToDir(ctx context.Context, dir string
 			var (
 				bepInExKey   = s.BepInEx.Versionless().String()
 				isBepInEx    = modKey == bepInExKey
-				dependencies = fn.Filter(pkgMeta.Dependencies, func(dependency string, _ int) bool {
+				dependencies = xslice.Filter(pkgMeta.Dependencies, func(dependency string, _ int) bool {
 					return !strings.HasPrefix(dependency, bepInExKey)
 				})
 			)
@@ -580,7 +580,7 @@ func (s *Sindri) extractModsAndDependenciesToDir(ctx context.Context, dir string
 				return
 			}
 
-			pkgZipRdr.File = fn.Reduce(pkgZipRdr.File, func(acc []*zip.File, cur *zip.File, _ int) []*zip.File {
+			pkgZipRdr.File = xslice.Reduce(pkgZipRdr.File, func(acc []*zip.File, cur *zip.File, _ int) []*zip.File {
 				norm := strings.ReplaceAll(cur.Name, "\\", "/")
 
 				if isBepInEx {
@@ -662,7 +662,7 @@ func (s *Sindri) layerDigests(layerDigests ...string) ([]v1.Layer, error) {
 			return nil, err
 		}
 
-		if fn.Includes(layerDigests, digest.String()) {
+		if xslice.Includes(layerDigests, digest.String()) {
 			filteredLayers = append(filteredLayers, layer)
 		}
 	}
