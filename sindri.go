@@ -170,12 +170,25 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 		return nil
 	}
 
-	modLayers, err := s.modLayers()
+	layers, err := s.img.Layers()
 	if err != nil {
 		return err
 	}
 
-	if s.img, err = mutate.AppendLayers(empty.Image, append(modLayers, steamAppLayer)...); err != nil {
+	filteredLayers := []v1.Layer{steamAppLayer}
+
+	for _, layer := range layers {
+		digest, err := layer.Digest()
+		if err != nil {
+			return err
+		}
+
+		if s.metadata.SteamAppLayerDigest != digest.String() {
+			filteredLayers = append(filteredLayers, layer)
+		}
+	}
+
+	if s.img, err = mutate.AppendLayers(empty.Image, filteredLayers...); err != nil {
 		return err
 	}
 
@@ -347,11 +360,6 @@ func (s *Sindri) Extract(mods ...string) (io.ReadCloser, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	layers, err := s.img.Layers()
-	if err != nil {
-		return nil, err
-	}
-
 	extractLayerDigests := []string{s.metadata.SteamAppLayerDigest}
 
 	for _, mod := range mods {
@@ -365,20 +373,12 @@ func (s *Sindri) Extract(mods ...string) (io.ReadCloser, error) {
 		}
 	}
 
-	filteredLayers := []v1.Layer{}
-
-	for _, layer := range layers {
-		digest, err := layer.Digest()
-		if err != nil {
-			return nil, err
-		}
-
-		if fn.Includes(extractLayerDigests, digest.String()) {
-			filteredLayers = append(filteredLayers, layer)
-		}
+	layers, err := s.layerDigests(extractLayerDigests...)
+	if err != nil {
+		return nil, err
 	}
 
-	img, err := mutate.AppendLayers(empty.Image, filteredLayers...)
+	img, err := mutate.AppendLayers(empty.Image, layers...)
 	if err != nil {
 		return nil, err
 	}
@@ -632,11 +632,6 @@ func (s *Sindri) metadataName() string {
 }
 
 func (s *Sindri) modLayers(mods ...string) ([]v1.Layer, error) {
-	layers, err := s.img.Layers()
-	if err != nil {
-		return nil, err
-	}
-
 	extractLayerDigests := []string{}
 
 	for _, mod := range mods {
@@ -650,6 +645,15 @@ func (s *Sindri) modLayers(mods ...string) ([]v1.Layer, error) {
 		}
 	}
 
+	return s.layerDigests(extractLayerDigests...)
+}
+
+func (s *Sindri) layerDigests(layerDigests ...string) ([]v1.Layer, error) {
+	layers, err := s.img.Layers()
+	if err != nil {
+		return nil, err
+	}
+
 	filteredLayers := []v1.Layer{}
 
 	for _, layer := range layers {
@@ -658,7 +662,7 @@ func (s *Sindri) modLayers(mods ...string) ([]v1.Layer, error) {
 			return nil, err
 		}
 
-		if fn.Includes(extractLayerDigests, digest.String()) {
+		if fn.Includes(layerDigests, digest.String()) {
 			filteredLayers = append(filteredLayers, layer)
 		}
 	}
