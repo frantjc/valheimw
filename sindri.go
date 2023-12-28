@@ -645,6 +645,7 @@ func (s *Sindri) modLayers(mods ...string) ([]v1.Layer, error) {
 			extractLayerDigests = append(extractLayerDigests, modMeta.LayerDigest)
 
 			if len(extractLayerDigests) == lenMods {
+				// Found them all
 				break
 			}
 		}
@@ -684,7 +685,7 @@ func (s *Sindri) layerDigests(layerDigests ...string) ([]v1.Layer, error) {
 		}
 	}
 
-	if len(filteredLayers) != len(layerDigests) {
+	if len(filteredLayers) != lenLayerDigests {
 		return nil, fmt.Errorf("unable to find all layers by digest")
 	}
 
