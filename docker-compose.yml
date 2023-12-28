@@ -2,7 +2,7 @@ version: "3.4"
 
 services:
   sindri:
-    image: ghcr.io/frantjc/sindri:${TAG:-1.2.2}
+    image: ghcr.io/frantjc/sindri:${TAG:-1.2.3}
     build: .
     ports:
       - 8080:8080

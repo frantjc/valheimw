@@ -11,4 +11,4 @@ it is recommended to uninstall Sindri using the above command and then reinstall
 scratch. To do this, run:
 
 uninstall-sindri
-curl -fSs http://new-sindri-address/mods.tar.gz | tar -xzf -
+curl -fSs http://new-sindri-address/mods.gz | tar -xzf -
