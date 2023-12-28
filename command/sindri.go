@@ -108,8 +108,6 @@ func NewSindri() *cobra.Command {
 					}
 				}
 
-				mods = append(mods, s.BepInEx.Fullname())
-
 				moddedValheimTar, err := s.Extract(mods...)
 				if err != nil {
 					return err

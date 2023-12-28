@@ -360,23 +360,17 @@ func (s *Sindri) Extract(mods ...string) (io.ReadCloser, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	extractLayerDigests := []string{s.metadata.SteamAppLayerDigest}
-
-	for _, mod := range mods {
-		pkg, err := thunderstore.ParsePackage(mod)
-		if err != nil {
-			return nil, err
-		}
-
-		if modMeta, ok := s.metadata.Mods[pkg.Versionless().String()]; ok {
-			extractLayerDigests = append(extractLayerDigests, modMeta.LayerDigest)
-		}
-	}
-
-	layers, err := s.layerDigests(extractLayerDigests...)
+	modLayers, err := s.modLayers(mods...)
 	if err != nil {
 		return nil, err
 	}
+
+	layers, err := s.layerDigests(s.metadata.SteamAppLayerDigest)
+	if err != nil {
+		return nil, err
+	}
+
+	layers = append(layers, modLayers...)
 
 	img, err := mutate.AppendLayers(empty.Image, layers...)
 	if err != nil {
@@ -632,9 +626,16 @@ func (s *Sindri) metadataName() string {
 }
 
 func (s *Sindri) modLayers(mods ...string) ([]v1.Layer, error) {
-	extractLayerDigests := []string{}
+	if len(mods) == 0 {
+		return []v1.Layer{}, nil
+	}
 
-	for _, mod := range mods {
+	var (
+		extractLayerDigests = []string{}
+		lenMods             = len(mods) + 1
+	)
+
+	for _, mod := range xslice.Unique(append(mods, s.BepInEx.Versionless().String())) {
 		pkg, err := thunderstore.ParsePackage(mod)
 		if err != nil {
 			return nil, err
@@ -642,7 +643,15 @@ func (s *Sindri) modLayers(mods ...string) ([]v1.Layer, error) {
 
 		if modMeta, ok := s.metadata.Mods[pkg.Versionless().String()]; ok {
 			extractLayerDigests = append(extractLayerDigests, modMeta.LayerDigest)
+
+			if len(extractLayerDigests) == lenMods {
+				break
+			}
 		}
+	}
+
+	if len(extractLayerDigests) != lenMods {
+		return nil, fmt.Errorf("unable to find all mod layer digests")
 	}
 
 	return s.layerDigests(extractLayerDigests...)
@@ -654,7 +663,10 @@ func (s *Sindri) layerDigests(layerDigests ...string) ([]v1.Layer, error) {
 		return nil, err
 	}
 
-	filteredLayers := []v1.Layer{}
+	var (
+		filteredLayers  = []v1.Layer{}
+		lenLayerDigests = len(layerDigests)
+	)
 
 	for _, layer := range layers {
 		digest, err := layer.Digest()
@@ -664,7 +676,16 @@ func (s *Sindri) layerDigests(layerDigests ...string) ([]v1.Layer, error) {
 
 		if xslice.Includes(layerDigests, digest.String()) {
 			filteredLayers = append(filteredLayers, layer)
+
+			if len(filteredLayers) == lenLayerDigests {
+				// Found them all
+				break
+			}
 		}
+	}
+
+	if len(filteredLayers) != len(layerDigests) {
+		return nil, fmt.Errorf("unable to find all layers by digest")
 	}
 
 	return filteredLayers, nil
