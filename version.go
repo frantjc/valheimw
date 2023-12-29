@@ -9,7 +9,7 @@ import (
 // Meant to be be overridden at build time,
 // but kept up-to-date sometimes to best
 // support `go install`.
-var Semver = "1.2.5"
+var Semver = "1.2.6"
 
 // GetSemver returns the semantic version of sindri as built from
 // Semver and debug build info.

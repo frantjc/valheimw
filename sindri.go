@@ -547,19 +547,24 @@ func (s *Sindri) extractModsAndDependenciesToDir(ctx context.Context, dir string
 			}
 
 			var (
-				bepInExKey   = s.BepInEx.Versionless().String()
-				isBepInEx    = modKey == bepInExKey
-				dependencies = xslice.Filter(pkgMeta.Dependencies, func(dependency string, _ int) bool {
-					return !strings.HasPrefix(dependency, bepInExKey)
-				})
+				bepInExKey = s.BepInEx.Versionless().String()
+				isBepInEx  = modKey == bepInExKey
 			)
-			if err := s.extractModsAndDependenciesToDir(ctx, dir, dependencies...); err != nil {
-				errC <- err
-				return
-			}
+
+			dependencies := pkgMeta.Dependencies
 
 			if pkg.Version == "" && pkgMeta.Latest != nil {
 				pkg = &pkgMeta.Latest.Package
+				dependencies = append(dependencies, pkgMeta.Latest.Dependencies...)
+			}
+
+			dependencies = xslice.Unique(xslice.Filter(dependencies, func(dependency string, _ int) bool {
+				return !strings.HasPrefix(dependency, bepInExKey)
+			}))
+
+			if err := s.extractModsAndDependenciesToDir(ctx, dir, dependencies...); err != nil {
+				errC <- err
+				return
 			}
 
 			pkgZip, err := s.ThunderstoreClient.GetPackageZip(ctx, pkg)
