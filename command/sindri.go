@@ -112,12 +112,13 @@ func NewSindri() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				defer moddedValheimTar.Close()
 
 				runDir, err := os.MkdirTemp(state, "")
 				if err != nil {
 					return err
 				}
+
+				log.Info("installing Valheim to " + runDir)
 
 				if err = xtar.Extract(moddedValheimTar, runDir); err != nil {
 					return err
@@ -128,6 +129,8 @@ func NewSindri() *cobra.Command {
 				}
 
 				opts.SaveDir = root
+
+				log.Info("writing Valheim player lists in " + opts.SaveDir)
 
 				if err := valheim.WritePlayerLists(opts.SaveDir, playerLists); err != nil {
 					return err
@@ -143,7 +146,7 @@ func NewSindri() *cobra.Command {
 				defer os.RemoveAll(runDir)
 
 				go func() {
-					log.Info("running Valheim")
+					log.Info("running Valheim in " + runDir)
 
 					if err := subCmd.Run(); err != nil {
 						errC <- fmt.Errorf("valheim: %w", err)

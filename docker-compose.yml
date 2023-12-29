@@ -2,24 +2,20 @@ version: "3.4"
 
 services:
   sindri:
-    image: ghcr.io/frantjc/sindri:${TAG:-1.2.4}
+    image: ghcr.io/frantjc/sindri:${TAG:-1.2.5}
     build: .
     ports:
-      - 8080:8080
       - 2456:2456/udp
+      - 8080:8080
     volumes:
       - ./hack/var/lib/sindri:/var/lib/sindri
       - ./hack/run/sindri:/run/sindri
     command:
       - -VV
-      - --no-download
+      # - --no-download
       # - --mods-only
       - --state=/run/sindri
       - --root=/var/lib/sindri
       - --mod=Nexus/FarmGrid
-      # - --mod=RandyKnapp/EquipmentAndQuickSlots
-      # - --admin=frantjc
-      # - --ban=frantjc
-      # - --permit=frantjc
     environment:
       VALHEIM_PASSWORD: ${VALHEIM_PASSWORD:-atleast5chars}

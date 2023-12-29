@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -287,7 +288,7 @@ func (s *Sindri) AddMods(ctx context.Context, mods ...string) error {
 		}
 	}
 
-	if s.img, err = mutate.AppendLayers(s.img, layers...); err != nil {
+	if s.img, err = mutate.AppendLayers(empty.Image, layers...); err != nil {
 		return err
 	}
 
@@ -630,12 +631,14 @@ func (s *Sindri) modLayers(mods ...string) ([]v1.Layer, error) {
 		return []v1.Layer{}, nil
 	}
 
+	mods = xslice.Unique(append(mods, s.BepInEx.Versionless().String()))
+
 	var (
 		extractLayerDigests = []string{}
-		lenMods             = len(mods) + 1
+		lenMods             = len(mods)
 	)
 
-	for _, mod := range xslice.Unique(append(mods, s.BepInEx.Versionless().String())) {
+	for _, mod := range mods {
 		pkg, err := thunderstore.ParsePackage(mod)
 		if err != nil {
 			return nil, err
@@ -648,6 +651,8 @@ func (s *Sindri) modLayers(mods ...string) ([]v1.Layer, error) {
 				// Found them all
 				break
 			}
+		} else {
+			return nil, fmt.Errorf("couldn't find mod " + mod + " layer digest")
 		}
 	}
 
@@ -785,7 +790,7 @@ func (s *Sindri) init(opts ...Opt) error {
 				metadataTarReader := tar.NewReader(rc)
 				for {
 					hdr, err := metadataTarReader.Next()
-					if err == io.EOF {
+					if errors.Is(err, io.EOF) {
 						return fmt.Errorf("unable to find metadata in metadata layer")
 					} else if err != nil {
 						return err
