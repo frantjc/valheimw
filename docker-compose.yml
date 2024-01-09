@@ -2,7 +2,7 @@ version: "3.4"
 
 services:
   sindri:
-    image: ghcr.io/frantjc/sindri:${TAG:-1.2.6}
+    image: ghcr.io/frantjc/sindri:${TAG:-1.2.7}
     build: .
     ports:
       - 2456:2456/udp

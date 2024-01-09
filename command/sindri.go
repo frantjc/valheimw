@@ -40,7 +40,7 @@ func NewSindri() *cobra.Command {
 		}
 		cmd = &cobra.Command{
 			Use:           "sindri",
-			Version:       sindri.GetSemver(),
+			Version:       sindri.SemVer(),
 			SilenceErrors: true,
 			SilenceUsage:  true,
 			PreRun: func(cmd *cobra.Command, _ []string) {
