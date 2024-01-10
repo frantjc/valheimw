@@ -5,14 +5,14 @@ go 1.21.4
 require (
 	github.com/adrg/xdg v0.4.0
 	github.com/frantjc/go-ingress v0.1.1
-	github.com/frantjc/x v0.0.0-20231227080902-6c5dc9b6f03f
+	github.com/frantjc/x v0.0.0-20240110023118-cfbb48930f03
 	github.com/go-logr/logr v1.4.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/google/go-containerregistry v0.17.0
-	github.com/mmatczuk/anyflag v0.0.0-20231026075539-5f42d2f36d96
+	github.com/mmatczuk/anyflag v0.0.0-20240105091245-c64b70bf5d41
 	github.com/spf13/cobra v1.8.0
 	go.uber.org/zap v1.26.0
-	golang.org/x/exp v0.0.0-20231214170342-aacd6d4b4611
+	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc
 )
 
 require (
@@ -24,6 +24,6 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/vbatts/tar-split v0.11.5 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/sync v0.5.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/sync v0.6.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
 )
