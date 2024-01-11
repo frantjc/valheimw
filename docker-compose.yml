@@ -16,6 +16,6 @@ services:
       # - --mods-only
       - --state=/run/sindri
       - --root=/var/lib/sindri
-      - --mod=Nexus/FarmGrid
+      - --mod=RandyKnapp/EquipmentAndQuickSlots
     environment:
       VALHEIM_PASSWORD: ${VALHEIM_PASSWORD:-atleast5chars}
