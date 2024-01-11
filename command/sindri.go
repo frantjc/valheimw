@@ -155,9 +155,14 @@ func NewSindri() *cobra.Command {
 					}
 				}()
 
+				valheimMapURL, err := url.Parse("https://valheim-map.world?offset=0,0&zoom=0.600&view=0&ver=0.217.22")
+				if err != nil {
+					return err
+				}
+
 				var (
 					seedJSONHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						seed, err := valheim.ReadSeed(opts)
+						seed, err := valheim.ReadSeed(opts.SaveDir, opts.World)
 						if err != nil {
 							w.WriteHeader(http.StatusInternalServerError)
 							return
@@ -168,7 +173,7 @@ func NewSindri() *cobra.Command {
 						_, _ = w.Write([]byte(`{"seed":"` + seed + `"}`))
 					})
 					seedTxtHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						seed, err := valheim.ReadSeed(opts)
+						seed, err := valheim.ReadSeed(opts.SaveDir, opts.World)
 						if err != nil {
 							w.WriteHeader(http.StatusInternalServerError)
 							return
@@ -181,16 +186,62 @@ func NewSindri() *cobra.Command {
 					seedHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/json") {
 							seedJSONHandler(w, r)
+							return
 						} else if strings.Contains(accept, "text/plain") {
 							seedTxtHandler(w, r)
+							return
 						}
 
 						w.WriteHeader(http.StatusNotAcceptable)
+					})
+					mapHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						seed, err := valheim.ReadSeed(opts.SaveDir, opts.World)
+						if err != nil {
+							w.WriteHeader(http.StatusInternalServerError)
+							return
+						}
+
+						q := valheimMapURL.Query()
+						q.Set("seed", seed)
+						valheimMapURL.RawQuery = q.Encode()
+
+						w.Header().Add("Content-Type", "")
+
+						http.Redirect(w, r, valheimMapURL.String(), http.StatusMovedPermanently)
+					})
+					worldsHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						_, _ = io.Copy(w, xtar.Compress(filepath.Join(opts.SaveDir, "worlds_local")))
+					})
+					dbHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						db, err := valheim.OpenDB(opts.SaveDir, opts.World)
+						if err != nil {
+							w.WriteHeader(http.StatusInternalServerError)
+							return
+						}
+						defer db.Close()
+
+						_, _ = io.Copy(w, db)
+					})
+					fwlHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						fwl, err := valheim.OpenFWL(opts.SaveDir, opts.World)
+						if err != nil {
+							w.WriteHeader(http.StatusInternalServerError)
+							return
+						}
+						defer fwl.Close()
+
+						_, _ = io.Copy(w, fwl)
 					})
 					paths = []ingress.Path{
 						ingress.ExactPath("/seed.json", seedJSONHandler),
 						ingress.ExactPath("/seed.txt", seedTxtHandler),
 						ingress.ExactPath("/seed", seedHdrHandler),
+						ingress.ExactPath("/map", mapHandler),
+						ingress.ExactPath("/worlds", worldsHandler),
+						ingress.ExactPath("/world.db", dbHandler),
+						ingress.ExactPath("/"+opts.World+".db", dbHandler),
+						ingress.ExactPath("/world.fwl", fwlHandler),
+						ingress.ExactPath("/"+opts.World+".fwl", fwlHandler),
 					}
 				)
 
