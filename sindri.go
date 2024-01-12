@@ -14,8 +14,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/frantjc/sindri/steamcmd"
+	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/thunderstore"
+	"github.com/frantjc/sindri/valheim"
 	xcontainerregistry "github.com/frantjc/sindri/x/containerregistry"
 	xtar "github.com/frantjc/x/archive/tar"
 	xzip "github.com/frantjc/x/archive/zip"
@@ -125,7 +126,7 @@ func (s *Sindri) Mods() ([]thunderstore.Package, error) {
 }
 
 // AppUpdate uses `steamcmd` to installed or update
-// the game that Sindri is managing.
+// the game that *Sindri is managing.
 func (s *Sindri) AppUpdate(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -140,18 +141,13 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 	}
 	defer os.RemoveAll(steamcmdForceInstallDir)
 
-	cmd, err := steamcmd.Run(ctx, &steamcmd.Commands{
+	if err := steamcmd.Command("steamcmd").AppUpdate(ctx, &steamcmd.AppUpdateCombined{
 		ForceInstallDir: steamcmdForceInstallDir,
-		AppUpdate:       s.SteamAppID,
-		Beta:            s.beta,
-		BetaPassword:    s.betaPassword,
-		Validate:        true,
-	})
-	if err != nil {
-		return err
-	}
-
-	if err = cmd.Run(); err != nil {
+		AppUpdate: &steamcmd.AppUpdate{
+			AppID:    valheim.SteamAppID,
+			Validate: true,
+		},
+	}); err != nil {
 		return err
 	}
 
