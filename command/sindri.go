@@ -174,7 +174,7 @@ func NewSindri() *cobra.Command {
 
 					paths = append(paths,
 						ingress.ExactPath("/world.db", dbHandler),
-						ingress.ExactPath("/"+opts.World+".db", dbHandler),
+						ingress.ExactPath(filepath.Join("/", opts.World+".db"), dbHandler),
 					)
 				}
 
@@ -186,7 +186,7 @@ func NewSindri() *cobra.Command {
 
 					var (
 						seedJSONHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							seed, err := valheim.ReadSeed(opts.SaveDir, opts.World)
+							seed, err := valheim.ReadWorldSeed(opts.SaveDir, opts.World)
 							if err != nil {
 								w.WriteHeader(http.StatusInternalServerError)
 								return
@@ -197,7 +197,7 @@ func NewSindri() *cobra.Command {
 							_, _ = w.Write([]byte(`{"seed":"` + seed + `"}`))
 						})
 						seedTxtHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							seed, err := valheim.ReadSeed(opts.SaveDir, opts.World)
+							seed, err := valheim.ReadWorldSeed(opts.SaveDir, opts.World)
 							if err != nil {
 								w.WriteHeader(http.StatusInternalServerError)
 								return
@@ -219,7 +219,7 @@ func NewSindri() *cobra.Command {
 							w.WriteHeader(http.StatusNotAcceptable)
 						})
 						mapHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							seed, err := valheim.ReadSeed(opts.SaveDir, opts.World)
+							seed, err := valheim.ReadWorldSeed(opts.SaveDir, opts.World)
 							if err != nil {
 								w.WriteHeader(http.StatusInternalServerError)
 								return
@@ -230,7 +230,6 @@ func NewSindri() *cobra.Command {
 							valheimMapURL.RawQuery = q.Encode()
 
 							w.Header().Add("Content-Type", "")
-
 							http.Redirect(w, r, valheimMapURL.String(), http.StatusMovedPermanently)
 						})
 						fwlHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -251,7 +250,7 @@ func NewSindri() *cobra.Command {
 						ingress.ExactPath("/seed", seedHdrHandler),
 						ingress.ExactPath("/map", mapHandler),
 						ingress.ExactPath("/world.fwl", fwlHandler),
-						ingress.ExactPath("/"+opts.World+".fwl", fwlHandler),
+						ingress.ExactPath(filepath.Join("/", opts.World+".fwl"), fwlHandler),
 					)
 				}
 

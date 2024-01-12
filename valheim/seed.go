@@ -8,28 +8,29 @@ import (
 	"path/filepath"
 )
 
-func OpenFWL(savedir, world string) (*os.File, error) {
+func OpenFWL(savedir, world string) (io.ReadCloser, error) {
 	return os.Open(filepath.Join(savedir, "worlds_local", world+".fwl"))
 }
 
-func OpenDB(savedir, world string) (*os.File, error) {
+func OpenDB(savedir, world string) (io.ReadCloser, error) {
 	return os.Open(filepath.Join(savedir, "worlds_local", world+".db"))
 }
 
-func ReadSeed(savedir, world string) (string, error) {
-	f, err := OpenFWL(savedir, world)
+func ReadWorldSeed(savedir, world string) (string, error) {
+	r, err := OpenFWL(savedir, world)
 	if err != nil {
 		return "", err
 	}
+	defer r.Close()
 
-	return ReadWorldSeed(f, world)
+	return ReadSeed(r, world)
 }
 
-var (
+const (
 	SeedLength = 10
 )
 
-func ReadWorldSeed(r io.Reader, world string) (string, error) {
+func ReadSeed(r io.Reader, world string) (string, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return "", err
