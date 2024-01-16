@@ -1,6 +1,7 @@
 package command
 
 import (
+	"archive/tar"
 	"compress/gzip"
 	"context"
 	"fmt"
@@ -113,6 +114,7 @@ func NewSindri() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				defer moddedValheimTar.Close()
 
 				runDir, err := os.MkdirTemp(state, "")
 				if err != nil {
@@ -121,11 +123,7 @@ func NewSindri() *cobra.Command {
 
 				log.Info("installing Valheim to " + runDir)
 
-				if err = xtar.Extract(moddedValheimTar, runDir); err != nil {
-					return err
-				}
-
-				if err = moddedValheimTar.Close(); err != nil {
+				if err = xtar.Extract(tar.NewReader(moddedValheimTar), runDir); err != nil {
 					return err
 				}
 

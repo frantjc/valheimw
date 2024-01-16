@@ -11,15 +11,17 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/thunderstore"
 	"github.com/frantjc/sindri/valheim"
-	xcontainerregistry "github.com/frantjc/sindri/x/containerregistry"
 	xtar "github.com/frantjc/x/archive/tar"
 	xzip "github.com/frantjc/x/archive/zip"
+	xio "github.com/frantjc/x/io"
 	xslice "github.com/frantjc/x/slice"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -125,6 +127,29 @@ func (s *Sindri) Mods() ([]thunderstore.Package, error) {
 	return pkgs, nil
 }
 
+type readCloser struct {
+	io.Reader
+	io.Closer
+}
+
+func reproducibleBuildLayerFromDir(dir string) (v1.Layer, error) {
+	return tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+		var (
+			rc1 = xtar.Compress(dir)
+			rc2 = xtar.ModifyHeaders(tar.NewReader(rc1), func(h *tar.Header) {
+				h.ModTime = sourceDateEpoch
+			})
+		)
+
+		return &readCloser{
+			Reader: rc2,
+			Closer: xio.CloserFunc(func() error {
+				return errors.Join(rc2.Close(), rc1.Close())
+			}),
+		}, nil
+	})
+}
+
 // AppUpdate uses `steamcmd` to installed or update
 // the game that *Sindri is managing.
 func (s *Sindri) AppUpdate(ctx context.Context) error {
@@ -153,7 +178,7 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 		return err
 	}
 
-	steamAppLayer, err := xcontainerregistry.LayerFromDir(steamcmdForceInstallDir)
+	steamAppLayer, err := reproducibleBuildLayerFromDir(steamcmdForceInstallDir)
 	if err != nil {
 		return err
 	}
@@ -246,9 +271,7 @@ func (s *Sindri) AddMods(ctx context.Context, mods ...string) error {
 			return err
 		}
 
-		modLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-			return xtar.Compress(pkgUnzipDir), nil
-		})
+		modLayer, err := reproducibleBuildLayerFromDir(pkgUnzipDir)
 		if err != nil {
 			return err
 		}
@@ -353,6 +376,20 @@ func (s *Sindri) RemoveMods(_ context.Context, mods ...string) error {
 	return s.save()
 }
 
+var sourceDateEpoch = time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC).
+	Add(func() time.Duration {
+		sourceDateEpoch := os.Getenv("SOURCE_DATE_EPOCH")
+		if sourceDateEpoch == "" {
+			return 0
+		}
+
+		if seconds, err := strconv.Atoi(sourceDateEpoch); err == nil {
+			return time.Second * time.Duration(seconds)
+		}
+
+		return 0
+	}())
+
 // Extract returns an io.ReadCloser of a tarball
 // containing the files of the game and the given mods.
 func (s *Sindri) Extract(mods ...string) (io.ReadCloser, error) {
@@ -376,7 +413,11 @@ func (s *Sindri) Extract(mods ...string) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	return mutate.Extract(img), nil
+	now := time.Now()
+
+	return xtar.ModifyHeaders(tar.NewReader(mutate.Extract(img)), func(h *tar.Header) {
+		h.ModTime = now
+	}), nil
 }
 
 // ExtractMods returns an io.ReadCloser containing a tarball
@@ -395,7 +436,11 @@ func (s *Sindri) ExtractMods(mods ...string) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	return mutate.Extract(img), nil
+	now := time.Now()
+
+	return xtar.ModifyHeaders(tar.NewReader(mutate.Extract(img)), func(h *tar.Header) {
+		h.ModTime = now
+	}), nil
 }
 
 func (s *Sindri) save() error {
@@ -415,7 +460,7 @@ func (s *Sindri) save() error {
 			Name:     s.metadataName(),
 			Size:     int64(len(b)),
 			Mode:     0644,
-			ModTime:  xtar.ModTime,
+			ModTime:  sourceDateEpoch,
 		}); err != nil {
 			return nil, err
 		}
