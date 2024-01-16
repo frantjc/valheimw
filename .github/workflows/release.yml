@@ -32,3 +32,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKER_BUILDKIT: 1
+      - name: Run git config
+        run: |
+          git config --global user.email "$GIT_USER"
+          git config --global user.name "$GIT_USER"
+        env:
+          GIT_USER: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+      - uses: azure/setup-helm@v3
+      - uses: helm/chart-releaser-action@v1.6.0
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

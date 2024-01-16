@@ -144,8 +144,10 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 	if err := steamcmd.Command("steamcmd").AppUpdate(ctx, &steamcmd.AppUpdateCombined{
 		ForceInstallDir: steamcmdForceInstallDir,
 		AppUpdate: &steamcmd.AppUpdate{
-			AppID:    valheim.SteamAppID,
-			Validate: true,
+			AppID:        valheim.SteamAppID,
+			Validate:     true,
+			Beta:         s.beta,
+			BetaPassword: s.betaPassword,
 		},
 	}); err != nil {
 		return err

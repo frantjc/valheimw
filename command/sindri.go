@@ -156,7 +156,15 @@ func NewSindri() *cobra.Command {
 					}
 				}()
 
-				paths := []ingress.Path{}
+				var (
+					zHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						_, _ = w.Write([]byte("ok\n"))
+					})
+					paths = []ingress.Path{
+						ingress.ExactPath("/readyz", zHandler),
+						ingress.ExactPath("/healthz", zHandler),
+					}
+				)
 
 				if !noDB {
 					var (
@@ -279,9 +287,7 @@ func NewSindri() *cobra.Command {
 
 							w.Header().Add("Content-Type", "application/tar")
 
-							if _, err = io.Copy(w, clienthelper.NewTarPrefixReader(r)); err == nil {
-								_, _ = io.Copy(w, rc)
-							}
+							_, _ = clienthelper.CopyWithTarPrefix(w, rc, r)
 						})
 						modTgzHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							rc, err := s.ExtractMods(mods...)
@@ -299,9 +305,7 @@ func NewSindri() *cobra.Command {
 							}
 							defer gzw.Close()
 
-							if _, err = io.Copy(gzw, clienthelper.NewTarPrefixReader(r)); err == nil {
-								_, _ = io.Copy(gzw, rc)
-							}
+							_, _ = clienthelper.CopyWithTarPrefix(gzw, rc, r)
 						})
 						modHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/gzip") {

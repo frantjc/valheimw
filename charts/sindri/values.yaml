@@ -1,0 +1,111 @@
+sindri:
+  port: 8080
+  modsOnly: false
+  noDownload: false
+  noDb: false
+  noFwl: false
+  root: /var/lib/sindri
+  state: /run/sindri
+
+valheim:
+  password:
+  name:
+  world:
+  port: 2456
+  admins: []
+  bans: []
+  permitted: []
+  backups:
+  backupShort:
+  backupLong:
+  saveInterval:
+  instanceId:
+  preset:
+  combatModifier:
+  deathPenaltyModifier:
+  portalModifier: false
+  raidModifier:
+  resourceModifier:
+  noBuildCost: false
+  noMap: false
+  passiveMobs: false
+  playerEvents: false
+  crossplay: false
+  public: false
+  beta:
+  betaPassword:
+
+image:
+  repository: ghcr.io/frantjc/sindri
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts: []
+    # - host: chart-example.local
+    #   paths:
+    #     - path: /
+    #       pathType: ImplementationSpecific
+  tls: []
+    # - secretName: chart-example-tls
+    #   hosts:
+    #     - chart-example.local
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+  # - name: foo
+  #   secret:
+  #     secretName: mysecret
+  #     optional: false
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+  # - name: foo
+  #   mountPath: "/etc/foo"
+  #   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

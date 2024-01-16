@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sindri.fullname" . }}
+  labels:
+    {{- include "sindri.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.sindri.port }}
+      targetPort: {{ .Values.sindri.port }}
+      name: sindri
+    - port: {{ .Values.valheim.port }}
+      targetPort: {{ .Values.valheim.port }}
+      name: valheim
+      protocol: UDP
+  selector:
+    {{- include "sindri.selectorLabels" . | nindent 4 }}

@@ -30,10 +30,20 @@ var (
 	updateCmdName    = []byte("update-sindri.cmd")
 )
 
-// NewTarPrefixReader returns an io.Reader containing tar entries
+func CopyWithTarPrefix(dst io.Writer, src io.Reader, r *http.Request) (int64, error) {
+	n, err := io.Copy(dst, newTarPrefixReader(r))
+	if err != nil {
+		return n, err
+	}
+
+	m, err := io.Copy(dst, src)
+	return n + m, err
+}
+
+// newTarPrefixReader returns an io.Reader containing tar entries
 // to prepend to a tar archive which help users to manage Sindri
 // client-side.
-func NewTarPrefixReader(r *http.Request) io.Reader {
+func newTarPrefixReader(r *http.Request) io.Reader {
 	var (
 		host     = []byte(r.Header.Get("X-Forwarded-Host"))
 		protocol = []byte(r.Header.Get("X-Forwarded-Proto"))
@@ -114,49 +124,46 @@ func NewTarPrefixReader(r *http.Request) io.Reader {
 	go func() {
 		defer pw.Close()
 
-		if err := writeFile(
-			string(uninstallShName),
-			template(uninstallShTpl),
-			0755,
-		); err != nil {
-			_ = pw.CloseWithError(err)
-			return
-		}
+		if err := func() error {
+			if err := writeFile(
+				string(uninstallShName),
+				template(uninstallShTpl),
+				0755,
+			); err != nil {
+				return err
+			}
 
-		if err := writeFile(
-			string(updateShName),
-			template(updateShTpl),
-			0755,
-		); err != nil {
-			_ = pw.CloseWithError(err)
-			return
-		}
+			if err := writeFile(
+				string(updateShName),
+				template(updateShTpl),
+				0755,
+			); err != nil {
+				return err
+			}
 
-		if err := writeFile(
-			string(uninstallCmdName),
-			template(uninstallCmdTpl),
-			0755,
-		); err != nil {
-			_ = pw.CloseWithError(err)
-			return
-		}
+			if err := writeFile(
+				string(uninstallCmdName),
+				template(uninstallCmdTpl),
+				0755,
+			); err != nil {
+				return err
+			}
 
-		if err := writeFile(
-			string(updateCmdName),
-			template(updateCmdTpl),
-			0755,
-		); err != nil {
-			_ = pw.CloseWithError(err)
-			return
-		}
+			if err := writeFile(
+				string(updateCmdName),
+				template(updateCmdTpl),
+				0755,
+			); err != nil {
+				return err
+			}
 
-		if err := writeFile(
-			string(readmeTxtName),
-			template(readmeTxtTpl),
-			0644,
-		); err != nil {
+			return writeFile(
+				string(readmeTxtName),
+				template(readmeTxtTpl),
+				0644,
+			)
+		}(); err != nil {
 			_ = pw.CloseWithError(err)
-			return
 		}
 	}()
 

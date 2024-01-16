@@ -1,0 +1,179 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sindri.fullname" . }}
+  labels:
+    {{- include "sindri.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "sindri.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "sindri.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "sindri.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            {{- with .Values.sindri.port }}
+            - --port=":{{ . }}"
+            {{- end }}
+            {{- if .Values.sindri.modsOnly }}
+            - --mods-only
+            {{- end }}
+            {{- if .Values.sindri.noDownload }}
+            - --no-download
+            {{- end }}
+            {{- if .Values.sindri.noDb }}
+            - --no-db
+            {{- end }}
+            {{- if .Values.sindri.noFwl }}
+            - --no-fwl
+            {{- end }}
+            {{- with .Values.sindri.root }}
+            - --root="{{ . }}"
+            {{- end }}
+            {{- with .Values.sindri.state }}
+            - --state="{{ . }}"
+            {{- end }}
+            {{- with .Values.valheim.name }}
+            - --name="{{ . }}"
+            {{- end }}
+            {{- with .Values.valheim.world }}
+            - --world="{{ . }}"
+            {{- end }}
+            {{- with .Values.valheim.port }}
+            - --port={{ . }}
+            {{- end }}
+            {{- range .Values.valheim.admins }}
+            - --admin={{ . }}
+            {{- end }}
+            {{- range .Values.valheim.bans }}
+            - --ban={{ . }}
+            {{- end }}
+            {{- range .Values.valheim.permitted }}
+            - --permit={{ . }}
+            {{- end }}
+            {{- with .Values.valheim.backups }}
+            - --backups={{ . }}
+            {{- end }}
+            {{- with .Values.valheim.backupShort }}
+            - --backup-short={{ . }}
+            {{- end }}
+            {{- with .Values.valheim.backupLong }}
+            - --backup-long={{ . }}
+            {{- end }}
+            {{- with .Values.valheim.saveInterval }}
+            - --save-interval={{ . }}
+            {{- end }}
+            {{- with .Values.valheim.instanceId }}
+            - --instance-id={{ . }}
+            {{- end }}
+            {{- with .Values.valheim.preset }}
+            - --preset={{ . }}
+            {{- end }}
+            {{- with .Values.valheim.combatModifier }}
+            - --combat-modifier={{ . }}
+            {{- end }}
+            {{- with .Values.valheim.deathPenaltyModifier }}
+            - --death-penalty-modifier={{ . }}
+            {{- end }}
+            {{- with .Values.valheim.portalModifier }}
+            - --portal-modifier={{ . }}
+            {{- end }}
+            {{- with .Values.valheim.raidModifier }}
+            - --raid-modifier={{ . }}
+            {{- end }}
+            {{- with .Values.valheim.resourceModifier }}
+            - --resource-modifier={{ . }}
+            {{- end }}
+            {{- if .Values.valheim.noBuildCost }}
+            - --no-build-cost
+            {{- end }}
+            {{- if .Values.valheim.noMap }}
+            - --no-map
+            {{- end }}
+            {{- if .Values.valheim.passiveMobs }}
+            - --passive-mobs
+            {{- end }}
+            {{- if .Values.valheim.playerEvents }}
+            - --player-events
+            {{- end }}
+            {{- if .Values.valheim.crossplay }}
+            - --crossplay
+            {{- end }}
+            {{- if .Values.valheim.public }}
+            - --public
+            {{- end }}
+            {{- with .Values.valheim.beta }}
+            - --beta="{{ . }}"
+            {{- end }}
+            {{- with .Values.valheim.betaPassword }}
+            - --beta-password="{{ . }}"
+            {{- end }}
+          env:
+            - name: VALHEIM_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sindri.fullname" . }}
+                  key: valheimPassword
+          ports:
+            - containerPort: {{ .Values.sindri.port }}
+            - containerPort: {{ .Values.valheim.port }}
+              protocol: UDP
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: {{ .Values.sindri.port }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.sindri.port }}
+          {{ with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

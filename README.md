@@ -63,13 +63,13 @@ docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     # Valheim listens on port 2456 for UDP traffic by default.
     --publish 2456:2456/udp \
-    ghcr.io/frantjc/sindri:1.3.1 \
+    ghcr.io/frantjc/sindri:1.3.2 \
         --root /var/lib/sindri
 ```
 
 ### Mods
 
-Sindri downloads its mods from thunderstore.io. Mods can be referenced a number of ways. For example, [FarmGrid](https://valheim.thunderstore.io/package/RandyKnapp/EquipmentAndQuickSlots/) can be referenced by its full name, `Nexus-FarmGrid-0.2.0` (note that the version is optional--if omitted, the latest version is used); by a [distribution-spec](https://github.com/opencontainers/distribution-spec)-like reference, `RandyKnapp/EquipmentAndQuickSlots:0.2.0`; or by a GitHub-Actions-like reference, `RandyKnapp/EquipmentAndQuickSlots@0.2.0`. Note that these are all case-sensitive.
+Sindri downloads its mods from thunderstore.io. Mods can be referenced a number of ways. For example, [EquipmentAndQuickSlots](https://valheim.thunderstore.io/package/RandyKnapp/EquipmentAndQuickSlots/) can be referenced by its full name, `RandyKnapp-EquipmentAndQuickSlots-0.2.0` (note that the version is optional--if omitted, the latest version is used); by a [distribution-spec](https://github.com/opencontainers/distribution-spec)-like reference, `RandyKnapp/EquipmentAndQuickSlots:0.2.0`; or by a GitHub-Actions-like reference, `RandyKnapp/EquipmentAndQuickSlots@0.2.0`. Note that these are all case-sensitive.
 
 The desired list of mods can be passed to Sindri via `--mod`.
 
@@ -77,7 +77,7 @@ The desired list of mods can be passed to Sindri via `--mod`.
 docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     --publish 2456:2456/udp \
-    ghcr.io/frantjc/sindri:1.3.1 \
+    ghcr.io/frantjc/sindri:1.3.2 \
         --root /var/lib/sindri \
         --mod RandyKnapp/EquipmentAndQuickSlots
 ```
@@ -91,7 +91,7 @@ docker run \
     --volume $(pwd)/sindri:/var/lib/sindri \
     --publish 2456:2456/udp \
     --publish 8080:8080 \
-    ghcr.io/frantjc/sindri:1.3.1 \
+    ghcr.io/frantjc/sindri:1.3.2 \
         --root /var/lib/sindri
 ```
 
@@ -125,7 +125,7 @@ docker run \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
     --env VALHEIM_PASSWORD=atleast5chars \
-    ghcr.io/frantjc/sindri:1.3.1 \
+    ghcr.io/frantjc/sindri:1.3.2 \
         --root /var/lib/sindri \
         --mod RandyKnapp/EquipmentAndQuickSlots \
         --port 3567 \
@@ -144,7 +144,7 @@ docker run \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
     --env VALHEIM_PASSWORD=atleast5chars \
-    ghcr.io/frantjc/sindri:1.3.1 \
+    ghcr.io/frantjc/sindri:1.3.2 \
         --root /var/lib/sindri \
         --beta public-test \
         --beta-password yesimadebackups
@@ -160,7 +160,7 @@ docker run \
     --publish 3567:3567/udp \
     --publish 8080:8080 \
     --env VALHEIM_PASSWORD=atleast5chars \
-    ghcr.io/frantjc/sindri:1.3.1 \
+    ghcr.io/frantjc/sindri:1.3.2 \
         --root /var/lib/sindri \
         --no-download
 ```
