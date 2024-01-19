@@ -2,6 +2,20 @@
 
 Easily run a dedicated Valheim server with mods from [thunderstore.io](https://valheim.thunderstore.io/) and a way to easily share those mods with Valheim clients.
 
+## quickstart
+
+[Install Docker](https://docs.docker.com/desktop/).
+
+Run this command:
+
+```sh
+docker run \
+    --volume $(pwd)/sindri:/var/lib/sindri \
+    --publish 2456:2456/udp \
+    ghcr.io/frantjc/sindri:1.3.2 \
+        --root /var/lib/sindri
+```
+
 ## usage
 
 ```sh
