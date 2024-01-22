@@ -18,7 +18,6 @@ import (
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/thunderstore"
-	"github.com/frantjc/sindri/valheim"
 	xtar "github.com/frantjc/x/archive/tar"
 	xzip "github.com/frantjc/x/archive/zip"
 	xio "github.com/frantjc/x/io"
@@ -153,6 +152,10 @@ func reproducibleBuildLayerFromDir(dir string) (v1.Layer, error) {
 // AppUpdate uses `steamcmd` to installed or update
 // the game that *Sindri is managing.
 func (s *Sindri) AppUpdate(ctx context.Context) error {
+	if s.SteamAppID == "" {
+		return fmt.Errorf("empty SteamAppID")
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -169,10 +172,10 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 	if err := steamcmd.Command("steamcmd").AppUpdate(ctx, &steamcmd.AppUpdateCombined{
 		ForceInstallDir: steamcmdForceInstallDir,
 		AppUpdate: &steamcmd.AppUpdate{
-			AppID:        valheim.SteamAppID,
-			Validate:     true,
+			AppID:        s.SteamAppID,
 			Beta:         s.beta,
 			BetaPassword: s.betaPassword,
+			Validate:     true,
 		},
 	}); err != nil {
 		return err
@@ -224,8 +227,13 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 // AddMods installs or updates the given mods and their
 // dependencies using thunderstore.io.
 func (s *Sindri) AddMods(ctx context.Context, mods ...string) error {
-	if len(mods) == 0 {
+	switch {
+	case len(mods) == 0:
 		return nil
+	case s.BepInEx == nil:
+		return fmt.Errorf("nil BepInEx Package")
+	case s.ThunderstoreClient == nil:
+		return fmt.Errorf("nil ThunderstoreClient")
 	}
 
 	s.mu.Lock()
@@ -746,15 +754,6 @@ func (s *Sindri) layerDigests(layerDigests ...string) ([]v1.Layer, error) {
 }
 
 func (s *Sindri) init(opts ...Opt) error {
-	switch {
-	case s.SteamAppID == "":
-		return fmt.Errorf("empty SteamAppID")
-	case s.BepInEx == nil:
-		return fmt.Errorf("nil BepInEx Package")
-	case s.ThunderstoreClient == nil:
-		return fmt.Errorf("nil ThunderstoreClient")
-	}
-
 	if s.initialized {
 		return nil
 	}
