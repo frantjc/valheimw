@@ -38,7 +38,7 @@ jobs:
           git config --global user.name "$GIT_USER"
         env:
           GIT_USER: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
-      - uses: azure/setup-helm@v3
+      - uses: azure/setup-helm@v4
       - uses: helm/chart-releaser-action@v1.6.0
         with:
           mark_as_latest: false
