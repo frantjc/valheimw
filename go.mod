@@ -9,7 +9,7 @@ require (
 	github.com/frantjc/x v0.0.0-20240116045108-479cf61015f9
 	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/zapr v1.3.0
-	github.com/google/go-containerregistry v0.19.1
+	github.com/google/go-containerregistry v0.19.2
 	github.com/mmatczuk/anyflag v0.0.0-20240105091245-c64b70bf5d41
 	github.com/spf13/cobra v1.8.0
 	go.uber.org/zap v1.27.0
