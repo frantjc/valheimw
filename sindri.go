@@ -36,10 +36,14 @@ type ModMetadata struct {
 	Version     string `json:"version,omitempty"`
 }
 
+type SteamAppMetadata struct {
+	LayerDigest string `json:"layerDigest,omitempty"`
+}
+
 // Metadata stores metadata about a downloaded game
 // and added mods.
 type Metadata struct {
-	SteamAppLayerDigest string                 `json:"steamAppLayerDigest,omitempty"`
+	SteamApps map[string]SteamAppMetadata                 `json:"steamApps,omitempty"`
 	Mods                map[string]ModMetadata `json:"mods,omitempty"`
 }
 
@@ -151,8 +155,8 @@ func reproducibleBuildLayerFromDir(dir string) (v1.Layer, error) {
 
 // AppUpdate uses `steamcmd` to installed or update
 // the game that *Sindri is managing.
-func (s *Sindri) AppUpdate(ctx context.Context) error {
-	if s.SteamAppID == "" {
+func (s *Sindri) AppUpdate(ctx context.Context, steamAppID string) error {
+	if steamAppID == "" {
 		return fmt.Errorf("empty SteamAppID")
 	}
 
@@ -191,11 +195,18 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 		return err
 	}
 
-	// If the digest hasn't changed, we don't need to spend
-	// any more time on this.
-	if s.metadata.SteamAppLayerDigest == steamAppLayerDigest.String() {
-		return nil
+	if s.metadata.SteamApps == nil {
+		s.metadata.SteamApps = map[string]SteamAppMetadata{}
 	}
+
+	if steamAppMetadata, ok := s.metadata.SteamApps[steamAppID]; ok {
+		// If the digest hasn't changed, we don't need to spend
+		// any more time on this.
+		if steamAppMetadata.LayerDigest == steamAppLayerDigest.String() {
+			return nil
+		}
+	}
+
 
 	layers, err := s.img.Layers()
 	if err != nil {
@@ -210,7 +221,7 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 			return err
 		}
 
-		if s.metadata.SteamAppLayerDigest != digest.String() {
+		if s.metadata.SteamApps[steamAppID].LayerDigest != digest.String() {
 			filteredLayers = append(filteredLayers, layer)
 		}
 	}
@@ -219,7 +230,7 @@ func (s *Sindri) AppUpdate(ctx context.Context) error {
 		return err
 	}
 
-	s.metadata.SteamAppLayerDigest = steamAppLayerDigest.String()
+	s.metadata.SteamApps[steamAppID] = SteamAppMetadata{LayerDigest: steamAppLayerDigest.String()}
 
 	return s.save()
 }
@@ -400,16 +411,16 @@ var sourceDateEpoch = time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC).
 
 // Extract returns an io.ReadCloser of a tarball
 // containing the files of the game and the given mods.
-func (s *Sindri) Extract(mods ...string) (io.ReadCloser, error) {
+func (s *Sindri) Extract(steamAppIDs []string, mods ...string) (io.ReadCloser, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	modLayers, err := s.modLayers(mods...)
+	layers, err := s.steamAppLayers(steamAppIDs...)
 	if err != nil {
 		return nil, err
 	}
 
-	layers, err := s.layerDigests(s.metadata.SteamAppLayerDigest)
+	modLayers, err := s.modLayers(mods...)
 	if err != nil {
 		return nil, err
 	}
@@ -682,6 +693,36 @@ func (s *Sindri) metadataName() string {
 	return "sindri.metadata.json"
 }
 
+func (s *Sindri) steamAppLayers(steamAppIDs ...string) ([]v1.Layer, error) {
+	if len(steamAppIDs) == 0 {
+		return []v1.Layer{}, nil
+	}
+
+	var (
+		extractLayerDigests = []string{}
+		lenSteamAppIDs             = len(steamAppIDs)
+	)
+
+	for _, steamAppID := range steamAppIDs {
+		if steamAppMeta, ok := s.metadata.SteamApps[steamAppID]; ok {
+			extractLayerDigests = append(extractLayerDigests, steamAppMeta.LayerDigest)
+
+			if len(extractLayerDigests) == lenSteamAppIDs {
+				// Found them all
+				break
+			}
+		} else {
+			return nil, fmt.Errorf("could not find steamapp " + steamAppID + " layer digest")
+		}
+	}
+
+	if len(extractLayerDigests) != lenSteamAppIDs {
+		return nil, fmt.Errorf("unable to find all steamapp layer digests")
+	}
+
+	return s.layerDigests(extractLayerDigests...)
+}
+
 func (s *Sindri) modLayers(mods ...string) ([]v1.Layer, error) {
 	if len(mods) == 0 {
 		return []v1.Layer{}, nil
@@ -708,7 +749,7 @@ func (s *Sindri) modLayers(mods ...string) ([]v1.Layer, error) {
 				break
 			}
 		} else {
-			return nil, fmt.Errorf("couldn't find mod " + mod + " layer digest")
+			return nil, fmt.Errorf("could not find mod " + mod + " layer digest")
 		}
 	}
 
