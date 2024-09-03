@@ -71,7 +71,6 @@ func NewSindri() *cobra.Command {
 				}
 
 				s, err := sindri.New(
-					valheim.SteamAppID,
 					valheim.BepInEx,
 					thunderstore.NewClient(thunderstoreURL, thunderstore.WithDir(state)),
 					sindri.WithRootDir(root),

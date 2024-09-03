@@ -1,6 +1,6 @@
 services:
   sindri:
-    image: ghcr.io/frantjc/sindri:${TAG:-1.3.2}
+    image: ghcr.io/frantjc/sindri:${TAG:-2.0.0}
     build:
       context: .
       dockerfile: sindri.Dockerfile
@@ -20,7 +20,7 @@ services:
     environment:
       VALHEIM_PASSWORD: ${VALHEIM_PASSWORD:-atleast5chars}
   ladon:
-    image: ghcr.io/frantjc/ladon:${TAG:-1.3.2}
+    image: ghcr.io/frantjc/ladon:${TAG:-2.0.0}
     build:
       context: .
       dockerfile: ladon.Dockerfile

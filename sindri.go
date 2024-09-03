@@ -49,7 +49,6 @@ type Metadata struct {
 
 // Sindri manages the files of a game and its mods.
 type Sindri struct {
-	SteamAppID         string
 	BepInEx            *thunderstore.Package
 	ThunderstoreClient *thunderstore.Client
 
@@ -104,9 +103,8 @@ const (
 // required arguments and options. Sindri can also be
 // safely created directly so long as the exported
 // fields are set to non-nil values.
-func New(steamAppID string, bepInEx *thunderstore.Package, thunderstoreClient *thunderstore.Client, opts ...Opt) (*Sindri, error) {
+func New(bepInEx *thunderstore.Package, thunderstoreClient *thunderstore.Client, opts ...Opt) (*Sindri, error) {
 	s := &Sindri{
-		SteamAppID:         steamAppID,
 		BepInEx:            bepInEx,
 		ThunderstoreClient: thunderstoreClient,
 	}
@@ -176,7 +174,7 @@ func (s *Sindri) AppUpdate(ctx context.Context, steamAppID string) error {
 	if err := steamcmd.Command("steamcmd").AppUpdate(ctx, &steamcmd.AppUpdateCombined{
 		ForceInstallDir: steamcmdForceInstallDir,
 		AppUpdate: &steamcmd.AppUpdate{
-			AppID:        s.SteamAppID,
+			AppID:        steamAppID,
 			Beta:         s.beta,
 			BetaPassword: s.betaPassword,
 			Validate:     true,

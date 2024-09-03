@@ -22,7 +22,7 @@ func NewLadon() *cobra.Command {
 		root, state          string
 		verbosity            int
 		cmd = &cobra.Command{
-			Use:           "sindri",
+			Use:           "ladon",
 			Version:       sindri.SemVer(),
 			SilenceErrors: true,
 			SilenceUsage:  true,
@@ -42,7 +42,6 @@ func NewLadon() *cobra.Command {
 				}
 
 				s, err := sindri.New(
-					corekeeper.SteamAppID,
 					nil, nil,
 					sindri.WithRootDir(root),
 					sindri.WithStateDir(state),
@@ -81,13 +80,13 @@ func NewLadon() *cobra.Command {
 					return err
 				}
 				sindri.LogExec(log, subCmd)
-				// defer os.RemoveAll(runDir)
+				defer os.RemoveAll(runDir)
 
 				go func() {
 					log.Info("running Core Keeper in " + runDir)
 
 					if err := subCmd.Run(); err != nil {
-						errC <- fmt.Errorf("corekeeper: %w", err)
+						errC <- fmt.Errorf("core keeper: %w", err)
 					} else {
 						errC <- nil
 					}
