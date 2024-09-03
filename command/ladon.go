@@ -50,8 +50,12 @@ func NewLadon() *cobra.Command {
 				if err != nil {
 					return err
 				}
-	
+
 				if !noDownload {
+					if err = s.AppUpdate(ctx, "1007"); err != nil {
+						return err
+					}
+
 					if err = s.AppUpdate(ctx, corekeeper.SteamAppID); err != nil {
 						return err
 					}
