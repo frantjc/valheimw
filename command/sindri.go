@@ -71,7 +71,6 @@ func NewSindri() *cobra.Command {
 				}
 
 				s, err := sindri.New(
-					valheim.SteamAppID,
 					valheim.BepInEx,
 					thunderstore.NewClient(thunderstoreURL, thunderstore.WithDir(state)),
 					sindri.WithRootDir(root),
@@ -96,7 +95,7 @@ func NewSindri() *cobra.Command {
 					if !modsOnly {
 						log.Info("downloading Valheim")
 
-						if err = s.AppUpdate(ctx); err != nil {
+						if err = s.AppUpdate(ctx, valheim.SteamAppID); err != nil {
 							return err
 						}
 					}
@@ -110,7 +109,7 @@ func NewSindri() *cobra.Command {
 					}
 				}
 
-				moddedValheimTar, err := s.Extract(mods...)
+				moddedValheimTar, err := s.Extract([]string{valheim.SteamAppID}, mods...)
 				if err != nil {
 					return err
 				}

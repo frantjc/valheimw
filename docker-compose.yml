@@ -1,9 +1,9 @@
-version: "3.4"
-
 services:
   sindri:
-    image: ghcr.io/frantjc/sindri:${TAG:-1.3.2}
-    build: .
+    image: ghcr.io/frantjc/sindri:${TAG:-2.0.0}
+    build:
+      context: .
+      dockerfile: sindri.Dockerfile
     ports:
       - 2456:2456/udp
       - 8080:8080
@@ -19,3 +19,19 @@ services:
       - --mod=RandyKnapp/EquipmentAndQuickSlots
     environment:
       VALHEIM_PASSWORD: ${VALHEIM_PASSWORD:-atleast5chars}
+  ladon:
+    image: ghcr.io/frantjc/ladon:${TAG:-2.0.0}
+    build:
+      context: .
+      dockerfile: ladon.Dockerfile
+    ports:
+      - 27015:27015/udp
+      - 27016:27016/udp
+    volumes:
+      - ./hack/var/lib/ladon:/var/lib/ladon
+      - ./hack/run/ladon:/run/ladon
+    command:
+      - -VV
+      - --no-download
+      - --state=/run/ladon
+      - --root=/var/lib/ladon
