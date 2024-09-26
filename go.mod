@@ -4,7 +4,7 @@ go 1.21.4
 
 require (
 	github.com/adrg/xdg v0.5.0
-	github.com/frantjc/go-ingress v0.1.1
+	github.com/frantjc/go-ingress v0.2.0
 	github.com/frantjc/go-steamcmd v0.0.0-20240112014424-08f6a8624b2d
 	github.com/frantjc/x v0.0.0-20240116045108-479cf61015f9
 	github.com/go-logr/logr v1.4.2

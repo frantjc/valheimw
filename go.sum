@@ -11,8 +11,8 @@ github.com/docker/distribution v2.8.2+incompatible h1:T3de5rq0dB1j30rp0sA2rER+m3
 github.com/docker/distribution v2.8.2+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
 github.com/docker/docker-credential-helpers v0.7.0 h1:xtCHsjxogADNZcdv1pKUHXryefjlVRqWqIhk/uXJp0A=
 github.com/docker/docker-credential-helpers v0.7.0/go.mod h1:rETQfLdHNT3foU5kuNkFR1R1V12OJRRO5lzt2D1b5X0=
-github.com/frantjc/go-ingress v0.1.1 h1:qT1Wy03bMtEVuZomM2FJgK1TViHRxuEV/xsOGlzy/Sw=
-github.com/frantjc/go-ingress v0.1.1/go.mod h1:C/oNT54NfMlg+8M6O2M3OLhB7/HvLPDObkJerC8r+yA=
+github.com/frantjc/go-ingress v0.2.0 h1:qlZbeywNxCxYN9/uJ1ccEefTP7vArgnzRvACDMjQLiA=
+github.com/frantjc/go-ingress v0.2.0/go.mod h1:C/oNT54NfMlg+8M6O2M3OLhB7/HvLPDObkJerC8r+yA=
 github.com/frantjc/go-steamcmd v0.0.0-20240112014424-08f6a8624b2d h1:MuGx3DH9jy/0ZeD09vQ9EQtMJ29kPObnLAYjmC3Vt5U=
 github.com/frantjc/go-steamcmd v0.0.0-20240112014424-08f6a8624b2d/go.mod h1:g/OfOB32TF9mlBL+4OIgHST0LhV22drWOFNXng4NHwg=
 github.com/frantjc/x v0.0.0-20240116045108-479cf61015f9 h1:Hkp6KIoLLq/QEWjCOoToKYa45NXbAvgaK5Om4OEv7k8=
