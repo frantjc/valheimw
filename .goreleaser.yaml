@@ -1,6 +1,7 @@
 builds:
   - main: ./cmd/sindri
     id: sindri
+    binary: sindri
     ldflags:
       - -s -w -X github.com/frantjc/sindri.VersionCore={{ .RawVersion }}
     env:
@@ -14,6 +15,7 @@ builds:
         - upx {{ .Path }}
   - main: ./cmd/ladon
     id: ladon
+    binary: ladon
     ldflags:
       - -s -w -X github.com/frantjc/sindri.VersionCore={{ .RawVersion }}
     env:
