@@ -1,6 +1,0 @@
-apiVersion: v2
-name: sindri
-description: A Helm chart for Sindri
-type: application
-version: 0.1.0
-appVersion: "2.0.0"
