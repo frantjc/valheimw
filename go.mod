@@ -3,7 +3,7 @@ module github.com/frantjc/sindri
 go 1.21.4
 
 require (
-	github.com/adrg/xdg v0.5.0
+	github.com/adrg/xdg v0.5.1
 	github.com/frantjc/go-ingress v0.2.0
 	github.com/frantjc/go-steamcmd v0.0.0-20240112014424-08f6a8624b2d
 	github.com/frantjc/x v0.0.0-20240116045108-479cf61015f9
@@ -26,5 +26,5 @@ require (
 	github.com/vbatts/tar-split v0.11.5 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
 )
