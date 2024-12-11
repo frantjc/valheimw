@@ -17,7 +17,7 @@ func main() {
 		ctx, stop = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	)
 
-	err := xerrors.Ignore(command.NewValheim().ExecuteContext(ctx), context.Canceled)
+	err := xerrors.Ignore(command.NewValheimw().ExecuteContext(ctx), context.Canceled)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 	}

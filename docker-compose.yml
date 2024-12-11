@@ -1,14 +1,24 @@
 services:
-  valheim:
-    image: ghcr.io/frantjc/valheim:${TAG:-2.0.0}
+  valheimw:
+    image: ghcr.io/frantjc/sindri/valheimw:${TAG:-2.0.0}
     build:
       context: .
       args:
-        - TOOL=valheim
-    command:
-      - --mod=RandyKnapp/EquipmentAndQuickSlots
-      - --wd=/root/.cache/sindri/valheim
+        tool: valheimw
+    # command:
+    #   - --mod=RandyKnapp/EquipmentAndQuickSlots
     volumes:
       - ./hack:/root/.cache
     environment:
-      VALHEIM_PASSWORD: valheim
+      VALHEIM_PASSWORD: hellothere
+    ports:
+      - 2456:2456/udp
+      - 8080:8080
+  sindri:
+    image: ghcr.io/frantjc/sindri:${TAG:-2.0.0}
+    build:
+      context: .
+      args:
+        tool: sindri
+    ports:
+      - 8080:8080

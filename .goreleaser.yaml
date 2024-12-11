@@ -13,9 +13,37 @@ builds:
     hooks:
       post:
         - upx {{ .Path }}
-  - main: ./cmd/ladon
-    id: ladon
-    binary: ladon
+  - main: ./cmd/valheimw
+    id: valheimw
+    binary: valheimw
+    ldflags:
+      - -s -w -X github.com/frantjc/sindri.VersionCore={{ .RawVersion }}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+    hooks:
+      post:
+        - upx {{ .Path }}
+  - main: ./cmd/boil
+    id: boil
+    binary: boil
+    ldflags:
+      - -s -w -X github.com/frantjc/sindri.VersionCore={{ .RawVersion }}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+    hooks:
+      post:
+        - upx {{ .Path }}
+  - main: ./cmd/mist
+    id: mist
+    binary: mist
     ldflags:
       - -s -w -X github.com/frantjc/sindri.VersionCore={{ .RawVersion }}
     env:
@@ -35,16 +63,11 @@ changelog:
       - Merge pull request
       - Merge remote-tracking branch
       - Merge branch
-dockers:
-  - dockerfile: goreleaser.sindri.Dockerfile
-    image_templates:
-      - ghcr.io/frantjc/sindri:{{ .RawVersion }}
-      - ghcr.io/frantjc/sindri:{{ .Major }}.{{ .Minor }}
-      - ghcr.io/frantjc/sindri:{{ .Major }}
-      - ghcr.io/frantjc/sindri:latest
-  - dockerfile: goreleaser.ladon.Dockerfile
-    image_templates:
-      - ghcr.io/frantjc/ladon:{{ .RawVersion }}
-      - ghcr.io/frantjc/ladon:{{ .Major }}.{{ .Minor }}
-      - ghcr.io/frantjc/ladon:{{ .Major }}
-      - ghcr.io/frantjc/ladon:latest
+# TODO: ...
+# dockers:
+#   - dockerfile: goreleaser.Dockerfile
+#     image_templates:
+#       - ghcr.io/frantjc/sindri:{{ .RawVersion }}
+#       - ghcr.io/frantjc/sindri:{{ .Major }}.{{ .Minor }}
+#       - ghcr.io/frantjc/sindri:{{ .Major }}
+#       - ghcr.io/frantjc/sindri:latest

@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -17,12 +18,14 @@ import (
 
 	"github.com/frantjc/go-ingress"
 	"github.com/frantjc/sindri"
+	"github.com/frantjc/sindri/internal/cache"
 	"github.com/frantjc/sindri/steamapp"
 	"github.com/frantjc/sindri/thunderstore"
 	"github.com/frantjc/sindri/valheim"
 	xtar "github.com/frantjc/x/archive/tar"
 	"github.com/mmatczuk/anyflag"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -30,9 +33,8 @@ var (
 	bepInExName      = "BepInExPack_Valheim"
 )
 
-func NewValheim() *cobra.Command {
+func NewValheimw() *cobra.Command {
 	var (
-		wd                 string
 		addr               string
 		beta, betaPassword string
 		mods               []string
@@ -43,84 +45,67 @@ func NewValheim() *cobra.Command {
 			Password: os.Getenv("VALHEIM_PASSWORD"),
 		}
 		cmd = &cobra.Command{
-			Use:           "valheim",
+			Use:           "valheimw",
 			Version:       sindri.SemVer(),
 			SilenceErrors: true,
 			SilenceUsage:  true,
 			RunE: func(cmd *cobra.Command, args []string) error {
-				var (
-					ctx = cmd.Context()
-					mgr = sindri.NewManager()
-				)
-				defer mgr.Close()
+				wd := filepath.Join(cache.Dir, "valheimw")
+				defer os.RemoveAll(wd)
 
-				if wd != "" {
-					if err := os.MkdirAll(wd, 0755); err != nil {
-						return err
-					}
+				if err := os.MkdirAll(wd, 0777); err != nil {
+					return err
 				}
+
+				ctx := cmd.Context()
 
 				pkgs, err := thunderstore.DependencyTree(ctx, mods...)
 				if err != nil {
 					return err
 				}
 
+				eg, _ := errgroup.WithContext(ctx)
+
 				for _, pkg := range pkgs {
-					dir := "BepInEx/plugins"
+					dir := fmt.Sprintf("BepInEx/plugins/%s", pkg.String())
 
 					if pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName {
 						opts.BepInEx = true
 						dir = ""
 					}
 
-					if _, err := mgr.Install(ctx,
-						fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()),
-						dir,
-					); err != nil {
-						return err
-					}
+					eg.Go(func() error {
+						return sindri.Extract(ctx,
+							fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()),
+							filepath.Join(wd, dir),
+						)
+					})
 				}
 
 				if !opts.BepInEx && len(pkgs) > 0 {
 					opts.BepInEx = true
 
-					if _, err := mgr.Install(ctx,
-						fmt.Sprintf("%s://%s-%s", thunderstore.Scheme, bepInExNamespace, bepInExName),
-						"",
-					); err != nil {
-						return err
-					}
+					eg.Go(func() error {
+						return sindri.Extract(ctx,
+							fmt.Sprintf("%s://%s-%s", thunderstore.Scheme, bepInExNamespace, bepInExName),
+							wd,
+						)
+					})
 				}
 
 				o := &steamapp.Opts{}
 				steamapp.WithBeta(beta, betaPassword)(o)
 
-				if _, err := mgr.Install(ctx,
-					fmt.Sprintf("%s://%d?%s", steamapp.Scheme, valheim.SteamAppID, steamapp.URLValues(o).Encode()),
-					"",
-				); err != nil {
+				eg.Go(func() error {
+					return sindri.Extract(ctx,
+						fmt.Sprintf("%s://%d?%s", steamapp.Scheme, valheim.SteamAppID, steamapp.URLValues(o).Encode()),
+						wd,
+					)
+				})
+
+				if err = eg.Wait(); err != nil {
 					return err
 				}
-
-				rc, err := mgr.ExtractAll()
-				if err != nil {
-					return err
-				}
-				defer rc.Close()
-
-				if err = xtar.Extract(tar.NewReader(rc), wd); err != nil {
-					return err
-				}
-				defer os.RemoveAll(wd)
-
-				sub, err := valheim.NewCommand(ctx, wd, opts)
-				if err != nil {
-					return err
-				}
-
-				sub.Stdin = cmd.InOrStdin()
-				sub.Stdout = cmd.OutOrStdout()
-				sub.Stderr = cmd.ErrOrStderr()
 
 				var (
 					zHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -203,7 +188,7 @@ func NewValheim() *cobra.Command {
 							q.Set("seed", seed)
 							valheimMapURL.RawQuery = q.Encode()
 
-							http.Redirect(w, r, valheimMapURL.String(), http.StatusMovedPermanently)
+							http.Redirect(w, r, valheimMapURL.String(), http.StatusTemporaryRedirect)
 						})
 						fwlHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							fwl, err := valheim.OpenFWL(opts.SaveDir, opts.World)
@@ -243,34 +228,84 @@ func NewValheim() *cobra.Command {
 				if len(mods) > 0 {
 					var (
 						modTarHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							rc, err := mgr.Extract(thunderstore.Scheme)
-							if err != nil {
-								w.WriteHeader(http.StatusInternalServerError)
-								return
-							}
-							defer rc.Close()
+							tw := tar.NewWriter(w)
+							defer tw.Close()
 
 							w.Header().Add("Content-Type", "application/tar")
 
-							_, _ = io.Copy(w, rc)
+							for _, mod := range mods {
+								rc, err := sindri.Open(ctx, mod)
+								if err != nil {
+									w.WriteHeader(http.StatusInternalServerError)
+									return
+								}
+								defer rc.Close()
+
+								tr := tar.NewReader(rc)
+
+								for {
+									hdr, err := tr.Next()
+									if errors.Is(err, io.EOF) {
+										break
+									} else if err != nil {
+										w.WriteHeader(http.StatusInternalServerError)
+										return
+									}
+
+									if err = tw.WriteHeader(hdr); err != nil {
+										w.WriteHeader(http.StatusInternalServerError)
+										return
+									}
+
+									if _, err = io.Copy(tw, tr); err != nil {
+										w.WriteHeader(http.StatusInternalServerError)
+										return
+									}
+								}
+							}
 						})
 						modTgzHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							rc, err := mgr.Extract(thunderstore.Scheme)
-							if err != nil {
-								w.WriteHeader(http.StatusInternalServerError)
-								return
-							}
-							defer rc.Close()
-
-							w.Header().Add("Content-Type", "application/gzip")
-
 							gzw, err := gzip.NewWriterLevel(w, gzip.BestCompression)
 							if err != nil {
 								gzw = gzip.NewWriter(w)
 							}
 							defer gzw.Close()
 
-							_, _ = io.Copy(gzw, rc)
+							tw := tar.NewWriter(gzw)
+							defer tw.Close()
+
+							w.Header().Add("Content-Type", "application/gzip")
+
+							for _, mod := range mods {
+								rc, err := sindri.Open(ctx, mod)
+								if err != nil {
+									w.WriteHeader(http.StatusInternalServerError)
+									return
+								}
+								defer rc.Close()
+
+								tr := tar.NewReader(rc)
+
+								for {
+									hdr, err := tr.Next()
+									if errors.Is(err, io.EOF) {
+										break
+									} else if err != nil {
+										w.WriteHeader(http.StatusInternalServerError)
+										return
+									}
+
+									if err = tw.WriteHeader(hdr); err != nil {
+										w.WriteHeader(http.StatusInternalServerError)
+										return
+									}
+
+									if _, err = io.Copy(tw, tr); err != nil {
+										w.WriteHeader(http.StatusInternalServerError)
+										return
+									}
+								}
+							}
 						})
 						modHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/gzip") {
@@ -294,21 +329,27 @@ func NewValheim() *cobra.Command {
 					)
 				}
 
-				var (
-					srv = &http.Server{
-						Addr:              addr,
-						ReadHeaderTimeout: time.Second * 5,
-						BaseContext: func(_ net.Listener) context.Context {
-							return ctx
-						},
-						Handler: ingress.New(paths...),
-					}
-					errC = make(chan error, 1)
-				)
+				eg, egctx := errgroup.WithContext(ctx)
 
-				go func() {
-					errC <- sub.Run()
-				}()
+				srv := &http.Server{
+					Addr:              addr,
+					ReadHeaderTimeout: time.Second * 5,
+					BaseContext: func(_ net.Listener) context.Context {
+						return egctx
+					},
+					Handler: ingress.New(paths...),
+				}
+
+				sub, err := valheim.NewCommand(ctx, wd, opts)
+				if err != nil {
+					return err
+				}
+
+				sub.Stdin = cmd.InOrStdin()
+				sub.Stdout = cmd.OutOrStdout()
+				sub.Stderr = cmd.ErrOrStderr()
+
+				eg.Go(sub.Run)
 
 				l, err := net.Listen("tcp", addr)
 				if err != nil {
@@ -316,20 +357,19 @@ func NewValheim() *cobra.Command {
 				}
 				defer l.Close()
 
-				go func() {
-					errC <- srv.Serve(l)
-				}()
+				// TODO: I don't think the context cancels this.
+				eg.Go(func() error {
+					return srv.Serve(l)
+				})
 				defer srv.Close()
 
-				return <-errC
+				return eg.Wait()
 			},
 		}
 	)
 
 	cmd.SetVersionTemplate("{{ .Name }}{{ .Version }} " + runtime.Version() + "\n")
 	cmd.Flags().CountVarP(&verbosity, "verbose", "V", "verbosity")
-
-	cmd.Flags().StringVarP(&wd, "wd", "d", ".", "working directory")
 
 	cmd.Flags().StringArrayVarP(&mods, "mod", "m", nil, "Thunderstore mods (case-sensitive)")
 
@@ -338,7 +378,7 @@ func NewValheim() *cobra.Command {
 
 	cmd.Flags().StringVar(&addr, "addr", ":8080", "address")
 
-	cmd.Flags().StringVar(&opts.SaveDir, "savedir", ".", "Valheim server -savedir")
+	cmd.Flags().StringVar(&opts.SaveDir, "savedir", filepath.Join(cache.Dir, "valheim"), "Valheim server -savedir")
 	cmd.Flags().StringVar(&opts.Name, "name", "sindri", "Valheim server -name")
 	cmd.Flags().Int64Var(&opts.Port, "port", 0, "Valheim server -port (0 to use default)")
 	cmd.Flags().StringVar(&opts.World, "world", "sindri", "Valheim server -world")
