@@ -2,7 +2,9 @@ package contreg
 
 import (
 	"context"
+	"io"
 
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -21,6 +23,16 @@ type DockerClient struct {
 var _ Reader = &DockerClient{}
 
 func (c *DockerClient) Read(ctx context.Context, ref name.Reference) (v1.Image, error) {
+	rc, err := c.Client.ImagePull(ctx, ref.String(), image.PullOptions{})
+	if err != nil {
+		return nil, err
+	}
+	defer rc.Close()
+
+	if _, err = io.Copy(io.Discard, rc); err != nil {
+		return nil, err
+	}
+
 	return daemon.Image(ref, daemon.WithContext(ctx), daemon.WithClient(c))
 }
 
