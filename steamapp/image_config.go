@@ -15,6 +15,7 @@ import (
 func ImageConfig(ctx context.Context, appID int, opts ...Opt) (*v1.Config, error) {
 	o := &Opts{
 		installDir: "/",
+		platformType: steamcmd.DefaultPlatformType,
 	}
 
 	for _, opt := range opts {
