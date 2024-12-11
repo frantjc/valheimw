@@ -1,0 +1,19 @@
+name: Build Push Steamapp
+on:
+  workflow_dispatch:
+    inputs:
+      app-id:
+        description: Steam app ID to build and push.
+        required: true
+      branch:
+        description: Steamapp branch to build.
+        default: public
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo appID: ${{ inputs.app-id }}, branch: ${{ inputs.branch }}

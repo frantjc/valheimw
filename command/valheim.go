@@ -15,10 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adrg/xdg"
 	"github.com/frantjc/go-ingress"
 	"github.com/frantjc/sindri"
-	"github.com/frantjc/sindri/internal/clienthelper"
+	"github.com/frantjc/sindri/steamapp"
 	"github.com/frantjc/sindri/thunderstore"
 	"github.com/frantjc/sindri/valheim"
 	xtar "github.com/frantjc/x/archive/tar"
@@ -26,132 +25,102 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewSindri is the entrypoint for `sindri`.
-func NewSindri() *cobra.Command {
+var (
+	bepInExNamespace = "denikson"
+	bepInExName      = "BepInExPack_Valheim"
+)
+
+func NewValheim() *cobra.Command {
 	var (
-		addr                 string
-		noDownload, modsOnly bool
-		beta, betaPassword   string
-		mods, rmMods         []string
-		root, state          string
-		verbosity            int
-		noDB, noFWL          bool
-		playerLists          = &valheim.PlayerLists{}
-		opts                 = &valheim.Opts{
+		wd                 string
+		addr               string
+		beta, betaPassword string
+		mods               []string
+		verbosity          int
+		noDB, noFWL        bool
+		playerLists        = &valheim.PlayerLists{}
+		opts               = &valheim.Opts{
 			Password: os.Getenv("VALHEIM_PASSWORD"),
 		}
 		cmd = &cobra.Command{
-			Use:           "sindri",
+			Use:           "valheim",
 			Version:       sindri.SemVer(),
 			SilenceErrors: true,
 			SilenceUsage:  true,
-			PreRun: func(cmd *cobra.Command, _ []string) {
-				cmd.SetContext(
-					sindri.WithLogger(cmd.Context(), sindri.NewLogger().V(2-verbosity)),
-				)
-			},
 			RunE: func(cmd *cobra.Command, args []string) error {
 				var (
 					ctx = cmd.Context()
-					log = sindri.LoggerFrom(ctx)
+					mgr = sindri.NewManager()
 				)
-				thunderstoreURL, err := url.Parse("https://valheim.thunderstore.io/")
-				if err != nil {
-					return err
-				}
+				defer mgr.Close()
 
-				root, err := filepath.Abs(root)
-				if err != nil {
-					return err
-				}
-
-				state, err := filepath.Abs(state)
-				if err != nil {
-					return err
-				}
-
-				s, err := sindri.New(
-					valheim.BepInEx,
-					thunderstore.NewClient(thunderstoreURL, thunderstore.WithDir(state)),
-					sindri.WithRootDir(root),
-					sindri.WithStateDir(state),
-					sindri.WithBeta(beta, betaPassword),
-				)
-				if err != nil {
-					return err
-				}
-
-				if !noDownload {
-					if len(mods) > 0 {
-						// Mods first because they're going to be smaller most of
-						// the time so it makes the whole process a bit faster.
-						log.Info("downloading mods " + strings.Join(append(mods, s.BepInEx.Fullname()), ", "))
-
-						if err = s.AddMods(ctx, mods...); err != nil {
-							return err
-						}
-					}
-
-					if !modsOnly {
-						log.Info("downloading Valheim")
-
-						if err = s.AppUpdate(ctx, valheim.SteamAppID); err != nil {
-							return err
-						}
-					}
-				}
-
-				if len(rmMods) > 0 {
-					log.Info("removing mods " + strings.Join(rmMods, ", "))
-
-					if err = s.RemoveMods(ctx, rmMods...); err != nil {
+				if wd != "" {
+					if err := os.MkdirAll(wd, 0755); err != nil {
 						return err
 					}
 				}
 
-				moddedValheimTar, err := s.Extract([]string{valheim.SteamAppID}, mods...)
-				if err != nil {
-					return err
-				}
-				defer moddedValheimTar.Close()
-
-				runDir, err := os.MkdirTemp(state, "")
+				pkgs, err := thunderstore.DependencyTree(ctx, mods...)
 				if err != nil {
 					return err
 				}
 
-				log.Info("installing Valheim to " + runDir)
+				for _, pkg := range pkgs {
+					dir := "BepInEx/plugins"
 
-				if err = xtar.Extract(tar.NewReader(moddedValheimTar), runDir); err != nil {
-					return err
-				}
-
-				opts.SaveDir = root
-
-				log.Info("writing Valheim player lists in " + opts.SaveDir)
-
-				if err := valheim.WritePlayerLists(opts.SaveDir, playerLists); err != nil {
-					return err
-				}
-
-				errC := make(chan error)
-
-				subCmd, err := valheim.NewCommand(ctx, runDir, opts)
-				if err != nil {
-					return err
-				}
-				sindri.LogExec(log, subCmd)
-				defer os.RemoveAll(runDir)
-
-				go func() {
-					log.Info("running Valheim in " + runDir)
-
-					if err := subCmd.Run(); err != nil {
-						errC <- fmt.Errorf("valheim: %w", err)
-					} else {
-						errC <- nil
+					if pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName {
+						opts.BepInEx = true
+						dir = ""
 					}
-				}()
+
+					if _, err := mgr.Install(ctx,
+						fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()),
+						dir,
+					); err != nil {
+						return err
+					}
+				}
+
+				if !opts.BepInEx && len(pkgs) > 0 {
+					opts.BepInEx = true
+
+					if _, err := mgr.Install(ctx,
+						fmt.Sprintf("%s://%s-%s", thunderstore.Scheme, bepInExNamespace, bepInExName),
+						"",
+					); err != nil {
+						return err
+					}
+				}
+
+				o := &steamapp.Opts{}
+				steamapp.WithBeta(beta, betaPassword)(o)
+
+				if _, err := mgr.Install(ctx,
+					fmt.Sprintf("%s://%d?%s", steamapp.Scheme, valheim.SteamAppID, steamapp.URLValues(o).Encode()),
+					"",
+				); err != nil {
+					return err
+				}
+
+				rc, err := mgr.ExtractAll()
+				if err != nil {
+					return err
+				}
+				defer rc.Close()
+
+				if err = xtar.Extract(tar.NewReader(rc), wd); err != nil {
+					return err
+				}
+				defer os.RemoveAll(wd)
+
+				sub, err := valheim.NewCommand(ctx, wd, opts)
+				if err != nil {
+					return err
+				}
+
+				sub.Stdin = cmd.InOrStdin()
+				sub.Stdout = cmd.OutOrStdout()
+				sub.Stderr = cmd.ErrOrStderr()
 
 				var (
 					zHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -234,7 +203,6 @@ func NewSindri() *cobra.Command {
 							q.Set("seed", seed)
 							valheimMapURL.RawQuery = q.Encode()
 
-							w.Header().Add("Content-Type", "")
 							http.Redirect(w, r, valheimMapURL.String(), http.StatusMovedPermanently)
 						})
 						fwlHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -275,7 +243,7 @@ func NewSindri() *cobra.Command {
 				if len(mods) > 0 {
 					var (
 						modTarHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							rc, err := s.ExtractMods(mods...)
+							rc, err := mgr.Extract(thunderstore.Scheme)
 							if err != nil {
 								w.WriteHeader(http.StatusInternalServerError)
 								return
@@ -284,10 +252,10 @@ func NewSindri() *cobra.Command {
 
 							w.Header().Add("Content-Type", "application/tar")
 
-							_, _ = clienthelper.CopyWithTarPrefix(w, rc, r)
+							_, _ = io.Copy(w, rc)
 						})
 						modTgzHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							rc, err := s.ExtractMods(mods...)
+							rc, err := mgr.Extract(thunderstore.Scheme)
 							if err != nil {
 								w.WriteHeader(http.StatusInternalServerError)
 								return
@@ -302,7 +270,7 @@ func NewSindri() *cobra.Command {
 							}
 							defer gzw.Close()
 
-							_, _ = clienthelper.CopyWithTarPrefix(gzw, rc, r)
+							_, _ = io.Copy(gzw, rc)
 						})
 						modHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/gzip") {
@@ -324,18 +292,23 @@ func NewSindri() *cobra.Command {
 						ingress.ExactPath("/mods.tar.gz", modTgzHandler),
 						ingress.ExactPath("/mods", modHdrHandler),
 					)
-				} else {
-					log.Info("no mods, not serving mod download endpoints")
 				}
 
-				srv := &http.Server{
-					Addr:              addr,
-					ReadHeaderTimeout: time.Second * 5,
-					BaseContext: func(_ net.Listener) context.Context {
-						return ctx
-					},
-					Handler: ingress.New(paths...),
-				}
+				var (
+					srv = &http.Server{
+						Addr:              addr,
+						ReadHeaderTimeout: time.Second * 5,
+						BaseContext: func(_ net.Listener) context.Context {
+							return ctx
+						},
+						Handler: ingress.New(paths...),
+					}
+					errC = make(chan error, 1)
+				)
+
+				go func() {
+					errC <- sub.Run()
+				}()
 
 				l, err := net.Listen("tcp", addr)
 				if err != nil {
@@ -344,9 +317,7 @@ func NewSindri() *cobra.Command {
 				defer l.Close()
 
 				go func() {
-					log.Info("listening on " + addr)
-
-					errC <- fmt.Errorf("sindri: %s", srv.Serve(l))
+					errC <- srv.Serve(l)
 				}()
 				defer srv.Close()
 
@@ -356,27 +327,18 @@ func NewSindri() *cobra.Command {
 	)
 
 	cmd.SetVersionTemplate("{{ .Name }}{{ .Version }} " + runtime.Version() + "\n")
-	cmd.Flags().CountVarP(&verbosity, "verbose", "V", "verbosity for sindri")
+	cmd.Flags().CountVarP(&verbosity, "verbose", "V", "verbosity")
 
-	cmd.Flags().StringVarP(&root, "root", "r", filepath.Join(xdg.DataHome, "sindri"), "root directory for sindri (-savedir resides here)")
-	_ = cmd.MarkFlagDirname("root")
-
-	cmd.Flags().StringVarP(&state, "state", "s", filepath.Join(xdg.RuntimeDir, "sindri"), "state directory for sindri")
-	_ = cmd.MarkFlagDirname("state")
+	cmd.Flags().StringVarP(&wd, "wd", "d", ".", "working directory")
 
 	cmd.Flags().StringArrayVarP(&mods, "mod", "m", nil, "Thunderstore mods (case-sensitive)")
-	cmd.Flags().StringArrayVar(&rmMods, "rm", nil, "Thunderstore mods to remove (case-sensitive)")
-	cmd.Flags().BoolVar(&modsOnly, "mods-only", false, "do not redownload Valheim")
-	cmd.Flags().BoolVar(&noDownload, "airgap", false, "do not redownload Valheim or mods")
-	cmd.Flags().BoolVar(&noDownload, "no-download", false, "do not redownload Valheim or mods")
-	_ = cmd.Flags().MarkHidden("airgap")
-	_ = cmd.Flags().MarkDeprecated("airgap", "please use --no-download instead of --airgap")
 
 	cmd.Flags().BoolVar(&noDB, "no-db", false, "do not expose the world .db file for download")
 	cmd.Flags().BoolVar(&noFWL, "no-fwl", false, "do not expose the world .fwl file information")
 
-	cmd.Flags().StringVar(&addr, "addr", ":8080", "address for sindri")
+	cmd.Flags().StringVar(&addr, "addr", ":8080", "address")
 
+	cmd.Flags().StringVar(&opts.SaveDir, "savedir", ".", "Valheim server -savedir")
 	cmd.Flags().StringVar(&opts.Name, "name", "sindri", "Valheim server -name")
 	cmd.Flags().Int64Var(&opts.Port, "port", 0, "Valheim server -port (0 to use default)")
 	cmd.Flags().StringVar(&opts.World, "world", "sindri", "Valheim server -world")

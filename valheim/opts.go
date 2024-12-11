@@ -123,6 +123,8 @@ type Opts struct {
 	PlayerEvents bool
 	PassiveMobs  bool
 	NoMap        bool
+
+	BepInEx bool
 }
 
 // ToArgs transforms Opts into an array

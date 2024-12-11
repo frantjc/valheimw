@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version: 1.23
       - uses: crazy-max/ghaction-upx@v3
         with:
           install-only: true

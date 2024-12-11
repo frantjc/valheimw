@@ -1,37 +1,14 @@
 services:
-  sindri:
-    image: ghcr.io/frantjc/sindri:${TAG:-2.0.0}
+  valheim:
+    image: ghcr.io/frantjc/valheim:${TAG:-2.0.0}
     build:
       context: .
-      dockerfile: sindri.Dockerfile
-    ports:
-      - 2456:2456/udp
-      - 8080:8080
-    volumes:
-      - ./hack/var/lib/sindri:/var/lib/sindri
-      - ./hack/run/sindri:/run/sindri
+      args:
+        - TOOL=valheim
     command:
-      - -VV
-      # - --no-download
-      # - --mods-only
-      - --state=/run/sindri
-      - --root=/var/lib/sindri
       - --mod=RandyKnapp/EquipmentAndQuickSlots
-    environment:
-      VALHEIM_PASSWORD: ${VALHEIM_PASSWORD:-atleast5chars}
-  ladon:
-    image: ghcr.io/frantjc/ladon:${TAG:-2.0.0}
-    build:
-      context: .
-      dockerfile: ladon.Dockerfile
-    ports:
-      - 27015:27015/udp
-      - 27016:27016/udp
+      - --wd=/root/.cache/sindri/valheim
     volumes:
-      - ./hack/var/lib/ladon:/var/lib/ladon
-      - ./hack/run/ladon:/run/ladon
-    command:
-      - -VV
-      - --no-download
-      - --state=/run/ladon
-      - --root=/var/lib/ladon
+      - ./hack:/root/.cache
+    environment:
+      VALHEIM_PASSWORD: valheim

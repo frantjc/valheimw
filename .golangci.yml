@@ -3,11 +3,13 @@ run:
 linters:
   enable:
     - dupl
-    - exportloopref
+    - copyloopvar
     - gosec
     - gocritic
     - importas
-    - megacheck
+    - gosimple
+    - staticcheck
+    - unused
     - nakedret
     - nolintlint
     - prealloc

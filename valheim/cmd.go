@@ -19,6 +19,14 @@ func NewCommand(ctx context.Context, dir string, opts *Opts) (*exec.Cmd, error) 
 		return nil, fmt.Errorf("-password must be >=5 characters and not contained within the world name")
 	}
 
+	if !filepath.IsAbs(dir) {
+		var err error
+		dir, err = filepath.Abs(dir)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	var (
 		//nolint:gosec
 		cmd = exec.CommandContext(
@@ -40,61 +48,66 @@ func NewCommand(ctx context.Context, dir string, opts *Opts) (*exec.Cmd, error) 
 			os.Getenv("LD_LIBRARY_PATH"),
 			filepath.Join(dir, "linux64"),
 		)
-		// Potential BepInEx stuff
-		doorstopLibs     = filepath.Join(dir, "doorstop_libs")
-		libdoorstop      = filepath.Join(doorstopLibs, "libdoorstop_x86") // ext added below
-		bepInExPreloader = filepath.Join(dir, "BepInEx/core/BepInEx.Preloader.dll")
-		unstrippedCorlib = filepath.Join(dir, "unstripped_corlib")
 	)
 
-	// TODO: Should this ever be _x64?
-	// if strings.Contains(runtime.GOARCH, "amd64") {
-	// 	libdoorstop += "_x64"
-	// } else {
-	// 	libdoorstop += "_x86"
-	// }
-
-	switch runtime.GOOS {
-	case "windows":
-		return nil, fmt.Errorf("incompatible OS %s", runtime.GOOS)
-	case "darwin":
-		libdoorstop += ".dylib"
-	default:
-		libdoorstop += ".so"
-	}
-
 	cmd.Dir = dir
-	cmd.Env = os.Environ()
 
-	if _, err := os.Stat(doorstopLibs); err == nil {
-		cmd.Env = append(
-			cmd.Env,
-			"DOORSTOP_ENABLED=TRUE",
-			fmt.Sprintf("DYLD_LIBRARY_PATH=%s", doorstopLibs),
+	if opts.BepInEx {
+		var (
+			doorstopLibs     = filepath.Join(cmd.Dir, "doorstop_libs")
+			libdoorstop      = filepath.Join(doorstopLibs, "libdoorstop_x86") // ext added below
+			bepInExPreloader = filepath.Join(cmd.Dir, "BepInEx/core/BepInEx.Preloader.dll")
+			unstrippedCorlib = filepath.Join(cmd.Dir, "unstripped_corlib")
 		)
-		ldLibraryPath = xos.JoinPath(ldLibraryPath, doorstopLibs)
-	}
 
-	if _, err := os.Stat(libdoorstop); err == nil {
-		cmd.Env = append(
-			cmd.Env,
-			fmt.Sprintf("LD_PRELOAD=%s", xos.JoinPath(libdoorstop, os.Getenv("LD_PRELOAD"))),
-			fmt.Sprintf("DYLD_INSERT_LIBRARIES=%s", libdoorstop),
-		)
-	}
+		// TODO: Should this ever be _x64?
+		// if strings.Contains(runtime.GOARCH, "amd64") {
+		// 	libdoorstop += "_x64"
+		// } else {
+		// 	libdoorstop += "_x86"
+		// }
 
-	if _, err := os.Stat(bepInExPreloader); err == nil {
-		cmd.Env = append(
-			cmd.Env,
-			fmt.Sprintf("DOORSTOP_INVOKE_DLL_PATH=%s", bepInExPreloader),
-		)
-	}
+		switch runtime.GOOS {
+		case "windows":
+			return nil, fmt.Errorf("%s incompatible with BepInEx", runtime.GOOS)
+		case "darwin":
+			libdoorstop += ".dylib"
+		default:
+			libdoorstop += ".so"
+		}
 
-	if _, err := os.Stat(unstrippedCorlib); err == nil {
-		cmd.Env = append(
-			cmd.Env,
-			fmt.Sprintf("DOORSTOP_CORLIB_OVERRIDE_PATH=%s", unstrippedCorlib),
-		)
+		cmd.Env = os.Environ()
+
+		if _, err := os.Stat(doorstopLibs); err == nil {
+			cmd.Env = append(
+				cmd.Env,
+				"DOORSTOP_ENABLED=TRUE",
+				fmt.Sprintf("DYLD_LIBRARY_PATH=%s", doorstopLibs),
+			)
+			ldLibraryPath = xos.JoinPath(ldLibraryPath, doorstopLibs)
+		}
+
+		if _, err := os.Stat(libdoorstop); err == nil {
+			cmd.Env = append(
+				cmd.Env,
+				fmt.Sprintf("LD_PRELOAD=%s", xos.JoinPath(libdoorstop, os.Getenv("LD_PRELOAD"))),
+				fmt.Sprintf("DYLD_INSERT_LIBRARIES=%s", libdoorstop),
+			)
+		}
+
+		if _, err := os.Stat(bepInExPreloader); err == nil {
+			cmd.Env = append(
+				cmd.Env,
+				fmt.Sprintf("DOORSTOP_INVOKE_DLL_PATH=%s", bepInExPreloader),
+			)
+		}
+
+		if _, err := os.Stat(unstrippedCorlib); err == nil {
+			cmd.Env = append(
+				cmd.Env,
+				fmt.Sprintf("DOORSTOP_CORLIB_OVERRIDE_PATH=%s", unstrippedCorlib),
+			)
+		}
 	}
 
 	cmd.Env = append(

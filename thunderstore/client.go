@@ -3,19 +3,30 @@ package thunderstore
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+
+	"github.com/frantjc/sindri/internal/cache"
+)
+
+var (
+	DefaultURL = func() *url.URL {
+		u, err := url.Parse("https://thunderstore.io/")
+		if err != nil {
+			panic(err)
+		}
+
+		return u
+	}()
+	DefaultClient = NewClient()
 )
 
 type ClientOpt func(*Client)
-
-func WithHTTPClient(httpClient *http.Client) ClientOpt {
-	return func(c *Client) {
-		c.httpClient = httpClient
-	}
-}
 
 func WithDir(dir string) ClientOpt {
 	return func(c *Client) {
@@ -23,8 +34,20 @@ func WithDir(dir string) ClientOpt {
 	}
 }
 
-func NewClient(u *url.URL, opts ...ClientOpt) *Client {
-	c := &Client{u, http.DefaultClient, os.TempDir()}
+func WithHTTPClient(httpClient *http.Client) ClientOpt {
+	return func(c *Client) {
+		c.httpClient = httpClient
+	}
+}
+
+func WithURL(u *url.URL) ClientOpt {
+	return func(c *Client) {
+		c.thunderstoreURL = u
+	}
+}
+
+func NewClient(opts ...ClientOpt) *Client {
+	c := &Client{DefaultURL, http.DefaultClient, filepath.Join(cache.Dir, Scheme)}
 
 	for _, opt := range opts {
 		opt(c)
@@ -39,16 +62,17 @@ type Client struct {
 	dir             string
 }
 
-func (c *Client) GetPackageMetadata(ctx context.Context, p *Package) (*PackageMetadata, error) {
-	meta := &PackageMetadata{}
+func (c *Client) GetPackage(ctx context.Context, p *Package) (*Package, error) {
 	req, err := http.NewRequestWithContext(
 		ctx, http.MethodGet,
-		c.thunderstoreURL.JoinPath("/api/experimental/package").JoinPath(packageElems(p)...).String()+"/",
+		fmt.Sprintf("%s/", c.thunderstoreURL.JoinPath("/api/experimental/package", p.Namespace, p.Name, p.VersionNumber).String()),
 		nil,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	pkg := &Package{}
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
@@ -56,7 +80,15 @@ func (c *Client) GetPackageMetadata(ctx context.Context, p *Package) (*PackageMe
 	}
 	defer res.Body.Close()
 
-	return meta, json.NewDecoder(res.Body).Decode(meta)
+	if err := json.NewDecoder(res.Body).Decode(pkg); err != nil {
+		return nil, err
+	}
+
+	if pkg.Detail == "Not found." {
+		return nil, fmt.Errorf("package %s not found", p)
+	}
+
+	return pkg, nil
 }
 
 type ZipReadableCloser struct {
@@ -73,15 +105,49 @@ func (z *ZipReadableCloser) Size() int64 {
 }
 
 func (z *ZipReadableCloser) Close() error {
+	return z.f.Close()
+}
+
+func (z *ZipReadableCloser) Remove() error {
 	return os.Remove(z.f.Name())
 }
 
 func (c *Client) GetPackageZip(ctx context.Context, p *Package) (*ZipReadableCloser, error) {
-	req, err := http.NewRequestWithContext(
-		ctx, http.MethodGet,
-		c.thunderstoreURL.JoinPath("/package/download").JoinPath(packageElems(p)...).String()+"/",
-		nil,
-	)
+	zipFilePath := filepath.Join(c.dir, fmt.Sprintf("%s.zip", p))
+
+	fi, err := os.Stat(zipFilePath)
+	if err == nil {
+		f, err := os.Open(zipFilePath)
+		if err != nil {
+			return nil, err
+		}
+
+		return &ZipReadableCloser{f, fi.Size()}, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+
+	if err = os.MkdirAll(c.dir, 0750); err != nil {
+		return nil, err
+	}
+
+	u := ""
+	if p.Latest != nil && p.Latest.DownloadURL != nil && p.Latest.DownloadURL.URL != nil {
+		u = p.Latest.DownloadURL.String()
+	} else if p.DownloadURL != nil && p.DownloadURL.URL != nil {
+		u = p.DownloadURL.String()
+	} else if p.VersionNumber != "" {
+		u = fmt.Sprintf("%s/", c.thunderstoreURL.JoinPath("/package/download", p.Namespace, p.Name, p.VersionNumber).String())
+	} else {
+		pkg, err := c.GetPackage(ctx, p)
+		if err != nil {
+			return nil, err
+		}
+
+		return c.GetPackageZip(ctx, pkg)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +158,7 @@ func (c *Client) GetPackageZip(ctx context.Context, p *Package) (*ZipReadableClo
 	}
 	defer res.Body.Close()
 
-	f, err := os.CreateTemp(c.dir, p.Fullname()+"-*.zip")
+	f, err := os.Create(zipFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -101,14 +167,14 @@ func (c *Client) GetPackageZip(ctx context.Context, p *Package) (*ZipReadableClo
 		return nil, err
 	}
 
-	fi, err := f.Stat()
+	if res.ContentLength >= 0 {
+		return &ZipReadableCloser{f, res.ContentLength}, nil
+	}
+
+	fi, err = f.Stat()
 	if err != nil {
 		return nil, err
 	}
 
 	return &ZipReadableCloser{f, fi.Size()}, nil
-}
-
-func packageElems(p *Package) []string {
-	return []string{p.Namespace, p.Name, p.Version}
 }

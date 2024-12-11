@@ -64,18 +64,18 @@ func WritePlayerList(w io.Writer, playerIDs []int64) error {
 }
 
 func WritePlayerLists(savedir string, playerLists *PlayerLists) error {
-	if err := WritePlayerListFile(filepath.Join(savedir, AdminListName), playerLists.AdminIDs); err != nil {
+	if err := writePlayerListFile(filepath.Join(savedir, AdminListName), playerLists.AdminIDs); err != nil {
 		return err
 	}
 
-	if err := WritePlayerListFile(filepath.Join(savedir, BannedListName), playerLists.BannedIDs); err != nil {
+	if err := writePlayerListFile(filepath.Join(savedir, BannedListName), playerLists.BannedIDs); err != nil {
 		return err
 	}
 
-	return WritePlayerListFile(filepath.Join(savedir, PermittedListName), playerLists.PermittedIDs)
+	return writePlayerListFile(filepath.Join(savedir, PermittedListName), playerLists.PermittedIDs)
 }
 
-func WritePlayerListFile(name string, playerIDs []int64) error {
+func writePlayerListFile(name string, playerIDs []int64) error {
 	if len(playerIDs) > 0 {
 		f, err := os.Create(name)
 		if err != nil {
