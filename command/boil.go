@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 
@@ -21,7 +22,7 @@ func NewBoil() *cobra.Command {
 	var (
 		output, rawRef, rawBaseImageRef    string
 		beta, betaPassword                 string
-		username, password, steamGuardCode string
+		username, password string
 		cmd                                = &cobra.Command{
 			Args:          cobra.ExactArgs(1),
 			SilenceErrors: true,
@@ -124,6 +125,23 @@ func NewBoil() *cobra.Command {
 					return err
 				}
 
+				layer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+					return steamapp.Open(
+						ctx,
+						appID,
+						steamapp.WithBeta(beta, betaPassword),
+						steamapp.WithAccount(username, password),
+					)
+				})
+				if err != nil {
+					return err
+				}
+
+				image, err = mutate.AppendLayers(image, layer)
+				if err != nil {
+					return err
+				}
+
 				ref, err := name.ParseReference(rawRef)
 				if err != nil {
 					return err
@@ -147,7 +165,6 @@ func NewBoil() *cobra.Command {
 
 	cmd.Flags().StringVar(&username, "username", "", "Steam username")
 	cmd.Flags().StringVar(&password, "password", "", "Steam password")
-	cmd.Flags().StringVar(&steamGuardCode, "steam-guard-code", "", "Steam Guard code")
 
 	return cmd
 }
