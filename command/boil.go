@@ -8,6 +8,7 @@ import (
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/contreg"
+	"github.com/frantjc/sindri/internal/layerutil"
 	"github.com/frantjc/sindri/steamapp"
 	xslice "github.com/frantjc/x/slice"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -65,6 +66,7 @@ func NewBoil() *cobra.Command {
 						steamapp.WithBeta(beta, betaPassword),
 					}
 					image = empty.Image
+					installDir = "/steamapp"
 				)
 
 				if rawBaseImageRef != "" {
@@ -111,7 +113,7 @@ func NewBoil() *cobra.Command {
 					return err
 				}
 
-				newCfg, err := steamapp.ImageConfig(ctx, appID, opts...)
+				newCfg, err := steamapp.ImageConfig(ctx, appID, append(opts, steamapp.WithInstallDir(installDir))...)
 				if err != nil {
 					return err
 				}
@@ -124,15 +126,17 @@ func NewBoil() *cobra.Command {
 				if err != nil {
 					return err
 				}
-
-				layer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-					return steamapp.Open(
-						ctx,
-						appID,
-						steamapp.WithBeta(beta, betaPassword),
-						steamapp.WithAccount(username, password),
-					)
-				})
+				
+				layer, err := layerutil.ReproducibleBuildLayerInDirFromOpener(
+					func() (io.ReadCloser, error) {
+						return steamapp.Open(
+							ctx,
+							appID,
+							opts...
+						)
+					},
+					installDir,
+				)
 				if err != nil {
 					return err
 				}
