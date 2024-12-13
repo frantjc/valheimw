@@ -1,18 +1,4 @@
 builds:
-  - main: ./cmd/sindri
-    id: sindri
-    binary: sindri
-    ldflags:
-      - -s -w -X github.com/frantjc/sindri.VersionCore={{ .RawVersion }}
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-    goarch:
-      - amd64
-    hooks:
-      post:
-        - upx {{ .Path }}
   - main: ./cmd/valheimw
     id: valheimw
     binary: valheimw
