@@ -24,16 +24,16 @@ USER valheimw
 ENTRYPOINT ["valheimw"]
 COPY --from=build /valheimw /usr/local/bin
 
-FROM scratch AS boil
-COPY --from=build /boil /
-ENTRYPOINT ["/boil"]
-
-FROM scratch AS mist
-COPY --from=build /mist /
-ENTRYPOINT ["/mist"]
-
-FROM scratch AS sindri
-COPY --from=build /sindri /sindri
-ENTRYPOINT ["/sindri"]
+FROM debian:stable-slim AS boil
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        lib32gcc-s1 \
+    && rm -rf /var/lib/apt/lists/*
+RUN groupadd -r boil
+RUN useradd -r -g boil -m -d /boil -s /bin/bash boil
+USER boil
+ENTRYPOINT ["boil"]
+COPY --from=build /boil /usr/local/bin
 
 FROM $tool

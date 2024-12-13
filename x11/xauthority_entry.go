@@ -35,5 +35,5 @@ func (x *XAuthorityEntry) String() string {
 		proto = "."
 	}
 
-	return strings.Join([]string{x.Display.String(), x.Proto, x.Cookie}, "  ")
+	return strings.Join([]string{x.Display.String(), proto, x.Cookie}, "  ")
 }

@@ -32,8 +32,8 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/frantjc/go-encoding-vdf v0.0.0-20241021142830-5743b482bb3e h1:xv4vnq3mlWr7aPeQ5l03KYEKerE9B6KY3egn/w2j3P4=
 github.com/frantjc/go-encoding-vdf v0.0.0-20241021142830-5743b482bb3e/go.mod h1:PTLkpVRA5rbM+1/QW7BqqgNG0z0DuzUc+uonsCLajJ8=
-github.com/frantjc/go-ingress v0.2.0 h1:qlZbeywNxCxYN9/uJ1ccEefTP7vArgnzRvACDMjQLiA=
-github.com/frantjc/go-ingress v0.2.0/go.mod h1:C/oNT54NfMlg+8M6O2M3OLhB7/HvLPDObkJerC8r+yA=
+github.com/frantjc/go-ingress v0.3.0 h1:TtQ+b8nOeiUnLXBCBxM6VAKAsYCj6ahNHJ9KR9zewks=
+github.com/frantjc/go-ingress v0.3.0/go.mod h1:+OiXfXH9Dh3ETg0XFa7YCOvwI+DkRzj4HWiH2DHXTJo=
 github.com/frantjc/go-reproducible-builds v0.0.0-20241021140423-9651d3e86a85 h1:7IN4exvYdunKQACelEvSSqfD0LOEKE7k0ktCoJIST5g=
 github.com/frantjc/go-reproducible-builds v0.0.0-20241021140423-9651d3e86a85/go.mod h1:S/4KZSEVb6q7WxGx1Z/kBzlJaiuTUzWQaRoxRBfxB0w=
 github.com/frantjc/go-steamcmd v0.0.0-20241210002015-1735ec932a78 h1:ycMxfcUT5jQOWC1llHUgydKVdB+r6hMA6pzx26R4qz4=

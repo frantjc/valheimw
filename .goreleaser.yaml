@@ -41,20 +41,6 @@ builds:
     hooks:
       post:
         - upx {{ .Path }}
-  - main: ./cmd/mist
-    id: mist
-    binary: mist
-    ldflags:
-      - -s -w -X github.com/frantjc/sindri.VersionCore={{ .RawVersion }}
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-    goarch:
-      - amd64
-    hooks:
-      post:
-        - upx {{ .Path }}
 changelog:
   use: github
   filters:
@@ -63,11 +49,16 @@ changelog:
       - Merge pull request
       - Merge remote-tracking branch
       - Merge branch
-# TODO: ...
-# dockers:
-#   - dockerfile: goreleaser.Dockerfile
-#     image_templates:
-#       - ghcr.io/frantjc/sindri:{{ .RawVersion }}
-#       - ghcr.io/frantjc/sindri:{{ .Major }}.{{ .Minor }}
-#       - ghcr.io/frantjc/sindri:{{ .Major }}
-#       - ghcr.io/frantjc/sindri:latest
+dockers:
+  - dockerfile: goreleaser.boil.Dockerfile
+    image_templates:
+      - ghcr.io/frantjc/boil:{{ .RawVersion }}
+      - ghcr.io/frantjc/boil:{{ .Major }}.{{ .Minor }}
+      - ghcr.io/frantjc/boil:{{ .Major }}
+      - ghcr.io/frantjc/boil:latest
+  - dockerfile: goreleaser.valheimw.Dockerfile
+    image_templates:
+      - ghcr.io/frantjc/valheimw:{{ .RawVersion }}
+      - ghcr.io/frantjc/valheimw:{{ .Major }}.{{ .Minor }}
+      - ghcr.io/frantjc/valheimw:{{ .Major }}
+      - ghcr.io/frantjc/valheimw:latest

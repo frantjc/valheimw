@@ -12,9 +12,9 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-func ImageConfig(ctx context.Context, appID int, opts ...Opt) (*v1.Config, error) {
+func ImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt) (*v1.Config, error) {
 	o := &Opts{
-		installDir: "/",
+		installDir:   "/",
 		platformType: steamcmd.DefaultPlatformType,
 	}
 
@@ -43,15 +43,14 @@ func ImageConfig(ctx context.Context, appID int, opts ...Opt) (*v1.Config, error
 
 	for _, launch := range appInfo.Config.Launch {
 		if strings.EqualFold(launch.Type, "server") && strings.Contains(launch.Config.OSList, o.platformType.String()) {
-			return &v1.Config{
-				Entrypoint: []string{
-					filepath.Join(o.installDir, launch.Executable),
-				},
-				Cmd: xslice.Filter(regexp.MustCompile(`\s+`).Split(launch.Arguments, -1), func(arg string, _ int) bool {
-					return arg != ""
-				}),
-				WorkingDir: o.installDir,
-			}, nil
+			cfg.Entrypoint = []string{
+				filepath.Join(o.installDir, launch.Executable),
+			}
+			cfg.Cmd = xslice.Filter(regexp.MustCompile(`\s+`).Split(launch.Arguments, -1), func(arg string, _ int) bool {
+				return arg != ""
+			})
+			cfg.WorkingDir = o.installDir
+			return cfg, nil
 		}
 	}
 

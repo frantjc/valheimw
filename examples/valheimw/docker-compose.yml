@@ -1,0 +1,10 @@
+services:
+  valheimw:
+    image: ghcr.io/frantjc/valheimw:3.0.0
+    command:
+      - --mod=RandyKnapp/EquipmentAndQuickSlots
+    environment:
+      VALHEIM_PASSWORD: hellothere
+    ports:
+      - 2456:2456/udp
+      - 8080:8080

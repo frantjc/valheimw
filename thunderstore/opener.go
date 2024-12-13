@@ -17,17 +17,10 @@ import (
 )
 
 type Opts struct {
-	client     *Client
-	installDir string
+	client *Client
 }
 
 type Opt func(*Opts)
-
-func WithInstallDir(dir string) Opt {
-	return func(o *Opts) {
-		o.installDir = dir
-	}
-}
 
 func WithClient(cli *Client) Opt {
 	return func(o *Opts) {
@@ -41,8 +34,7 @@ const (
 
 func Open(ctx context.Context, pkg *Package, opts ...Opt) (io.ReadCloser, error) {
 	o := &Opts{
-		client:     DefaultClient,
-		installDir: filepath.Join(cache.Dir, Scheme, pkg.Namespace, pkg.Name, pkg.VersionNumber),
+		client: DefaultClient,
 	}
 
 	for _, opt := range opts {
@@ -62,19 +54,22 @@ func Open(ctx context.Context, pkg *Package, opts ...Opt) (io.ReadCloser, error)
 
 	pkgZipRdr.File = xslice.Map(pkgZipRdr.File, func(f *zip.File, _ int) *zip.File {
 		f.Name = strings.ReplaceAll(f.Name, "\\", "/")
+		f.Name = strings.TrimPrefix(f.Name, pkg.Name)
 		return f
 	})
 
-	if err := xzip.Extract(pkgZipRdr, o.installDir); err != nil {
+	installDir := filepath.Join(cache.Dir, Scheme, pkg.Namespace, pkg.Name, pkg.VersionNumber)
+
+	if err := xzip.Extract(pkgZipRdr, installDir); err != nil {
 		return nil, err
 	}
 
-	rc := xtar.Compress(o.installDir)
+	rc := xtar.Compress(installDir)
 
 	return xio.ReadCloser{
 		Reader: rc,
 		Closer: xio.CloserFunc(func() error {
-			return errors.Join(rc.Close(), os.RemoveAll(o.installDir))
+			return errors.Join(rc.Close(), os.RemoveAll(installDir))
 		}),
 	}, nil
 }

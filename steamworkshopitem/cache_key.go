@@ -7,7 +7,7 @@ import (
 	"github.com/frantjc/go-steamcmd"
 )
 
-func CacheKey(ctx context.Context, appID, publishedFileID int, opts ...Opt) (string, error) {
+func CacheKey(_ context.Context, appID, publishedFileID int, opts ...Opt) (string, error) {
 	o := &Opts{
 		platformType: steamcmd.DefaultPlatformType,
 	}

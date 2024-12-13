@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/adrg/xdg v0.5.3
-	github.com/frantjc/go-ingress v0.2.0
+	github.com/frantjc/go-ingress v0.3.0
 	github.com/frantjc/go-reproducible-builds v0.0.0-20241021140423-9651d3e86a85
 	github.com/frantjc/go-steamcmd v0.0.0-20241210002015-1735ec932a78
 	github.com/frantjc/x v0.0.0-20241124205504-36ac48ec4307
@@ -26,7 +26,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/frantjc/go-encoding-vdf v0.0.0-20241021142830-5743b482bb3e // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect

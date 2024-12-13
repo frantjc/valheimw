@@ -70,7 +70,9 @@ func WithBeta(beta, betaPassword string) Opt {
 
 func WithPlatformType(platformType steamcmd.PlatformType) Opt {
 	return func(o *Opts) {
-		o.platformType = platformType
+		if platformType != "" {
+			o.platformType = platformType
+		}
 	}
 }
 
@@ -99,17 +101,15 @@ func Open(ctx context.Context, appID int, opts ...Opt) (io.ReadCloser, error) {
 		branchName = o.beta
 	}
 
-	if o.installDir == "" {
-		o.installDir = filepath.Join(cache.Dir, Scheme, o.platformType.String(), fmt.Sprint(appID), branchName)
-	}
-
 	prompt, err := steamcmd.Start(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer prompt.Close(ctx)
 
-	if err := prompt.ForceInstallDir(ctx, o.installDir); err != nil {
+	installDir := filepath.Join(cache.Dir, Scheme, o.platformType.String(), fmt.Sprint(appID), branchName)
+
+	if err := prompt.ForceInstallDir(ctx, installDir); err != nil {
 		return nil, err
 	}
 
@@ -141,5 +141,5 @@ func Open(ctx context.Context, appID int, opts ...Opt) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	return xtar.Compress(o.installDir), nil
+	return xtar.Compress(installDir), nil
 }

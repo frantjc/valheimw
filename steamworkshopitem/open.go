@@ -13,7 +13,6 @@ import (
 )
 
 type Opts struct {
-	installDir         string
 	username, password string
 	platformType       steamcmd.PlatformType
 }
@@ -44,12 +43,6 @@ func URLValues(o *Opts) url.Values {
 	return query
 }
 
-func WithInstallDir(dir string) Opt {
-	return func(o *Opts) {
-		o.installDir = dir
-	}
-}
-
 func WithPlatformType(platformType steamcmd.PlatformType) Opt {
 	return func(o *Opts) {
 		o.platformType = platformType
@@ -76,17 +69,15 @@ func Open(ctx context.Context, appID, publishedFileID int, opts ...Opt) (io.Read
 		opt(o)
 	}
 
-	if o.installDir == "" {
-		o.installDir = filepath.Join(cache.Dir, Scheme, o.platformType.String(), fmt.Sprint(appID), fmt.Sprint(publishedFileID))
-	}
-
 	prompt, err := steamcmd.Start(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer prompt.Close(ctx)
 
-	if err := prompt.ForceInstallDir(ctx, o.installDir); err != nil {
+	installDir := filepath.Join(cache.Dir, Scheme, o.platformType.String(), fmt.Sprint(appID), fmt.Sprint(publishedFileID))
+
+	if err := prompt.ForceInstallDir(ctx, installDir); err != nil {
 		return nil, err
 	}
 
@@ -106,7 +97,7 @@ func Open(ctx context.Context, appID, publishedFileID int, opts ...Opt) (io.Read
 
 	return xtar.Compress(
 		filepath.Join(
-			o.installDir,
+			installDir,
 			"steamapps/workshop/content",
 			fmt.Sprint(appID),
 			fmt.Sprint(publishedFileID),

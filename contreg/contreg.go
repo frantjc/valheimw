@@ -12,17 +12,17 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
-type Reader interface {
-	Read(context.Context, name.Reference) (v1.Image, error)
+type Client interface {
+	Pull(context.Context, name.Reference) (v1.Image, error)
 }
 
 type DockerClient struct {
 	*client.Client
 }
 
-var _ Reader = &DockerClient{}
+var _ Client = &DockerClient{}
 
-func (c *DockerClient) Read(ctx context.Context, ref name.Reference) (v1.Image, error) {
+func (c *DockerClient) Pull(ctx context.Context, ref name.Reference) (v1.Image, error) {
 	rc, err := c.Client.ImagePull(ctx, ref.String(), image.PullOptions{})
 	if err != nil {
 		return nil, err
@@ -38,16 +38,18 @@ func (c *DockerClient) Read(ctx context.Context, ref name.Reference) (v1.Image, 
 
 type RemoteClient struct{}
 
-var _ Reader = &RemoteClient{}
+var _ Client = &RemoteClient{}
 
-func (*RemoteClient) Read(ctx context.Context, ref name.Reference) (v1.Image, error) {
+func (*RemoteClient) Pull(ctx context.Context, ref name.Reference) (v1.Image, error) {
 	return remote.Image(ref, remote.WithContext(ctx))
 }
 
 var (
-	DefaultClient = func() Reader {
+	DefaultClient = func() Client {
 		if cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation()); err == nil && cli != nil {
-			return &DockerClient{cli}
+			if _, err := cli.Ping(context.Background()); err == nil {
+				return &DockerClient{cli}
+			}
 		}
 
 		return &RemoteClient{}

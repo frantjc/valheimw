@@ -28,7 +28,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var (
+const (
 	bepInExNamespace = "denikson"
 	bepInExName      = "BepInExPack_Valheim"
 )
@@ -49,7 +49,7 @@ func NewValheimw() *cobra.Command {
 			Version:       sindri.SemVer(),
 			SilenceErrors: true,
 			SilenceUsage:  true,
-			RunE: func(cmd *cobra.Command, args []string) error {
+			RunE: func(cmd *cobra.Command, _ []string) error {
 				wd := filepath.Join(cache.Dir, "valheimw")
 				defer os.RemoveAll(wd)
 
@@ -98,7 +98,7 @@ func NewValheimw() *cobra.Command {
 
 				eg.Go(func() error {
 					return sindri.Extract(ctx,
-						fmt.Sprintf("%s://%d?%s", steamapp.Scheme, valheim.SteamAppID, steamapp.URLValues(o).Encode()),
+						fmt.Sprintf("%s://%d?%s", steamapp.Scheme, valheim.SteamappID, steamapp.URLValues(o).Encode()),
 						wd,
 					)
 				})
@@ -108,7 +108,7 @@ func NewValheimw() *cobra.Command {
 				}
 
 				var (
-					zHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					zHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 						_, _ = w.Write([]byte("ok\n"))
 					})
 					paths = []ingress.Path{
@@ -119,7 +119,7 @@ func NewValheimw() *cobra.Command {
 
 				if !noDB {
 					var (
-						dbHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						dbHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							db, err := valheim.OpenDB(opts.SaveDir, opts.World)
 							if err != nil {
 								w.WriteHeader(http.StatusInternalServerError)
@@ -144,7 +144,7 @@ func NewValheimw() *cobra.Command {
 					}
 
 					var (
-						seedJSONHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						seedJSONHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							seed, err := valheim.ReadWorldSeed(opts.SaveDir, opts.World)
 							if err != nil {
 								w.WriteHeader(http.StatusInternalServerError)
@@ -155,7 +155,7 @@ func NewValheimw() *cobra.Command {
 
 							_, _ = w.Write([]byte(`{"seed":"` + seed + `"}`))
 						})
-						seedTxtHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						seedTxtHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							seed, err := valheim.ReadWorldSeed(opts.SaveDir, opts.World)
 							if err != nil {
 								w.WriteHeader(http.StatusInternalServerError)
@@ -190,7 +190,7 @@ func NewValheimw() *cobra.Command {
 
 							http.Redirect(w, r, valheimMapURL.String(), http.StatusTemporaryRedirect)
 						})
-						fwlHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						fwlHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							fwl, err := valheim.OpenFWL(opts.SaveDir, opts.World)
 							if err != nil {
 								w.WriteHeader(http.StatusInternalServerError)
@@ -214,7 +214,7 @@ func NewValheimw() *cobra.Command {
 
 				if !noDB && !noFWL {
 					var (
-						worldsHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						worldsHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							_, _ = io.Copy(w, xtar.Compress(filepath.Join(opts.SaveDir, "worlds_local")))
 						})
 					)
@@ -227,7 +227,7 @@ func NewValheimw() *cobra.Command {
 
 				if len(mods) > 0 {
 					var (
-						modTarHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						modTarHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							tw := tar.NewWriter(w)
 							defer tw.Close()
 
@@ -264,7 +264,7 @@ func NewValheimw() *cobra.Command {
 								}
 							}
 						})
-						modTgzHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						modTgzHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							gzw, err := gzip.NewWriterLevel(w, gzip.BestCompression)
 							if err != nil {
 								gzw = gzip.NewWriter(w)

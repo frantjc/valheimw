@@ -13,7 +13,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
-func ReproducibleBuildLayerInDirFromOpener(o tarball.Opener, dir string) (v1.Layer, error) {
+func ReproducibleBuildLayerInDirFromOpener(o tarball.Opener, dir, uname, gname string) (v1.Layer, error) {
 	return tarball.LayerFromOpener(
 		func() (io.ReadCloser, error) {
 			rc1, err := o()
@@ -28,6 +28,8 @@ func ReproducibleBuildLayerInDirFromOpener(o tarball.Opener, dir string) (v1.Lay
 					// h.Uname = cfg.User
 					h.Name = filepath.Join(dir, h.Name)
 					h.ModTime = reproduciblebuilds.SourceDateEpoch
+					h.Uname = uname
+					h.Gname = gname
 				},
 			)
 
