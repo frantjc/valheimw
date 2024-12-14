@@ -7,5 +7,5 @@ RUN apt-get update -y \
 RUN groupadd -r boiler
 RUN useradd -r -g boiler -m -s /bin/bash boiler
 USER boiler
-ENTRYPOINT ["boiler"]
+ENTRYPOINT ["/usr/local/bin/boiler"]
 COPY boiler /usr/local/bin

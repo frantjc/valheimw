@@ -21,7 +21,7 @@ RUN apt-get update -y \
 RUN groupadd -r valheimw
 RUN useradd -r -g valheimw -m -s /bin/bash valheimw
 USER valheimw
-ENTRYPOINT ["valheimw"]
+ENTRYPOINT ["/usr/local/bin/valheimw"]
 COPY --from=build /valheimw /usr/local/bin
 
 FROM debian:stable-slim AS boiler
@@ -33,7 +33,7 @@ RUN apt-get update -y \
 RUN groupadd -r boiler
 RUN useradd -r -g boiler -m -s /bin/bash boiler
 USER boil
-ENTRYPOINT ["boiler"]
+ENTRYPOINT ["/usr/local/bin/boiler"]
 COPY --from=build /boiler /usr/local/bin
 
 FROM $tool
