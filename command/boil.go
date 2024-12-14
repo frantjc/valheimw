@@ -1,26 +1,17 @@
 package command
 
 import (
-	"bytes"
-	"context"
-	_ "embed"
 	"fmt"
 	"io"
-	"log/slog"
-	"net"
-	"net/http"
 	"os"
 	"runtime"
 	"strconv"
-	"time"
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/contreg"
-	"github.com/frantjc/sindri/distrib"
 	"github.com/frantjc/sindri/internal/layerutil"
 	"github.com/frantjc/sindri/steamapp"
 	xslice "github.com/frantjc/x/slice"
-	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -29,67 +20,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//go:embed image.tar
-var imageTar []byte
-
 func NewBoil() *cobra.Command {
-	var (
-		addr     string
-		registry = &distrib.SteamappPuller{
-			Dir:   "/boil/steamapp",
-			User:  "boil",
-			Group: "boil",
-		}
-		cmd = &cobra.Command{
-			Use:           "boil",
-			SilenceErrors: true,
-			SilenceUsage:  true,
-			RunE: func(cmd *cobra.Command, _ []string) error {
-				srv := &http.Server{
-					Addr:              addr,
-					ReadHeaderTimeout: time.Second * 5,
-					BaseContext: func(_ net.Listener) context.Context {
-						return logr.NewContextWithSlogLogger(cmd.Context(), slog.Default())
-					},
-					Handler: distrib.Handler(registry),
-				}
-
-				l, err := net.Listen("tcp", addr)
-				if err != nil {
-					return err
-				}
-				defer l.Close()
-
-				registry.Base, err = tarball.Image(func() (io.ReadCloser, error) {
-					return io.NopCloser(bytes.NewReader(imageTar)), nil
-				}, nil)
-				if err != nil {
-					return err
-				}
-
-				return srv.Serve(l)
-			},
-		}
-	)
-
-	cmd.SetVersionTemplate("{{ .Name }}{{ .Version }} " + runtime.Version() + "\n")
-
-	cmd.Flags().StringVar(&addr, "addr", ":8080", "address")
-
-	cmd.Flags().StringVar(&registry.Username, "username", "", "Steam username")
-	cmd.Flags().StringVar(&registry.Password, "password", "", "Steam password")
-
-	return cmd
-}
-
-func NewBuild() *cobra.Command {
 	var (
 		output, rawRef, rawBaseImageRef string
 		beta, betaPassword              string
 		username, password              string
+		platformType                    string
 		dir                             string
 		cmd                             = &cobra.Command{
-			Use:           "build",
+			Use:           "boil",
 			Args:          cobra.ExactArgs(1),
 			SilenceErrors: true,
 			SilenceUsage:  true,
@@ -119,9 +58,27 @@ func NewBuild() *cobra.Command {
 					updateC = make(chan v1.Update)
 				)
 				go func() {
+					var (
+						byteCount = func(b int64) string {
+							const unit = 1000
+							if b < unit {
+								return fmt.Sprintf("%db", b)
+							}
+							div, exp := int64(unit), 0
+							for n := b / unit; n >= unit; n /= unit {
+								div *= unit
+								exp++
+							}
+							return fmt.Sprintf("%.1f%cB",
+								float64(b)/float64(div), "kmgt"[exp])
+						}
+					)
+
 					for update := range updateC {
-						_, _ = fmt.Fprintf(updateW, "%d/%d\n", update.Complete, update.Total)
+						_, _ = fmt.Fprintf(updateW, "\r(%s / %s) %d%%", byteCount(update.Complete), byteCount(update.Total), 100*update.Complete/update.Total)
 					}
+
+					fmt.Fprintln(updateW, " DONE")
 				}()
 				defer close(updateC)
 
@@ -132,6 +89,10 @@ func NewBuild() *cobra.Command {
 					}
 					image = empty.Image
 				)
+
+				if platformType != "" {
+					opts = append(opts, steamapp.WithPlatformType(steamcmd.PlatformType(platformType)))
+				}
 
 				if rawBaseImageRef != "" {
 					baseImageRef, err := name.ParseReference(rawBaseImageRef)
@@ -148,6 +109,10 @@ func NewBuild() *cobra.Command {
 				if rawRef == "" {
 					prompt, err := steamcmd.Start(ctx)
 					if err != nil {
+						return err
+					}
+
+					if err := prompt.Login(ctx, steamcmd.WithAccount(username, password)); err != nil {
 						return err
 					}
 
@@ -231,6 +196,8 @@ func NewBuild() *cobra.Command {
 	cmd.Flags().StringVar(&betaPassword, "beta-password", "", "Steam beta password")
 
 	cmd.Flags().StringVar(&dir, "dir", "/boil/steamapp", "Steam app install directory")
+
+	cmd.Flags().StringVar(&platformType, "platformtype", "", "Steam app platform type")
 
 	cmd.Flags().StringVar(&username, "username", "", "Steam username")
 	cmd.Flags().StringVar(&password, "password", "", "Steam password")

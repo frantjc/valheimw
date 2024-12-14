@@ -8,7 +8,7 @@ RUN apt-get update -y \
         libpulse0 \
     && rm -rf /var/lib/apt/lists/*
 RUN groupadd -r valheimw
-RUN useradd -r -g valheim -m -d /home/valheim -s /bin/bash valheimw
+RUN useradd -r -g valheimw -m -d /home/valheimw -s /bin/bash valheimw
 USER valheimw
 WORKDIR /home/valheimw
 ENTRYPOINT ["valheimw"]
