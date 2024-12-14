@@ -15,12 +15,12 @@ RUN apt-get update -y \
         xvfb \
     && rm -rf /var/lib/apt/lists/*
 # Corekeeper SEGFAUTs without this.
-RUN ln -s /boil/steamapp/linux64/steamclient.so /usr/lib/x86_64-linux-gnu/steamclient.so
+RUN ln -s /home/boil/steamapp/linux64/steamclient.so /usr/lib/x86_64-linux-gnu/steamclient.so
 # Something keeps setting this back to root.
 # Force it back for now, otherwise Corekeeper
 # can't create ~/.config.
-RUN chown -R boil:boil
+RUN chown -R boil:boil /home/boil
 USER boil
 # launch.sh just execs _launch.sh with gnome,
 # so avoid the extra dependency on gnome.
-ENTRYPOINT ["/boil/steamapp/_launch.sh"]
+ENTRYPOINT ["/home/boil/steamapp/_launch.sh"]
