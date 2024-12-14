@@ -6,14 +6,19 @@ Sindri is a toolkit for turning Steam apps into containers. This repository also
 
 `valheimw` is a wrapper around the Valheim server.
 
-On start up, it installs the latest version of the specified branch of Valheim (public by default), any given [thunderstore.io](https://valheim.thunderstore.io/) mods and BepInEx to load them.
+On start up, it installs the latest version of the specified branch of the Valheim server (public by default), any given [thunderstore.io](https://valheim.thunderstore.io/) mods and BepInEx to load them. Then it executes the Valheim server using those mods, if any.
 
-It runs an HTTP server alongside the Valheim server which provides endpoints to download the mods in use, the world's `.db` and `.fwl` files (and information from them), or go to its [valheim-map.world](https://valheim-map.world/) page.
+It also runs an HTTP server alongside the Valheim server which provides endpoints to do a number of helpful things.
+
+- Download a tarball of the mods in use.
+- Download the world's `.db` and `.fwl` files.
+- Get information from the world's `.fwl` file.
+- Go to the world's [valheim-map.world](https://valheim-map.world/) page.
 
 Lastly, it documents all arguments that can be passed to Valheim's server.
 
 ```sh
-valheimw --help
+docker run --rm ghcr.io/frantjc/valheimw --help
 ```
 
 See [examples/valheimw](examples/valheimw).
