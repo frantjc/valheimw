@@ -24,16 +24,16 @@ USER valheimw
 ENTRYPOINT ["valheimw"]
 COPY --from=build /valheimw /usr/local/bin
 
-FROM debian:stable-slim AS boil
+FROM debian:stable-slim AS boiler
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         lib32gcc-s1 \
     && rm -rf /var/lib/apt/lists/*
-RUN groupadd -r boil
-RUN useradd -r -g boil -m -s /bin/bash boil
+RUN groupadd -r boiler
+RUN useradd -r -g boiler -m -s /bin/bash boiler
 USER boil
-ENTRYPOINT ["boil"]
-COPY --from=build /boil /usr/local/bin
+ENTRYPOINT ["boiler"]
+COPY --from=build /boiler /usr/local/bin
 
 FROM $tool

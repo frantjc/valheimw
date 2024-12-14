@@ -2,6 +2,7 @@ package command
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,9 +16,8 @@ import (
 func NewMist() *cobra.Command {
 	var (
 		clean bool
-		cmd = &cobra.Command{
+		cmd   = &cobra.Command{
 			Use:           "mist",
-			Args:          cobra.ExactArgs(2),
 			SilenceErrors: true,
 			SilenceUsage:  true,
 			RunE: func(cmd *cobra.Command, args []string) error {
@@ -28,6 +28,10 @@ func NewMist() *cobra.Command {
 					)
 				}
 
+				if lenArgs := len(args); lenArgs != 2 {
+					return fmt.Errorf("accepts 2 arg(s), received %d", lenArgs)
+				}
+
 				return sindri.Extract(cmd.Context(), args[0], args[1])
 			},
 		}
@@ -36,6 +40,6 @@ func NewMist() *cobra.Command {
 	cmd.SetVersionTemplate("{{ .Name }}{{ .Version }} " + runtime.Version() + "\n")
 
 	cmd.Flags().BoolVar(&clean, "clean", false, "clean cache and exit")
-	
+
 	return cmd
 }
