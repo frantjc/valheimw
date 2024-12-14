@@ -195,7 +195,7 @@ func NewBoil() *cobra.Command {
 	cmd.Flags().StringVar(&beta, "beta", "", "Steam beta branch")
 	cmd.Flags().StringVar(&betaPassword, "beta-password", "", "Steam beta password")
 
-	cmd.Flags().StringVar(&dir, "dir", "/boil/steamapp", "Steam app install directory")
+	cmd.Flags().StringVar(&dir, "dir", "/home/boil/steamapp", "Steam app install directory")
 
 	cmd.Flags().StringVar(&platformType, "platformtype", "", "Steam app platform type")
 

@@ -24,7 +24,7 @@ func NewBoiler() *cobra.Command {
 	var (
 		addr     string
 		registry = &distrib.SteamappPuller{
-			Dir:   "/boil/steamapp",
+			Dir:   "/home/boil/steamapp",
 			User:  "boil",
 			Group: "boil",
 		}

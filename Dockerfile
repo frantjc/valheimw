@@ -19,7 +19,7 @@ RUN apt-get update -y \
         libpulse0 \
     && rm -rf /var/lib/apt/lists/*
 RUN groupadd -r valheimw
-RUN useradd -r -g valheimw -m -d /valheimw -s /bin/bash valheimw
+RUN useradd -r -g valheimw -m -s /bin/bash valheimw
 USER valheimw
 ENTRYPOINT ["valheimw"]
 COPY --from=build /valheimw /usr/local/bin
@@ -31,7 +31,7 @@ RUN apt-get update -y \
         lib32gcc-s1 \
     && rm -rf /var/lib/apt/lists/*
 RUN groupadd -r boil
-RUN useradd -r -g boil -m -d /boil -s /bin/bash boil
+RUN useradd -r -g boil -m -s /bin/bash boil
 USER boil
 ENTRYPOINT ["boil"]
 COPY --from=build /boil /usr/local/bin
