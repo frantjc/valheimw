@@ -1,0 +1,5 @@
+services:
+  boiler:
+    image: ghcr.io/frantjc/boiler
+    ports:
+      - 8080:8080

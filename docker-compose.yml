@@ -7,18 +7,18 @@ services:
     command:
       - --mod=RandyKnapp/EquipmentAndQuickSlots
     volumes:
-      - ./hack:/valheimw/.cache
+      - ./hack:/home/valheimw/.cache
     environment:
       VALHEIM_PASSWORD: hellothere
     ports:
       - 2456:2456/udp
       - 8080:8080
-  boil:
+  boiler:
     build:
       context: .
       args:
-        tool: boil
+        tool: boiler
     volumes:
-      - ./hack:/boil/.cache
+      - ./hack:/home/boiler/.cache
     ports:
       - 8080:8080
