@@ -8,6 +8,9 @@ import (
 	"syscall"
 
 	"github.com/frantjc/sindri/command"
+	_ "github.com/frantjc/sindri/steamapp"
+	_ "github.com/frantjc/sindri/steamworkshopitem"
+	_ "github.com/frantjc/sindri/thunderstore"
 	xerrors "github.com/frantjc/x/errors"
 	xos "github.com/frantjc/x/os"
 )
