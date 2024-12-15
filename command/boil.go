@@ -69,8 +69,7 @@ func NewBoil() *cobra.Command {
 								div *= unit
 								exp++
 							}
-							return fmt.Sprintf("%.1f%cB",
-								float64(b)/float64(div), "kmgt"[exp])
+							return fmt.Sprintf("%.1f%cB", float64(b)/float64(div), "kmgt"[exp])
 						}
 					)
 
