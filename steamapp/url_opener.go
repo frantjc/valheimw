@@ -12,31 +12,14 @@ import (
 
 func init() {
 	sindri.Register(
-		new(CacheableURLOpener),
+		new(URLOpener),
 		Scheme,
 	)
 }
 
-type CacheableURLOpener struct{}
+type URLOpener struct{}
 
-func (o *CacheableURLOpener) CacheKey(ctx context.Context, u *url.URL) (string, error) {
-	if u.Scheme != Scheme {
-		return "", fmt.Errorf("invalid scheme %s, expected %s", u.Scheme, Scheme)
-	}
-
-	appID, err := strconv.Atoi(u.Host)
-	if err != nil {
-		return "", err
-	}
-
-	return CacheKey(
-		ctx,
-		appID,
-		WithURLValues(u.Query()),
-	)
-}
-
-func (o *CacheableURLOpener) Open(ctx context.Context, u *url.URL) (io.ReadCloser, error) {
+func (o *URLOpener) Open(ctx context.Context, u *url.URL) (io.ReadCloser, error) {
 	if u.Scheme != Scheme {
 		return nil, fmt.Errorf("invalid scheme %s, expected %s", u.Scheme, Scheme)
 	}

@@ -11,16 +11,15 @@ import (
 	xtar "github.com/frantjc/x/archive/tar"
 )
 
-type CacheableURLOpener interface {
+type URLOpener interface {
 	Open(context.Context, *url.URL) (io.ReadCloser, error)
-	CacheKey(context.Context, *url.URL) (string, error)
 }
 
 var (
-	urlMux = map[string]CacheableURLOpener{}
+	urlMux = map[string]URLOpener{}
 )
 
-func Register(o CacheableURLOpener, scheme string, schemes ...string) {
+func Register(o URLOpener, scheme string, schemes ...string) {
 	for _, s := range append(schemes, scheme) {
 		if _, ok := urlMux[s]; ok {
 			panic("attempt to reregister scheme: " + s)
@@ -28,20 +27,6 @@ func Register(o CacheableURLOpener, scheme string, schemes ...string) {
 
 		urlMux[s] = o
 	}
-}
-
-func CacheKey(ctx context.Context, s string) (string, error) {
-	u, err := url.Parse(s)
-	if err != nil {
-		return "", err
-	}
-
-	o, ok := urlMux[strings.ToLower(u.Scheme)]
-	if !ok {
-		return "", fmt.Errorf("no opener registered for scheme %s", u.Scheme)
-	}
-
-	return o.CacheKey(ctx, u)
 }
 
 func Open(ctx context.Context, s string) (io.ReadCloser, error) {
