@@ -22,3 +22,11 @@ services:
       - ./hack:/home/boiler/.cache
     ports:
       - 8080:8080
+  xeyes:
+    build:
+      context: .
+      dockerfile: xeyes.Dockerfile
+    environment:
+      DISPLAY: host.docker.internal:0
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix

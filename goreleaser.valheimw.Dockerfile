@@ -6,7 +6,8 @@ RUN apt-get update -y \
         libatomic1 \
         libpulse-dev \
         libpulse0 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 RUN groupadd -r valheimw
 RUN useradd -r -g valheimw -m -s /bin/bash valheimw
 USER valheimw

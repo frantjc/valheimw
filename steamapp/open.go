@@ -21,6 +21,7 @@ type Opts struct {
 	beta, betaPassword string
 	username, password string
 	platformType       steamcmd.PlatformType
+	launchType         string
 }
 
 type Opt func(*Opts)
@@ -39,6 +40,7 @@ func WithURLValues(query url.Values) Opt {
 			WithPlatformType(
 				steamcmd.PlatformType(query.Get("platformtype")),
 			),
+			WithLaunchType(query.Get("launchtype")),
 		} {
 			opt(o)
 		}
@@ -80,6 +82,12 @@ func WithAccount(username, password string) Opt {
 	return func(o *Opts) {
 		o.username = username
 		o.password = password
+	}
+}
+
+func WithLaunchType(launchType string) Opt {
+	return func(o *Opts) {
+		o.launchType = launchType
 	}
 }
 

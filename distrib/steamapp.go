@@ -6,7 +6,7 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/frantjc/sindri/internal/layerutil"
+	"github.com/frantjc/sindri/internal/img"
 	"github.com/frantjc/sindri/steamapp"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -142,7 +142,7 @@ func (p *SteamappPuller) GetBlob(ctx context.Context, name string, digest string
 }
 
 func (p *SteamappPuller) getLayer(ctx context.Context, appID int, branch string) (Blob, error) {
-	layer, err := layerutil.ReproducibleBuildLayerInDirFromOpener(
+	layer, err := img.ReproducibleBuildLayerInDirFromOpener(
 		func() (io.ReadCloser, error) {
 			return steamapp.Open(ctx, appID, steamapp.WithAccount(p.Username, p.Password), steamapp.WithBeta(branch, ""))
 		},
@@ -178,5 +178,11 @@ func (p *SteamappPuller) getConfig(ctx context.Context, image v1.Image, appID in
 		return nil, err
 	}
 
-	return steamapp.ImageConfig(ctx, appID, &cfgf.Config, steamapp.WithAccount(p.Username, p.Password), steamapp.WithInstallDir(p.Dir), steamapp.WithBeta(branch, ""))
+	return steamapp.ImageConfig(
+		ctx, appID, &cfgf.Config,
+		steamapp.WithAccount(p.Username, p.Password),
+		steamapp.WithInstallDir(p.Dir),
+		steamapp.WithBeta(branch, ""),
+		steamapp.WithLaunchType("server"),
+	)
 }

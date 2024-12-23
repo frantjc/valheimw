@@ -42,17 +42,24 @@ func ImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt) (*
 	}
 
 	for _, launch := range appInfo.Config.Launch {
-		if strings.EqualFold(launch.Type, "server") && strings.Contains(launch.Config.OSList, o.platformType.String()) {
-			cfg.Entrypoint = []string{
-				filepath.Join(o.installDir, launch.Executable),
+		if strings.Contains(launch.Config.OSList, o.platformType.String()) {
+			if o.launchType == "" || strings.EqualFold(launch.Type, o.launchType) {
+				cfg.Entrypoint = []string{
+					filepath.Join(o.installDir, launch.Executable),
+				}
+				cfg.Cmd = xslice.Filter(regexp.MustCompile(`\s+`).Split(launch.Arguments, -1), func(arg string, _ int) bool {
+					return arg != ""
+				})
+				cfg.WorkingDir = o.installDir
+				return cfg, nil
 			}
-			cfg.Cmd = xslice.Filter(regexp.MustCompile(`\s+`).Split(launch.Arguments, -1), func(arg string, _ int) bool {
-				return arg != ""
-			})
-			cfg.WorkingDir = o.installDir
-			return cfg, nil
 		}
 	}
 
-	return nil, fmt.Errorf("app ID %d does not support %s, only %s", appInfo.Common.GameID, o.platformType, appInfo.Common.OSList)
+	launchTypeAddendum := ""
+	if o.launchType != "" {
+		launchTypeAddendum = fmt.Sprintf("for launch type %s", o.launchType)
+	}
+
+	return nil, fmt.Errorf("app ID %d does not support %s, only %s%s", appInfo.Common.GameID, o.platformType, appInfo.Common.OSList, launchTypeAddendum)
 }

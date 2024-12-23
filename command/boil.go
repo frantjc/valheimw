@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -8,14 +9,11 @@ import (
 	"strconv"
 
 	"github.com/frantjc/go-steamcmd"
-	"github.com/frantjc/sindri/contreg"
-	"github.com/frantjc/sindri/internal/layerutil"
+	"github.com/frantjc/sindri/internal/img"
 	"github.com/frantjc/sindri/steamapp"
 	xslice "github.com/frantjc/x/slice"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/spf13/cobra"
 )
@@ -81,28 +79,32 @@ func NewBoil() *cobra.Command {
 				}()
 				defer close(updateC)
 
-				var (
-					opts = []steamapp.Opt{
+				opts := []img.BuildSteamappOpt{
+					img.WithBaseImageRef(rawBaseImageRef),
+					img.WithSteamappOpts(
 						steamapp.WithAccount(username, password),
 						steamapp.WithBeta(beta, betaPassword),
-					}
-					image = empty.Image
-				)
-
+						steamapp.WithInstallDir(dir),
+					),
+				}
 				if platformType != "" {
-					opts = append(opts, steamapp.WithPlatformType(steamcmd.PlatformType(platformType)))
+					opts = append(opts, img.WithSteamappOpts(steamapp.WithPlatformType(steamcmd.PlatformType(platformType))))
 				}
 
-				if rawBaseImageRef != "" {
-					baseImageRef, err := name.ParseReference(rawBaseImageRef)
+				if rawBaseImageRef == "" {
+					baseImage, err := tarball.Image(func() (io.ReadCloser, error) {
+						return io.NopCloser(bytes.NewReader(imageTar)), nil
+					}, nil)
 					if err != nil {
 						return err
 					}
 
-					image, err = contreg.DefaultClient.Pull(ctx, baseImageRef)
-					if err != nil {
-						return err
-					}
+					opts = append(opts, img.WithBaseImage(baseImage))
+				}
+
+				image, err := img.SteamappImage(ctx, appID, opts...)
+				if err != nil {
+					return err
 				}
 
 				if rawRef == "" {
@@ -134,41 +136,6 @@ func NewBoil() *cobra.Command {
 						appInfo.Common.GameID,
 						branchName,
 					)
-				}
-
-				cfgf, err := image.ConfigFile()
-				if err != nil {
-					return err
-				}
-
-				cfg, err := steamapp.ImageConfig(ctx, appID, &cfgf.Config, append(opts, steamapp.WithInstallDir(dir))...)
-				if err != nil {
-					return err
-				}
-
-				image, err = mutate.Config(image, *cfg)
-				if err != nil {
-					return err
-				}
-
-				layer, err := layerutil.ReproducibleBuildLayerInDirFromOpener(
-					func() (io.ReadCloser, error) {
-						return steamapp.Open(
-							ctx,
-							appID,
-							opts...,
-						)
-					},
-					dir,
-					"", "",
-				)
-				if err != nil {
-					return err
-				}
-
-				image, err = mutate.AppendLayers(image, layer)
-				if err != nil {
-					return err
 				}
 
 				ref, err := name.ParseReference(rawRef)
