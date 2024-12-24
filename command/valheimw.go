@@ -113,6 +113,7 @@ func NewValheimw() *cobra.Command {
 					})
 					paths = []ingress.Path{
 						ingress.ExactPath("/readyz", zHandler),
+						ingress.ExactPath("/livez", zHandler),
 						ingress.ExactPath("/healthz", zHandler),
 					}
 				)
@@ -120,6 +121,8 @@ func NewValheimw() *cobra.Command {
 				if !noDB {
 					var (
 						dbHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+							w.Header().Add("Content-Disposition", "attachment")
+
 							db, err := valheim.OpenDB(opts.SaveDir, opts.World)
 							if err != nil {
 								w.WriteHeader(http.StatusInternalServerError)
@@ -191,6 +194,8 @@ func NewValheimw() *cobra.Command {
 							http.Redirect(w, r, valheimMapURL.String(), http.StatusTemporaryRedirect)
 						})
 						fwlHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+							w.Header().Add("Content-Disposition", "attachment")
+
 							fwl, err := valheim.OpenFWL(opts.SaveDir, opts.World)
 							if err != nil {
 								w.WriteHeader(http.StatusInternalServerError)
@@ -214,14 +219,47 @@ func NewValheimw() *cobra.Command {
 
 				if !noDB && !noFWL {
 					var (
-						worldsHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						worldsTarHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+							w.Header().Add("Content-Type", "application/tar")
+							w.Header().Add("Content-Disposition", "attachment")
+
 							_, _ = io.Copy(w, xtar.Compress(filepath.Join(opts.SaveDir, "worlds_local")))
+						})
+						worldsTgzHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+							gzw, err := gzip.NewWriterLevel(w, gzip.BestCompression)
+							if err != nil {
+								gzw = gzip.NewWriter(w)
+							}
+							defer gzw.Close()
+
+							w.Header().Add("Content-Type", "application/gzip")
+							w.Header().Add("Content-Disposition", "attachment")
+
+							_, _ = io.Copy(gzw, xtar.Compress(filepath.Join(opts.SaveDir, "worlds_local")))
+						})
+						worldsHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/gzip") {
+								w.Header().Add("Content-Disposition", "filename=file worlds.tar.gz")
+								worldsTgzHandler(w, r)
+								return
+							} else if strings.Contains(accept, "application/tar") {
+								w.Header().Add("Content-Disposition", "filename=file worlds.tar")
+								worldsTarHandler(w, r)
+								return
+							}
+
+							w.WriteHeader(http.StatusNotAcceptable)
 						})
 					)
 
 					paths = append(paths,
-						ingress.ExactPath("/worlds", worldsHandler),
-						ingress.ExactPath("/worlds_local", worldsHandler),
+						ingress.ExactPath("/worlds.tar", worldsTarHandler),
+						ingress.ExactPath("/worlds.tar.gz", worldsTgzHandler),
+						ingress.ExactPath("/worlds.tgz", worldsTgzHandler),
+						ingress.ExactPath("/worlds_local.tar.gz", worldsTgzHandler),
+						ingress.ExactPath("/worlds_local.tgz", worldsTgzHandler),
+						ingress.ExactPath("/worlds", worldsHdrHandler),
+						ingress.ExactPath("/worlds_local", worldsHdrHandler),
 					)
 				}
 
@@ -232,6 +270,7 @@ func NewValheimw() *cobra.Command {
 							defer tw.Close()
 
 							w.Header().Add("Content-Type", "application/tar")
+							w.Header().Add("Content-Disposition", "attachment")
 
 							for _, mod := range mods {
 								rc, err := sindri.Open(ctx, mod)
@@ -275,6 +314,7 @@ func NewValheimw() *cobra.Command {
 							defer tw.Close()
 
 							w.Header().Add("Content-Type", "application/gzip")
+							w.Header().Add("Content-Disposition", "attachment")
 
 							for _, mod := range mods {
 								rc, err := sindri.Open(ctx, mod)
@@ -309,9 +349,11 @@ func NewValheimw() *cobra.Command {
 						})
 						modHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/gzip") {
+								w.Header().Add("Content-Disposition", "filename=file mods.tar.gz")
 								modTgzHandler(w, r)
 								return
 							} else if strings.Contains(accept, "application/tar") {
+								w.Header().Add("Content-Disposition", "filename=file mods.tar")
 								modTarHandler(w, r)
 								return
 							}
@@ -340,7 +382,7 @@ func NewValheimw() *cobra.Command {
 					Handler: ingress.New(paths...),
 				}
 
-				sub, err := valheim.NewCommand(ctx, wd, opts)
+				sub, err := valheim.NewCommand(egctx, wd, opts)
 				if err != nil {
 					return err
 				}
@@ -357,11 +399,19 @@ func NewValheimw() *cobra.Command {
 				}
 				defer l.Close()
 
-				// TODO: I don't think the context cancels this.
 				eg.Go(func() error {
 					return srv.Serve(l)
 				})
-				defer srv.Close()
+
+				eg.Go(func() error {
+					<-egctx.Done()
+					cctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second*30)
+					defer cancel()
+					if err = srv.Shutdown(cctx); err != nil {
+						return err
+					}
+					return egctx.Err()
+				})
 
 				return eg.Wait()
 			},

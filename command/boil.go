@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/internal/img"
@@ -31,9 +32,15 @@ func NewBoil() *cobra.Command {
 			SilenceErrors: true,
 			SilenceUsage:  true,
 			RunE: func(cmd *cobra.Command, args []string) error {
+				appID, err := strconv.Atoi(args[0])
+				if err != nil {
+					return err
+				}
+
 				var (
-					imageW  = cmd.OutOrStdout()
-					updateW = cmd.ErrOrStderr()
+					imageW     = cmd.OutOrStdout()
+					updateW    = cmd.ErrOrStderr()
+					outputName = "stdout"
 				)
 
 				if !xslice.Includes([]string{"", "-"}, output) {
@@ -44,40 +51,8 @@ func NewBoil() *cobra.Command {
 					}
 
 					updateW = cmd.OutOrStdout()
+					outputName = output
 				}
-
-				appID, err := strconv.Atoi(args[0])
-				if err != nil {
-					return err
-				}
-
-				var (
-					ctx     = cmd.Context()
-					updateC = make(chan v1.Update)
-				)
-				go func() {
-					var (
-						byteCount = func(b int64) string {
-							const unit = 1000
-							if b < unit {
-								return fmt.Sprintf("%db", b)
-							}
-							div, exp := int64(unit), 0
-							for n := b / unit; n >= unit; n /= unit {
-								div *= unit
-								exp++
-							}
-							return fmt.Sprintf("%.1f%cB", float64(b)/float64(div), "kmgt"[exp])
-						}
-					)
-
-					for update := range updateC {
-						_, _ = fmt.Fprintf(updateW, "\r(%s / %s) %d%%", byteCount(update.Complete), byteCount(update.Total), 100*update.Complete/update.Total)
-					}
-
-					fmt.Fprintln(updateW, " DONE")
-				}()
-				defer close(updateC)
 
 				opts := []img.BuildSteamappOpt{
 					img.WithBaseImageRef(rawBaseImageRef),
@@ -92,6 +67,8 @@ func NewBoil() *cobra.Command {
 				}
 
 				if rawBaseImageRef == "" {
+					fmt.Fprint(updateW, "Loading default base image...")
+
 					baseImage, err := tarball.Image(func() (io.ReadCloser, error) {
 						return io.NopCloser(bytes.NewReader(imageTar)), nil
 					}, nil)
@@ -99,15 +76,25 @@ func NewBoil() *cobra.Command {
 						return err
 					}
 
+					fmt.Fprintln(updateW, "DONE")
+
 					opts = append(opts, img.WithBaseImage(baseImage))
 				}
+
+				ctx := cmd.Context()
+
+				fmt.Fprintf(updateW, "Layering Steam app %d onto image...", appID)
 
 				image, err := img.SteamappImage(ctx, appID, opts...)
 				if err != nil {
 					return err
 				}
 
+				fmt.Fprintln(updateW, "DONE")
+
 				if rawRef == "" {
+					fmt.Fprintf(updateW, "Getting Steam app %d info...", appID)
+
 					prompt, err := steamcmd.Start(ctx)
 					if err != nil {
 						return err
@@ -121,6 +108,8 @@ func NewBoil() *cobra.Command {
 					if err != nil {
 						return err
 					}
+
+					fmt.Fprintf(updateW, "%s...DONE\n", appInfo.Common.Name)
 
 					if err = prompt.Close(ctx); err != nil {
 						return err
@@ -143,9 +132,30 @@ func NewBoil() *cobra.Command {
 					return err
 				}
 
+				updateC := make(chan v1.Update)
+				go func() {
+					var (
+						preamble = fmt.Sprintf("\rWriting %s to %s...", ref, outputName)
+						m, n     int
+					)
+
+					for update := range updateC {
+						n, _ = fmt.Fprintf(updateW, "%s%d%% (%s / %s)", preamble, 100*update.Complete/update.Total, byteCount(update.Complete), byteCount(update.Total))
+						if o := m - n; m-n > 0 {
+							fmt.Fprint(updateW, strings.Repeat(" ", o))
+						} else {
+							m = n
+							n = 0
+						}
+					}
+
+					fmt.Fprintf(updateW, "%sDONE\n", preamble)
+				}()
+
 				if err := tarball.Write(ref, image, imageW, tarball.WithProgress(updateC)); err != nil {
 					return err
 				}
+				close(updateC)
 
 				return nil
 			},
@@ -169,4 +179,17 @@ func NewBoil() *cobra.Command {
 	cmd.Flags().StringVar(&password, "password", "", "Steam password")
 
 	return cmd
+}
+
+func byteCount(b int64) string {
+	const unit = 1000
+	if b < unit {
+		return fmt.Sprintf("%db", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f%cB", float64(b)/float64(div), "kmgt"[exp])
 }

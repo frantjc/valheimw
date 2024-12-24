@@ -6,8 +6,6 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-type ContainerClient interface{}
-
 type Image = v1.Image
 
 type ImageClient interface {

@@ -6,9 +6,9 @@ import (
 	"io"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/frantjc/go-steamcmd"
@@ -16,10 +16,10 @@ import (
 	"github.com/frantjc/sindri/steamapp"
 	xos "github.com/frantjc/x/os"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/moby/term"
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/spf13/cobra"
 )
 
@@ -35,8 +35,6 @@ func NewZoroark() *cobra.Command {
 			SilenceErrors: true,
 			SilenceUsage:  true,
 			RunE: func(cmd *cobra.Command, args []string) error {
-				ctx := cmd.Context()
-
 				appID, err := strconv.Atoi(args[0])
 				if err != nil {
 					return err
@@ -47,7 +45,11 @@ func NewZoroark() *cobra.Command {
 					return err
 				}
 
+				ctx := cmd.Context()
+
 				if rawTag == "" {
+					fmt.Fprintf(cmd.OutOrStdout(), "Getting Steam app %d info...", appID)
+
 					prompt, err := steamcmd.Start(ctx)
 					if err != nil {
 						return err
@@ -65,6 +67,8 @@ func NewZoroark() *cobra.Command {
 					if err = prompt.Close(ctx); err != nil {
 						return err
 					}
+
+					fmt.Fprintf(cmd.OutOrStdout(), "%s...DONE\n", appInfo.Common.Name)
 
 					branchName := steamapp.DefaultBranchName
 					if beta != "" {
@@ -84,12 +88,18 @@ func NewZoroark() *cobra.Command {
 				}
 
 				if _, _, err := cli.ImageInspectWithRaw(ctx, tag.String()); err != nil {
+					fmt.Fprint(cmd.OutOrStdout(), "Loading default base image...")
+
 					baseImage, err := tarball.Image(func() (io.ReadCloser, error) {
 						return io.NopCloser(bytes.NewReader(imageTar)), nil
 					}, nil)
 					if err != nil {
 						return err
 					}
+
+					fmt.Fprintln(cmd.OutOrStdout(), "DONE")
+
+					fmt.Fprintf(cmd.OutOrStdout(), "Layering Steam app %d onto image...", appID)
 
 					image, err := img.SteamappImage(ctx, appID,
 						img.WithBaseImage(baseImage),
@@ -105,10 +115,34 @@ func NewZoroark() *cobra.Command {
 						return err
 					}
 
+					fmt.Fprintln(cmd.OutOrStdout(), "DONE")
+
+					updateC := make(chan v1.Update)
+					go func() {
+						var (
+							preamble = fmt.Sprintf("\rWriting %s to %s...", tag, cli.DaemonHost())
+							m, n     int
+						)
+
+						for update := range updateC {
+							n, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s%d%% (%s / %s)", preamble, 100*update.Complete/update.Total, byteCount(update.Complete), byteCount(update.Total))
+							if o := m - n; m-n > 0 {
+								fmt.Fprint(cmd.OutOrStdout(), strings.Repeat(" ", o))
+							} else {
+								m = n
+								n = 0
+							}
+						}
+
+						fmt.Fprintf(cmd.OutOrStdout(), "%sDONE\n", preamble)
+					}()
+
 					if _, err = daemon.Write(tag, image, daemon.WithContext(ctx), daemon.WithClient(cli)); err != nil {
 						return err
 					}
 				}
+
+				fmt.Fprintf(cmd.OutOrStdout(), "Creating Steam app %d container...", appID)
 
 				cr, err := cli.ContainerCreate(ctx,
 					&container.Config{
@@ -123,21 +157,26 @@ func NewZoroark() *cobra.Command {
 						Binds: []string{
 							"/tmp/.X11-unix:/tmp/.X11-unix",
 						},
-						Resources: container.Resources{},
+						Resources: container.Resources{
+							DeviceRequests: []container.DeviceRequest{
+								{
+									Count:        -1,
+									Capabilities: [][]string{{"gpu"}},
+								},
+							},
+						},
 						// AutoRemove: true,
 					},
-					&network.NetworkingConfig{},
-					&v1.Platform{},
+					nil, nil,
 					fmt.Sprint(appID),
 				)
 				if err != nil {
 					return err
 				}
-				// defer func() {
-				// 	cctx := context.WithoutCancel(ctx)
-				// 	_ = cli.ContainerKill(cctx, cr.ID, "")
-				// 	_ = cli.ContainerStop(cctx, cr.ID, container.StopOptions{})
-				// }()
+
+				fmt.Fprintln(cmd.OutOrStdout(), "DONE")
+
+				fmt.Fprintf(cmd.OutOrStdout(), "Attaching to Steam app container %s...", cr.ID)
 
 				hjr, err := cli.ContainerAttach(ctx, cr.ID, container.AttachOptions{
 					Stream: true,
@@ -165,6 +204,8 @@ func NewZoroark() *cobra.Command {
 						errC <- err
 					}
 				}()
+
+				fmt.Fprintln(cmd.OutOrStdout(), "DONE")
 
 				if err = cli.ContainerStart(ctx, cr.ID, container.StartOptions{}); err != nil {
 					return err
