@@ -44,6 +44,20 @@ func ImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt) (*
 	for _, launch := range appInfo.Config.Launch {
 		if strings.Contains(launch.Config.OSList, o.platformType.String()) {
 			if o.launchType == "" || strings.EqualFold(launch.Type, o.launchType) {
+				cfg.Labels["cc.frantj.sindri.id"] = fmt.Sprint(appID)
+				if appInfo.Common != nil {
+					cfg.Labels["cc.frantj.sindri.name"] = appInfo.Common.Name
+					cfg.Labels["cc.frantj.sindri.type"] = appInfo.Common.Type
+				}
+				branchName := DefaultBranchName
+				if o.beta != "" {
+					branchName = o.beta
+				}
+				cfg.Labels["cc.frantj.sindri.branch"] = branchName
+				if branch, ok := appInfo.Depots.Branches[branchName]; ok {
+					cfg.Labels["cc.frantj.sindri.buildid"] = fmt.Sprint(branch.BuildID)
+					cfg.Labels["cc.frantj.sindri.description"] = branch.Description
+				}
 				cfg.Entrypoint = []string{
 					filepath.Join(o.installDir, launch.Executable),
 				}
