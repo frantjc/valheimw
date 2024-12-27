@@ -8,6 +8,7 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
+      - darwin
     goarch:
       - amd64
     hooks:
@@ -55,6 +56,21 @@ builds:
     hooks:
       post:
         - upx {{ .Path }}
+  - main: ./cmd/zoroark
+    id: zoroark
+    binary: zoroark
+    ldflags:
+      - -s -w -X github.com/frantjc/sindri.VersionCore={{ .RawVersion }}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+    hooks:
+      post:
+        - upx {{ .Path }}
 changelog:
   use: github
   filters:
@@ -82,13 +98,52 @@ dockers:
       - ghcr.io/frantjc/valheimw:{{ .Major }}.{{ .Minor }}
       - ghcr.io/frantjc/valheimw:{{ .Major }}
       - ghcr.io/frantjc/valheimw:latest
-# brews:
-#   - repository:
-#       owner: frantjc
-#       name: homebrew-tap
-#     directory: Formula
-#     skip_upload: auto
-#     homepage:  https://github.com/frantjc/sindri
-#     license: MIT
-#     test: |
-#       system "#{bin}/boil --version"
+brews:
+  - repository:
+      owner: frantjc
+      name: homebrew-tap
+    name: boil
+    alternative_names:
+      - boil@{{ .RawVersion }}
+      - boil:{{ .Major }}.{{ .Minor }}
+      - boil@{{ .Major }}
+    ids:
+      - boil
+    directory: Formula
+    skip_upload: auto
+    homepage:  https://github.com/frantjc/sindri
+    license: MIT
+    test: |
+      system "#{bin}/boil --version"
+  - repository:
+      owner: frantjc
+      name: homebrew-tap
+    name: valheimw
+    alternative_names:
+      - valheimw@{{ .RawVersion }}
+      - valheimw:{{ .Major }}.{{ .Minor }}
+      - valheimw@{{ .Major }}
+    ids:
+      - valheimw
+    directory: Formula
+    skip_upload: auto
+    homepage:  https://github.com/frantjc/sindri
+    license: MIT
+    test: |
+      system "#{bin}/valheimw --version"
+  - repository:
+      owner: frantjc
+      name: homebrew-tap
+    name: zoroark
+    alternative_names:
+      - zoroark@{{ .RawVersion }}
+      - zoroark:{{ .Major }}.{{ .Minor }}
+      - zoroark@{{ .Major }}
+    ids:
+      - zoroark
+    directory: Formula
+    skip_upload: auto
+    homepage:  https://github.com/frantjc/sindri
+    license: MIT
+    test: |
+      system "#{bin}/zoroark --version"
