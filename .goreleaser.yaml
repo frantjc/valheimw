@@ -1,3 +1,4 @@
+version: 2
 builds:
   - main: ./cmd/boil
     id: boil
@@ -103,10 +104,6 @@ brews:
       owner: frantjc
       name: homebrew-tap
     name: boil
-    alternative_names:
-      - boil@{{ .RawVersion }}
-      - boil@{{ .Major }}.{{ .Minor }}
-      - boil@{{ .Major }}
     ids:
       - boil
     directory: Formula
@@ -119,10 +116,6 @@ brews:
       owner: frantjc
       name: homebrew-tap
     name: valheimw
-    alternative_names:
-      - valheimw@{{ .RawVersion }}
-      - valheimw@{{ .Major }}.{{ .Minor }}
-      - valheimw@{{ .Major }}
     ids:
       - valheimw
     directory: Formula
@@ -135,10 +128,6 @@ brews:
       owner: frantjc
       name: homebrew-tap
     name: zoroark
-    alternative_names:
-      - zoroark@{{ .RawVersion }}
-      - zoroark@{{ .Major }}.{{ .Minor }}
-      - zoroark@{{ .Major }}
     ids:
       - zoroark
     directory: Formula
