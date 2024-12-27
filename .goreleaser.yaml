@@ -145,5 +145,9 @@ brews:
     skip_upload: auto
     homepage:  https://github.com/frantjc/sindri
     license: MIT
+    dependencies:
+      - name: xquartz
+        os: mac
     test: |
       system "#{bin}/zoroark --version"
+  
