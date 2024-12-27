@@ -105,7 +105,7 @@ brews:
     name: boil
     alternative_names:
       - boil@{{ .RawVersion }}
-      - boil:{{ .Major }}.{{ .Minor }}
+      - boil@{{ .Major }}.{{ .Minor }}
       - boil@{{ .Major }}
     ids:
       - boil
@@ -121,7 +121,7 @@ brews:
     name: valheimw
     alternative_names:
       - valheimw@{{ .RawVersion }}
-      - valheimw:{{ .Major }}.{{ .Minor }}
+      - valheimw@{{ .Major }}.{{ .Minor }}
       - valheimw@{{ .Major }}
     ids:
       - valheimw
@@ -137,7 +137,7 @@ brews:
     name: zoroark
     alternative_names:
       - zoroark@{{ .RawVersion }}
-      - zoroark:{{ .Major }}.{{ .Minor }}
+      - zoroark@{{ .Major }}.{{ .Minor }}
       - zoroark@{{ .Major }}
     ids:
       - zoroark
