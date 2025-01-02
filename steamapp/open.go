@@ -20,6 +20,7 @@ type Opts struct {
 	installDir         string
 	beta, betaPassword string
 	username, password string
+	steamGuardCode     string
 	platformType       steamcmd.PlatformType
 	launchType         string
 }
@@ -32,6 +33,9 @@ func WithURLValues(query url.Values) Opt {
 			WithAccount(
 				query.Get("username"),
 				query.Get("password"),
+			),
+			WithSteamGuardCode(
+				query.Get("steamguardcode"),
 			),
 			WithBeta(
 				query.Get("beta"),
@@ -85,6 +89,12 @@ func WithAccount(username, password string) Opt {
 	}
 }
 
+func WithSteamGuardCode(steamGuardCode string) Opt {
+	return func(o *Opts) {
+		o.steamGuardCode = steamGuardCode
+	}
+}
+
 func WithLaunchType(launchType string) Opt {
 	return func(o *Opts) {
 		o.launchType = launchType
@@ -121,7 +131,7 @@ func Open(ctx context.Context, appID int, opts ...Opt) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	if err := prompt.Login(ctx, steamcmd.WithAccount(o.username, o.password)); err != nil {
+	if err := prompt.Login(ctx, steamcmd.WithAccount(o.username, o.password), steamcmd.WithSteamGuardCode(o.steamGuardCode)); err != nil {
 		return nil, err
 	}
 

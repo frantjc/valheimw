@@ -26,6 +26,7 @@ import (
 func NewZoroark() *cobra.Command {
 	var (
 		username, password string
+		steamGuardCode     string
 		beta, betaPassword string
 		platformType       string
 		rawTag             string
@@ -55,7 +56,7 @@ func NewZoroark() *cobra.Command {
 						return err
 					}
 
-					if err := prompt.Login(ctx, steamcmd.WithAccount(username, password)); err != nil {
+					if err := prompt.Login(ctx, steamcmd.WithAccount(username, password), steamcmd.WithSteamGuardCode(steamGuardCode)); err != nil {
 						return err
 					}
 
@@ -106,6 +107,7 @@ func NewZoroark() *cobra.Command {
 						img.WithUser("root", "root"),
 						img.WithSteamappOpts(
 							steamapp.WithAccount(username, password),
+							steamapp.WithSteamGuardCode(steamGuardCode),
 							steamapp.WithBeta(beta, betaPassword),
 							steamapp.WithInstallDir("/steamapp"),
 							steamapp.WithPlatformType(steamcmd.PlatformType(platformType)),
@@ -165,7 +167,7 @@ func NewZoroark() *cobra.Command {
 								},
 							},
 						},
-						// AutoRemove: true,
+						AutoRemove: true,
 					},
 					nil, nil,
 					fmt.Sprint(appID),
@@ -218,6 +220,9 @@ func NewZoroark() *cobra.Command {
 					}
 				case <-ctx.Done():
 					err = ctx.Err()
+					if stopErr := cli.ContainerStop(ctx, cr.ID, container.StopOptions{}); stopErr != nil {
+						err = stopErr
+					}
 				case <-outC:
 				}
 				if err != nil {
@@ -242,6 +247,7 @@ func NewZoroark() *cobra.Command {
 
 	cmd.Flags().StringVar(&username, "username", "", "Steam username")
 	cmd.Flags().StringVar(&password, "password", "", "Steam password")
+	cmd.Flags().StringVar(&steamGuardCode, "steam-guard-code", "", "Steam Guard code")
 
 	cmd.Flags().StringVar(&beta, "beta", "", "Steam beta branch")
 	cmd.Flags().StringVar(&betaPassword, "beta-password", "", "Steam beta password")

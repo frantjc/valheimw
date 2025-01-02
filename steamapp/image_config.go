@@ -44,6 +44,9 @@ func ImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt) (*
 	for _, launch := range appInfo.Config.Launch {
 		if strings.Contains(launch.Config.OSList, o.platformType.String()) {
 			if o.launchType == "" || strings.EqualFold(launch.Type, o.launchType) {
+				if cfg.Labels == nil {
+					cfg.Labels = map[string]string{}
+				}
 				cfg.Labels["cc.frantj.sindri.id"] = fmt.Sprint(appID)
 				if appInfo.Common != nil {
 					cfg.Labels["cc.frantj.sindri.name"] = appInfo.Common.Name
