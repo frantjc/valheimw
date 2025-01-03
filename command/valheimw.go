@@ -295,6 +295,7 @@ func NewValheimw() *cobra.Command {
 										return
 									}
 
+									//nolint:gosec
 									if _, err = io.Copy(tw, tr); err != nil {
 										w.WriteHeader(http.StatusInternalServerError)
 										return
@@ -339,6 +340,7 @@ func NewValheimw() *cobra.Command {
 										return
 									}
 
+									//nolint:gosec
 									if _, err = io.Copy(tw, tr); err != nil {
 										w.WriteHeader(http.StatusInternalServerError)
 										return

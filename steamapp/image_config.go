@@ -22,23 +22,17 @@ func ImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt) (*
 		opt(o)
 	}
 
-	prompt, err := steamcmd.Start(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer prompt.Close(ctx)
-
-	if err := prompt.Login(ctx, steamcmd.WithAccount(o.username, o.password)); err != nil {
-		return nil, err
-	}
-
-	appInfo, err := prompt.AppInfoPrint(ctx, appID)
-	if err != nil {
+	if err := steamcmd.Run(ctx,
+		o.login,
+		steamcmd.AppInfoRequest(appID),
+		steamcmd.AppInfoPrint(appID),
+	); err != nil {
 		return nil, err
 	}
 
-	if appInfo == nil || appInfo.Config == nil {
-		return nil, fmt.Errorf("no app info config found")
+	appInfo, found := steamcmd.GetAppInfo(appID)
+	if !found {
+		return nil, fmt.Errorf("app info not found")
 	}
 
 	for _, launch := range appInfo.Config.Launch {
@@ -48,10 +42,8 @@ func ImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt) (*
 					cfg.Labels = map[string]string{}
 				}
 				cfg.Labels["cc.frantj.sindri.id"] = fmt.Sprint(appID)
-				if appInfo.Common != nil {
-					cfg.Labels["cc.frantj.sindri.name"] = appInfo.Common.Name
-					cfg.Labels["cc.frantj.sindri.type"] = appInfo.Common.Type
-				}
+				cfg.Labels["cc.frantj.sindri.name"] = appInfo.Common.Name
+				cfg.Labels["cc.frantj.sindri.type"] = appInfo.Common.Type
 				branchName := DefaultBranchName
 				if o.beta != "" {
 					branchName = o.beta

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"log/slog"
 	"net/http"
 	"strings"
 
@@ -68,18 +67,15 @@ func Handler(reg Puller) http.Handler {
 						ep        = split[lenSplit-2]
 						name      = strings.Join(split[2:lenSplit-2], "/")
 						reference = split[lenSplit-1]
-						log       = logr.FromContextAsSlogLogger(r.Context())
-					)
-					if log != nil {
-						log = log.With(
+						log       = logr.FromContextOrDiscard(r.Context()).WithValues(
 							"method", r.Method,
 							"name", name,
 							"reference", reference,
 							"id", uuid.NewString(),
 						)
-					} else {
-						log = slog.New(slog.NewTextHandler(io.Discard, nil))
-					}
+					)
+
+					log.WithValues()
 
 					log.Info(ep)
 
@@ -87,7 +83,7 @@ func Handler(reg Puller) http.Handler {
 					case "manifests":
 						if r.Method == http.MethodHead {
 							if err := reg.HeadManifest(r.Context(), name, reference); err != nil {
-								log.Error(ep, "err", err.Error())
+								log.Error(err, ep)
 								http.Error(w, err.Error(), http.StatusInternalServerError)
 								return
 							}
@@ -98,7 +94,7 @@ func Handler(reg Puller) http.Handler {
 
 						manifest, err := reg.GetManifest(r.Context(), name, reference)
 						if err != nil {
-							log.Error(ep, "err", err.Error())
+							log.Error(err, ep)
 							http.Error(w, err.Error(), http.StatusInternalServerError)
 							return
 						}
@@ -111,7 +107,7 @@ func Handler(reg Puller) http.Handler {
 					case "blobs":
 						if r.Method == http.MethodHead {
 							if err := reg.HeadBlob(r.Context(), name, reference); err != nil {
-								log.Error(ep, "err", err.Error())
+								log.Error(err, ep)
 								http.Error(w, err.Error(), http.StatusInternalServerError)
 								return
 							}
@@ -122,14 +118,14 @@ func Handler(reg Puller) http.Handler {
 
 						blob, err := reg.GetBlob(r.Context(), name, reference)
 						if err != nil {
-							log.Error(ep, "err", err.Error())
+							log.Error(err, ep)
 							http.Error(w, err.Error(), http.StatusInternalServerError)
 							return
 						}
 
 						hash, err := blob.Digest()
 						if err != nil {
-							log.Error("blob digest", "err", err.Error())
+							log.Error(err, "blob digest")
 							http.Error(w, err.Error(), http.StatusInternalServerError)
 							return
 						}
@@ -138,8 +134,7 @@ func Handler(reg Puller) http.Handler {
 
 						rc, err := blob.Compressed()
 						if err != nil {
-							log.Error("compressed blob reader", "err", err.Error())
-							log.Error(err.Error())
+							log.Error(err, "compressed blob reader")
 							http.Error(w, err.Error(), http.StatusInternalServerError)
 							return
 						}

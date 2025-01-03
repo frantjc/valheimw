@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"path/filepath"
 
@@ -65,7 +66,7 @@ func SteamappImage(ctx context.Context, appID int, opts ...BuildSteamappOpt) (v1
 	baseImage := o.baseImage
 	if o.baseImageRef != "" {
 		var err error
-		baseImage, err = sindri.NewImageClient(ctx).Pull(ctx, o.baseImageRef)
+		baseImage, err = sindri.NewImageClient().Pull(ctx, o.baseImageRef)
 		if err != nil {
 			return nil, err
 		}
@@ -110,6 +111,10 @@ func SteamappImage(ctx context.Context, appID int, opts ...BuildSteamappOpt) (v1
 }
 
 func ReproducibleBuildLayerInDirFromOpener(o tarball.Opener, dir, uname, gname string) (v1.Layer, error) {
+	if filepath.IsAbs(dir) {
+		return nil, fmt.Errorf("dir must be a relative path: %s", dir)
+	}
+
 	return tarball.LayerFromOpener(
 		func() (io.ReadCloser, error) {
 			rc1, err := o()
@@ -120,6 +125,7 @@ func ReproducibleBuildLayerInDirFromOpener(o tarball.Opener, dir, uname, gname s
 			rc2 := xtar.ModifyHeaders(
 				tar.NewReader(rc1),
 				func(h *tar.Header) {
+					//nolint:gosec
 					h.Name = filepath.Join(dir, h.Name)
 					h.ModTime = reproduciblebuilds.SourceDateEpoch
 					h.Uname = uname

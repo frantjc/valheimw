@@ -132,13 +132,14 @@ func (c *Client) GetPackageZip(ctx context.Context, p *Package) (*ZipReadableClo
 	}
 
 	u := ""
-	if p.Latest != nil && p.Latest.DownloadURL != nil && p.Latest.DownloadURL.URL != nil {
+	switch {
+	case p.Latest != nil && p.Latest.DownloadURL != nil && p.Latest.DownloadURL.URL != nil:
 		u = p.Latest.DownloadURL.String()
-	} else if p.DownloadURL != nil && p.DownloadURL.URL != nil {
+	case p.DownloadURL != nil && p.DownloadURL.URL != nil:
 		u = p.DownloadURL.String()
-	} else if p.VersionNumber != "" {
+	case p.VersionNumber != "":
 		u = fmt.Sprintf("%s/", c.thunderstoreURL.JoinPath("/package/download", p.Namespace, p.Name, p.VersionNumber).String())
-	} else {
+	default:
 		pkg, err := c.GetPackage(ctx, p)
 		if err != nil {
 			return nil, err

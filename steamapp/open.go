@@ -19,8 +19,7 @@ const (
 type Opts struct {
 	installDir         string
 	beta, betaPassword string
-	username, password string
-	steamGuardCode     string
+	login              steamcmd.Login
 	platformType       steamcmd.PlatformType
 	launchType         string
 }
@@ -30,11 +29,9 @@ type Opt func(*Opts)
 func WithURLValues(query url.Values) Opt {
 	return func(o *Opts) {
 		for _, opt := range []Opt{
-			WithAccount(
+			WithLogin(
 				query.Get("username"),
 				query.Get("password"),
-			),
-			WithSteamGuardCode(
 				query.Get("steamguardcode"),
 			),
 			WithBeta(
@@ -53,8 +50,9 @@ func WithURLValues(query url.Values) Opt {
 
 func URLValues(o *Opts) url.Values {
 	query := url.Values{}
-	query.Add("username", o.username)
-	query.Add("password", o.password)
+	query.Add("username", o.login.Username)
+	query.Add("password", o.login.Password)
+	query.Add("steamguardcode", o.login.SteamGuardCode)
 	query.Add("beta", o.beta)
 	query.Add("betapassword", o.betaPassword)
 	query.Add("platformtype", o.platformType.String())
@@ -82,16 +80,13 @@ func WithPlatformType(platformType steamcmd.PlatformType) Opt {
 	}
 }
 
-func WithAccount(username, password string) Opt {
+func WithLogin(username, password, steamGuardCode string) Opt {
 	return func(o *Opts) {
-		o.username = username
-		o.password = password
-	}
-}
-
-func WithSteamGuardCode(steamGuardCode string) Opt {
-	return func(o *Opts) {
-		o.steamGuardCode = steamGuardCode
+		o.login = steamcmd.Login{
+			Username:       username,
+			Password:       password,
+			SteamGuardCode: steamGuardCode,
+		}
 	}
 }
 
@@ -119,31 +114,15 @@ func Open(ctx context.Context, appID int, opts ...Opt) (io.ReadCloser, error) {
 		branchName = o.beta
 	}
 
-	prompt, err := steamcmd.Start(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer prompt.Close(ctx)
-
 	installDir := filepath.Join(cache.Dir, Scheme, o.platformType.String(), fmt.Sprint(appID), branchName)
 
-	if err := prompt.ForceInstallDir(ctx, installDir); err != nil {
+	if err := steamcmd.Run(ctx, o.login, steamcmd.AppInfoRequest(appID), steamcmd.AppInfoPrint(appID)); err != nil {
 		return nil, err
 	}
 
-	if err := prompt.Login(ctx, steamcmd.WithAccount(o.username, o.password), steamcmd.WithSteamGuardCode(o.steamGuardCode)); err != nil {
-		return nil, err
-	}
-
-	if o.platformType != "" {
-		if err := prompt.ForcePlatformType(ctx, o.platformType); err != nil {
-			return nil, err
-		}
-	}
-
-	appInfo, err := prompt.AppInfoPrint(ctx, appID)
-	if err != nil {
-		return nil, err
+	appInfo, found := steamcmd.GetAppInfo(appID)
+	if !found {
+		return nil, fmt.Errorf("app info not found")
 	}
 
 	branch, ok := appInfo.Depots.Branches[branchName]
@@ -155,7 +134,20 @@ func Open(ctx context.Context, appID int, opts ...Opt) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("steamapp %d branch %s requires a password", appID, branchName)
 	}
 
-	if err := prompt.AppUpdate(ctx, appID, steamcmd.WithBeta(o.beta, o.betaPassword)); err != nil {
+	commands := []steamcmd.Command{
+		steamcmd.ForceInstallDir(installDir),
+		o.login,
+	}
+	if o.platformType != "" {
+		commands = append(commands, steamcmd.ForcePlatformType(o.platformType))
+	}
+	commands = append(commands, steamcmd.AppUpdate{
+		AppID:        appID,
+		Beta:         o.beta,
+		BetaPassword: o.betaPassword,
+	})
+
+	if err := steamcmd.Run(ctx, commands...); err != nil {
 		return nil, err
 	}
 

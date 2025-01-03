@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/frantjc/go-steamcmd"
+	"github.com/frantjc/sindri"
 	"github.com/frantjc/sindri/internal/img"
 	"github.com/frantjc/sindri/steamapp"
 	xslice "github.com/frantjc/x/slice"
@@ -29,6 +30,7 @@ func NewBoil() *cobra.Command {
 		dir                             string
 		cmd                             = &cobra.Command{
 			Use:           "boil",
+			Version:       sindri.SemVer(),
 			Args:          cobra.ExactArgs(1),
 			SilenceErrors: true,
 			SilenceUsage:  true,
@@ -58,7 +60,7 @@ func NewBoil() *cobra.Command {
 				opts := []img.BuildSteamappOpt{
 					img.WithBaseImageRef(rawBaseImageRef),
 					img.WithSteamappOpts(
-						steamapp.WithAccount(username, password),
+						steamapp.WithLogin(username, password, ""),
 						steamapp.WithBeta(beta, betaPassword),
 						steamapp.WithInstallDir(dir),
 						steamapp.WithLaunchType(launchType),
@@ -97,24 +99,23 @@ func NewBoil() *cobra.Command {
 				if rawRef == "" {
 					fmt.Fprintf(updateW, "Getting Steam app %d info...", appID)
 
-					prompt, err := steamcmd.Start(ctx)
-					if err != nil {
+					if err := steamcmd.Run(ctx,
+						steamcmd.Login{
+							Username: username,
+							Password: password,
+						},
+						steamcmd.AppInfoRequest(appID),
+						steamcmd.AppInfoPrint(appID),
+					); err != nil {
 						return err
 					}
 
-					if err := prompt.Login(ctx, steamcmd.WithAccount(username, password)); err != nil {
-						return err
-					}
-
-					appInfo, err := prompt.AppInfoPrint(ctx, appID)
-					if err != nil {
-						return err
-					}
-
-					fmt.Fprintf(updateW, "%s...DONE\n", appInfo.Common.Name)
-
-					if err = prompt.Close(ctx); err != nil {
-						return err
+					appInfo, found := steamcmd.GetAppInfo(appID)
+					if found {
+						fmt.Fprintf(updateW, "%s...DONE\n", appInfo.Common.Name)
+					} else {
+						fmt.Fprintf(updateW, "FAILED\n")
+						return nil
 					}
 
 					branchName := steamapp.DefaultBranchName
@@ -147,7 +148,6 @@ func NewBoil() *cobra.Command {
 							fmt.Fprint(updateW, strings.Repeat(" ", o))
 						} else {
 							m = n
-							n = 0
 						}
 					}
 

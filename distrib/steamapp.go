@@ -87,9 +87,7 @@ func (p *SteamappPuller) setBranch(appID int, digest, reference string) error {
 		return err
 	}
 
-	return p.Store.Set(fmt.Sprintf("steamapp:%d::digest:%s", appID, digest), struct {
-		Branch string `json:"branch"`
-	}{reference})
+	return p.Store.Set(fmt.Sprintf("steamapp:%d::digest:%s", appID, digest), reference)
 }
 
 func (p *SteamappPuller) GetManifest(ctx context.Context, name string, reference string) (*Manifest, error) {
@@ -206,7 +204,7 @@ func (p *SteamappPuller) GetBlob(ctx context.Context, name string, digest string
 func (p *SteamappPuller) getLayer(ctx context.Context, appID int, branch string) (Blob, error) {
 	layer, err := img.ReproducibleBuildLayerInDirFromOpener(
 		func() (io.ReadCloser, error) {
-			return steamapp.Open(ctx, appID, steamapp.WithAccount(p.Username, p.Password), steamapp.WithBeta(branch, ""))
+			return steamapp.Open(ctx, appID, steamapp.WithLogin(p.Username, p.Password, ""), steamapp.WithBeta(branch, ""))
 		},
 		p.Dir,
 		p.User,
@@ -236,7 +234,7 @@ func (p *SteamappPuller) getConfig(ctx context.Context, image v1.Image, appID in
 
 	return steamapp.ImageConfig(
 		ctx, appID, &cfgf.Config,
-		steamapp.WithAccount(p.Username, p.Password),
+		steamapp.WithLogin(p.Username, p.Password, ""),
 		steamapp.WithInstallDir(p.Dir),
 		steamapp.WithBeta(branch, ""),
 		steamapp.WithLaunchType("server"),

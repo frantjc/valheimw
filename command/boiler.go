@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/frantjc/sindri"
 	"github.com/frantjc/sindri/distrib"
 	"github.com/frantjc/sindri/distrib/cache"
 	"github.com/go-logr/logr"
@@ -32,6 +33,7 @@ func NewBoiler() *cobra.Command {
 		}
 		cmd = &cobra.Command{
 			Use:           "boiler",
+			Version:       sindri.SemVer(),
 			Args:          cobra.MaximumNArgs(1),
 			SilenceErrors: true,
 			SilenceUsage:  true,
@@ -42,7 +44,7 @@ func NewBoiler() *cobra.Command {
 						Addr:              addr,
 						ReadHeaderTimeout: time.Second * 5,
 						Handler:           distrib.Handler(registry),
-						BaseContext: func(l net.Listener) context.Context {
+						BaseContext: func(_ net.Listener) context.Context {
 							return logr.NewContextWithSlogLogger(context.Background(), slog.Default())
 						},
 					}

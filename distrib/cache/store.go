@@ -29,7 +29,7 @@ func NewStore(s string) (Store, error) {
 	case "redis":
 		userPassword, _ := u.User.Password()
 		db, _ := strconv.Atoi(u.Query().Get("db"))
-		var timeout *time.Duration = nil
+		var timeout *time.Duration
 		if duration, err := time.ParseDuration(u.Query().Get("timeout")); err == nil {
 			timeout = &duration
 		}

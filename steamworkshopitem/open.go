@@ -13,8 +13,8 @@ import (
 )
 
 type Opts struct {
-	username, password string
-	platformType       steamcmd.PlatformType
+	login        steamcmd.Login
+	platformType steamcmd.PlatformType
 }
 
 type Opt func(*Opts)
@@ -22,9 +22,10 @@ type Opt func(*Opts)
 func WithURLValues(query url.Values) Opt {
 	return func(o *Opts) {
 		for _, opt := range []Opt{
-			WithAccount(
+			WithLogin(
 				query.Get("username"),
 				query.Get("password"),
+				query.Get("steamguardcode"),
 			),
 			WithPlatformType(
 				steamcmd.PlatformType(query.Get("platformtype")),
@@ -37,8 +38,9 @@ func WithURLValues(query url.Values) Opt {
 
 func URLValues(o *Opts) url.Values {
 	query := url.Values{}
-	query.Add("username", o.username)
-	query.Add("password", o.password)
+	query.Add("username", o.login.Username)
+	query.Add("password", o.login.Password)
+	query.Add("steamguardcode", o.login.SteamGuardCode)
 	query.Add("platformtype", o.platformType.String())
 	return query
 }
@@ -49,10 +51,13 @@ func WithPlatformType(platformType steamcmd.PlatformType) Opt {
 	}
 }
 
-func WithAccount(username, password string) Opt {
+func WithLogin(username, password, steamGuardCode string) Opt {
 	return func(o *Opts) {
-		o.username = username
-		o.password = password
+		o.login = steamcmd.Login{
+			Username:       username,
+			Password:       password,
+			SteamGuardCode: steamGuardCode,
+		}
 	}
 }
 
@@ -68,30 +73,23 @@ func Open(ctx context.Context, appID, publishedFileID int, opts ...Opt) (io.Read
 	for _, opt := range opts {
 		opt(o)
 	}
-
-	prompt, err := steamcmd.Start(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer prompt.Close(ctx)
-
 	installDir := filepath.Join(cache.Dir, Scheme, o.platformType.String(), fmt.Sprint(appID), fmt.Sprint(publishedFileID))
 
-	if err := prompt.ForceInstallDir(ctx, installDir); err != nil {
-		return nil, err
+	commands := []steamcmd.Command{
+		steamcmd.ForceInstallDir(installDir),
+		o.login,
 	}
-
-	if err := prompt.Login(ctx, steamcmd.WithAccount(o.username, o.password)); err != nil {
-		return nil, err
-	}
-
 	if o.platformType != "" {
-		if err := prompt.ForcePlatformType(ctx, o.platformType); err != nil {
-			return nil, err
-		}
+		commands = append(commands, steamcmd.ForcePlatformType(o.platformType))
 	}
+	commands = append(commands,
+		&steamcmd.WorkshopDownloadItem{
+			AppID:           appID,
+			PublishedFileID: publishedFileID,
+		},
+	)
 
-	if err := prompt.WorkshopDownloadItem(ctx, appID, publishedFileID); err != nil {
+	if err := steamcmd.Run(ctx, commands...); err != nil {
 		return nil, err
 	}
 
