@@ -25,6 +25,7 @@ func NewBoil() *cobra.Command {
 		beta, betaPassword              string
 		username, password              string
 		platformType                    string
+		launchType                      string
 		dir                             string
 		cmd                             = &cobra.Command{
 			Use:           "boil",
@@ -60,6 +61,7 @@ func NewBoil() *cobra.Command {
 						steamapp.WithAccount(username, password),
 						steamapp.WithBeta(beta, betaPassword),
 						steamapp.WithInstallDir(dir),
+						steamapp.WithLaunchType(launchType),
 					),
 				}
 				if platformType != "" {
@@ -174,6 +176,7 @@ func NewBoil() *cobra.Command {
 	cmd.Flags().StringVar(&dir, "dir", "/home/boil/steamapp", "Steam app install directory")
 
 	cmd.Flags().StringVar(&platformType, "platformtype", "", "Steam app platform type")
+	cmd.Flags().StringVar(&launchType, "launchtype", "server", "Steam app launch type")
 
 	cmd.Flags().StringVar(&username, "username", "", "Steam username")
 	cmd.Flags().StringVar(&password, "password", "", "Steam password")

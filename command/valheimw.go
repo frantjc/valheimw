@@ -57,14 +57,12 @@ func NewValheimw() *cobra.Command {
 					return err
 				}
 
-				ctx := cmd.Context()
+				eg, ctx := errgroup.WithContext(cmd.Context())
 
 				pkgs, err := thunderstore.DependencyTree(ctx, mods...)
 				if err != nil {
 					return err
 				}
-
-				eg, _ := errgroup.WithContext(ctx)
 
 				for _, pkg := range pkgs {
 					dir := fmt.Sprintf("BepInEx/plugins/%s", pkg.String())
@@ -95,6 +93,7 @@ func NewValheimw() *cobra.Command {
 
 				o := &steamapp.Opts{}
 				steamapp.WithBeta(beta, betaPassword)(o)
+				steamapp.WithLaunchType("server")(o)
 
 				eg.Go(func() error {
 					return sindri.Extract(ctx,
@@ -371,18 +370,7 @@ func NewValheimw() *cobra.Command {
 					)
 				}
 
-				eg, egctx := errgroup.WithContext(ctx)
-
-				srv := &http.Server{
-					Addr:              addr,
-					ReadHeaderTimeout: time.Second * 5,
-					BaseContext: func(_ net.Listener) context.Context {
-						return egctx
-					},
-					Handler: ingress.New(paths...),
-				}
-
-				sub, err := valheim.NewCommand(egctx, wd, opts)
+				sub, err := valheim.NewCommand(ctx, wd, opts)
 				if err != nil {
 					return err
 				}
@@ -399,18 +387,24 @@ func NewValheimw() *cobra.Command {
 				}
 				defer l.Close()
 
+				srv := &http.Server{
+					Addr:              addr,
+					ReadHeaderTimeout: time.Second * 5,
+					Handler:           ingress.New(paths...),
+				}
+
 				eg.Go(func() error {
 					return srv.Serve(l)
 				})
 
 				eg.Go(func() error {
-					<-egctx.Done()
+					<-ctx.Done()
 					cctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second*30)
 					defer cancel()
 					if err = srv.Shutdown(cctx); err != nil {
 						return err
 					}
-					return egctx.Err()
+					return ctx.Err()
 				})
 
 				return eg.Wait()

@@ -87,7 +87,9 @@ func (p *SteamappPuller) setBranch(appID int, digest, reference string) error {
 		return err
 	}
 
-	return p.Store.Set(fmt.Sprintf("steamapp:%d::digest:%s", appID, digest), reference)
+	return p.Store.Set(fmt.Sprintf("steamapp:%d::digest:%s", appID, digest), struct {
+		Branch string `json:"branch"`
+	}{reference})
 }
 
 func (p *SteamappPuller) GetManifest(ctx context.Context, name string, reference string) (*Manifest, error) {

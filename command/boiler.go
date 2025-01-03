@@ -16,6 +16,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 )
 
 //go:embed image.tar
@@ -36,14 +37,14 @@ func NewBoiler() *cobra.Command {
 			SilenceUsage:  true,
 			RunE: func(cmd *cobra.Command, args []string) error {
 				var (
-					ctx = logr.NewContextWithSlogLogger(cmd.Context(), slog.Default())
-					srv = &http.Server{
+					eg, ctx = errgroup.WithContext(logr.NewContextWithSlogLogger(cmd.Context(), slog.Default()))
+					srv     = &http.Server{
 						Addr:              addr,
 						ReadHeaderTimeout: time.Second * 5,
-						BaseContext: func(_ net.Listener) context.Context {
-							return ctx
+						Handler:           distrib.Handler(registry),
+						BaseContext: func(l net.Listener) context.Context {
+							return logr.NewContextWithSlogLogger(context.Background(), slog.Default())
 						},
-						Handler: distrib.Handler(registry),
 					}
 				)
 
@@ -67,14 +68,21 @@ func NewBoiler() *cobra.Command {
 					}
 				}
 
-				defer func() {
+				eg.Go(func() error {
 					<-ctx.Done()
 					cctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second*30)
 					defer cancel()
-					_ = srv.Shutdown(cctx)
-				}()
+					if err = srv.Shutdown(cctx); err != nil {
+						return err
+					}
+					return ctx.Err()
+				})
 
-				return srv.Serve(l)
+				eg.Go(func() error {
+					return srv.Serve(l)
+				})
+
+				return eg.Wait()
 			},
 		}
 	)
