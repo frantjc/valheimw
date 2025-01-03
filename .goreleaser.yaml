@@ -57,21 +57,6 @@ builds:
     hooks:
       post:
         - upx {{ .Path }}
-  - main: ./cmd/zoroark
-    id: zoroark
-    binary: zoroark
-    ldflags:
-      - -s -w -X github.com/frantjc/sindri.VersionCore={{ .RawVersion }}
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - darwin
-    goarch:
-      - amd64
-    hooks:
-      post:
-        - upx {{ .Path }}
 changelog:
   use: github
   filters:
@@ -124,19 +109,3 @@ brews:
     license: MIT
     test: |
       system "#{bin}/valheimw --version"
-  - repository:
-      owner: frantjc
-      name: homebrew-tap
-    name: zoroark
-    ids:
-      - zoroark
-    directory: Formula
-    skip_upload: auto
-    homepage:  https://github.com/frantjc/sindri
-    license: MIT
-    dependencies:
-      - name: xquartz
-        os: mac
-    test: |
-      system "#{bin}/zoroark --version"
-  

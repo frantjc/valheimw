@@ -1,6 +1,7 @@
 GO ?= go
 GOLANGCI-LINT ?= golangci-lint
 GIT ?= git
+DOCKER ?= docker
 
 all: fmt lint
 
@@ -18,5 +19,9 @@ release:
 	@$(GIT) tag v$(SEMVER)
 	@$(GIT) push --tags
 
+command/image.tar:
+	@$(DOCKER) build -t tmp command
+	@$(DOCKER) save tmp -o command/image.tar
+	@$(DOCKER) rmi tmp
 
-.PHONY: all fmt generate lint proto gen release
+.PHONY: all fmt generate lint proto gen release command/image.tar
