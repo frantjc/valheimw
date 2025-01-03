@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/frantjc/sindri/distrib"
+	"github.com/frantjc/sindri/distrib/cache"
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/spf13/cobra"
@@ -30,17 +31,21 @@ func NewBoiler() *cobra.Command {
 		}
 		cmd = &cobra.Command{
 			Use:           "boiler",
+			Args:          cobra.MaximumNArgs(1),
 			SilenceErrors: true,
 			SilenceUsage:  true,
-			RunE: func(cmd *cobra.Command, _ []string) error {
-				srv := &http.Server{
-					Addr:              addr,
-					ReadHeaderTimeout: time.Second * 5,
-					BaseContext: func(_ net.Listener) context.Context {
-						return logr.NewContextWithSlogLogger(cmd.Context(), slog.Default())
-					},
-					Handler: distrib.Handler(registry),
-				}
+			RunE: func(cmd *cobra.Command, args []string) error {
+				var (
+					ctx = logr.NewContextWithSlogLogger(cmd.Context(), slog.Default())
+					srv = &http.Server{
+						Addr:              addr,
+						ReadHeaderTimeout: time.Second * 5,
+						BaseContext: func(_ net.Listener) context.Context {
+							return ctx
+						},
+						Handler: distrib.Handler(registry),
+					}
+				)
 
 				l, err := net.Listen("tcp", addr)
 				if err != nil {
@@ -54,6 +59,20 @@ func NewBoiler() *cobra.Command {
 				if err != nil {
 					return err
 				}
+
+				if len(args) > 0 {
+					registry.Store, err = cache.NewStore(args[0])
+					if err != nil {
+						return err
+					}
+				}
+
+				defer func() {
+					<-ctx.Done()
+					cctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second*30)
+					defer cancel()
+					_ = srv.Shutdown(cctx)
+				}()
 
 				return srv.Serve(l)
 			},

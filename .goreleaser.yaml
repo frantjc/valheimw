@@ -1,3 +1,4 @@
+version: 2
 builds:
   - main: ./cmd/boil
     id: boil
@@ -8,6 +9,7 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
+      - darwin
     goarch:
       - amd64
     hooks:
@@ -82,13 +84,28 @@ dockers:
       - ghcr.io/frantjc/valheimw:{{ .Major }}.{{ .Minor }}
       - ghcr.io/frantjc/valheimw:{{ .Major }}
       - ghcr.io/frantjc/valheimw:latest
-# brews:
-#   - repository:
-#       owner: frantjc
-#       name: homebrew-tap
-#     directory: Formula
-#     skip_upload: auto
-#     homepage:  https://github.com/frantjc/sindri
-#     license: MIT
-#     test: |
-#       system "#{bin}/boil --version"
+brews:
+  - repository:
+      owner: frantjc
+      name: homebrew-tap
+    name: boil
+    ids:
+      - boil
+    directory: Formula
+    skip_upload: auto
+    homepage:  https://github.com/frantjc/sindri
+    license: MIT
+    test: |
+      system "#{bin}/boil --version"
+  - repository:
+      owner: frantjc
+      name: homebrew-tap
+    name: valheimw
+    ids:
+      - valheimw
+    directory: Formula
+    skip_upload: auto
+    homepage:  https://github.com/frantjc/sindri
+    license: MIT
+    test: |
+      system "#{bin}/valheimw --version"

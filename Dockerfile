@@ -32,7 +32,7 @@ RUN apt-get update -y \
     && rm -rf /var/lib/apt/lists/*
 RUN groupadd -r boiler
 RUN useradd -r -g boiler -m -s /bin/bash boiler
-USER boil
+USER boiler
 ENTRYPOINT ["/usr/local/bin/boiler"]
 COPY --from=build /boiler /usr/local/bin
 
