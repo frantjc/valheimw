@@ -29,9 +29,15 @@ func NewStore(s string) (Store, error) {
 	case "redis":
 		userPassword, _ := u.User.Password()
 		db, _ := strconv.Atoi(u.Query().Get("db"))
-		var timeout *time.Duration
+		timeout := redis.DefaultOptions.Timeout
 		if duration, err := time.ParseDuration(u.Query().Get("timeout")); err == nil {
 			timeout = &duration
+		}
+
+		if u.Host == "" {
+			u.Host = redis.DefaultOptions.Address
+		} else if u.Port() == "" {
+			u.Host += ":6379"
 		}
 
 		return redis.NewClient(redis.Options{
