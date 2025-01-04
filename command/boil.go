@@ -11,7 +11,8 @@ import (
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri"
-	"github.com/frantjc/sindri/internal/img"
+	"github.com/frantjc/sindri/internal/appinfoutil"
+	"github.com/frantjc/sindri/internal/steamappimgutil"
 	"github.com/frantjc/sindri/steamapp"
 	xslice "github.com/frantjc/x/slice"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -57,9 +58,9 @@ func NewBoil() *cobra.Command {
 					outputName = output
 				}
 
-				opts := []img.BuildSteamappOpt{
-					img.WithBaseImageRef(rawBaseImageRef),
-					img.WithSteamappOpts(
+				opts := []steamappimgutil.SteamappImageOpt{
+					steamappimgutil.WithBaseImageRef(rawBaseImageRef),
+					steamappimgutil.WithSteamappOpts(
 						steamapp.WithLogin(username, password, ""),
 						steamapp.WithBeta(beta, betaPassword),
 						steamapp.WithInstallDir(dir),
@@ -67,7 +68,7 @@ func NewBoil() *cobra.Command {
 					),
 				}
 				if platformType != "" {
-					opts = append(opts, img.WithSteamappOpts(steamapp.WithPlatformType(steamcmd.PlatformType(platformType))))
+					opts = append(opts, steamappimgutil.WithSteamappOpts(steamapp.WithPlatformType(steamcmd.PlatformType(platformType))))
 				}
 
 				if rawBaseImageRef == "" {
@@ -82,14 +83,14 @@ func NewBoil() *cobra.Command {
 
 					fmt.Fprintln(updateW, "DONE")
 
-					opts = append(opts, img.WithBaseImage(baseImage))
+					opts = append(opts, steamappimgutil.WithBaseImage(baseImage))
 				}
 
 				ctx := cmd.Context()
 
 				fmt.Fprintf(updateW, "Layering Steam app %d onto image...", appID)
 
-				image, err := img.SteamappImage(ctx, appID, opts...)
+				image, err := steamappimgutil.SteamappImage(ctx, appID, opts...)
 				if err != nil {
 					return err
 				}
@@ -99,24 +100,13 @@ func NewBoil() *cobra.Command {
 				if rawRef == "" {
 					fmt.Fprintf(updateW, "Getting Steam app %d info...", appID)
 
-					if err := steamcmd.Run(ctx,
-						steamcmd.Login{
-							Username: username,
-							Password: password,
-						},
-						steamcmd.AppInfoRequest(appID),
-						steamcmd.AppInfoPrint(appID),
-					); err != nil {
+					appInfo, err := appinfoutil.GetAppInfo(ctx, appID, appinfoutil.WithLogin(username, password, ""))
+					if err != nil {
+						fmt.Fprintf(updateW, "FAILED\n")
 						return err
 					}
 
-					appInfo, found := steamcmd.GetAppInfo(appID)
-					if found {
-						fmt.Fprintf(updateW, "%s...DONE\n", appInfo.Common.Name)
-					} else {
-						fmt.Fprintf(updateW, "FAILED\n")
-						return nil
-					}
+					fmt.Fprintf(updateW, "%s...DONE\n", appInfo.Common.Name)
 
 					branchName := steamapp.DefaultBranchName
 					if beta != "" {

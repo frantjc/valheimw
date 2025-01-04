@@ -7,7 +7,7 @@ require (
 	github.com/docker/docker v27.4.1+incompatible
 	github.com/frantjc/go-ingress v0.3.0
 	github.com/frantjc/go-reproducible-builds v0.0.0-20241021140423-9651d3e86a85
-	github.com/frantjc/go-steamcmd v0.0.0-20250103210246-6b579c8abd1d
+	github.com/frantjc/go-steamcmd v0.0.0-20250103222657-7e73d30cce71
 	github.com/frantjc/x v0.0.0-20241124205504-36ac48ec4307
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-containerregistry v0.20.2

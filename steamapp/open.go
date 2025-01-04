@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/frantjc/go-steamcmd"
+	"github.com/frantjc/sindri/internal/appinfoutil"
 	"github.com/frantjc/sindri/internal/cache"
 	xtar "github.com/frantjc/x/archive/tar"
 )
@@ -22,6 +23,7 @@ type Opts struct {
 	login              steamcmd.Login
 	platformType       steamcmd.PlatformType
 	launchType         string
+	store              cache.Store
 }
 
 type Opt func(*Opts)
@@ -45,6 +47,12 @@ func WithURLValues(query url.Values) Opt {
 		} {
 			opt(o)
 		}
+	}
+}
+
+func WithStore(store cache.Store) Opt {
+	return func(o *Opts) {
+		o.store = store
 	}
 }
 
@@ -109,20 +117,17 @@ func Open(ctx context.Context, appID int, opts ...Opt) (io.ReadCloser, error) {
 		opt(o)
 	}
 
-	branchName := DefaultBranchName
-	if o.beta != "" {
-		branchName = o.beta
-	}
-
-	installDir := filepath.Join(cache.Dir, Scheme, o.platformType.String(), fmt.Sprint(appID), branchName)
-
-	if err := steamcmd.Run(ctx, o.login, steamcmd.AppInfoRequest(appID), steamcmd.AppInfoPrint(appID)); err != nil {
+	appInfo, err := appinfoutil.GetAppInfo(ctx, appID,
+		appinfoutil.WithLogin(o.login.Username, o.login.Password, o.login.SteamGuardCode),
+		appinfoutil.WithStore(o.store),
+	)
+	if err != nil {
 		return nil, err
 	}
 
-	appInfo, found := steamcmd.GetAppInfo(appID)
-	if !found {
-		return nil, fmt.Errorf("app info not found")
+	branchName := DefaultBranchName
+	if o.beta != "" {
+		branchName = o.beta
 	}
 
 	branch, ok := appInfo.Depots.Branches[branchName]
@@ -133,6 +138,8 @@ func Open(ctx context.Context, appID int, opts ...Opt) (io.ReadCloser, error) {
 	if branch.PwdRequired && o.betaPassword == "" {
 		return nil, fmt.Errorf("steamapp %d branch %s requires a password", appID, branchName)
 	}
+
+	installDir := filepath.Join(cache.Dir, Scheme, o.platformType.String(), fmt.Sprint(appID), branchName)
 
 	commands := []steamcmd.Command{
 		steamcmd.ForceInstallDir(installDir),

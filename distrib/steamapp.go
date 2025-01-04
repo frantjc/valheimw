@@ -7,8 +7,8 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/frantjc/sindri/distrib/cache"
-	"github.com/frantjc/sindri/internal/img"
+	"github.com/frantjc/sindri/internal/cache"
+	"github.com/frantjc/sindri/internal/steamappimgutil"
 	"github.com/frantjc/sindri/steamapp"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -35,13 +35,13 @@ func (p *SteamappPuller) HeadManifest(_ context.Context, name string, _ string) 
 
 var errValNotFound = errors.New("value not found")
 
-func (p *SteamappPuller) getManifest(appID int, reference string) (*Manifest, error) {
-	if err := p.init(); err != nil {
-		return nil, err
-	}
+func (p *SteamappPuller) setManifest(appID int, reference string, manifest *Manifest) error {
+	return p.Store.Set(fmt.Sprintf("manifest::%d::%s", appID, reference), manifest)
+}
 
+func (p *SteamappPuller) getManifest(appID int, reference string) (*Manifest, error) {
 	manifest := &Manifest{}
-	if ok, err := p.Store.Get(fmt.Sprintf("steamapp:%d::ref:%s", appID, reference), manifest); err == nil && ok {
+	if ok, err := p.Store.Get(fmt.Sprintf("manifest::%d::%s", appID, reference), manifest); ok {
 		return manifest, nil
 	} else if err != nil {
 		return nil, err
@@ -50,27 +50,19 @@ func (p *SteamappPuller) getManifest(appID int, reference string) (*Manifest, er
 	return nil, errValNotFound
 }
 
-func (p *SteamappPuller) getBranch(appID int, digest string) (string, error) {
-	if err := p.init(); err != nil {
-		return "", err
-	}
+func (p *SteamappPuller) setBranch(appID int, digest, reference string) error {
+	return p.Store.Set(fmt.Sprintf("branch::%d::%s", appID, digest), reference)
+}
 
+func (p *SteamappPuller) getBranch(appID int, digest string) (string, error) {
 	branch := ""
-	if ok, err := p.Store.Get(fmt.Sprintf("steamapp:%d::digest:%s", appID, digest), &branch); err == nil && ok {
+	if ok, err := p.Store.Get(fmt.Sprintf("branch::%d::%s", appID, digest), &branch); ok {
 		return branch, nil
 	} else if err != nil {
 		return "", err
 	}
 
 	return "", errValNotFound
-}
-
-func (p *SteamappPuller) setManifest(appID int, reference string, manifest *Manifest) error {
-	if err := p.init(); err != nil {
-		return err
-	}
-
-	return p.Store.Set(fmt.Sprintf("steamapp:%d::ref:%s", appID, reference), manifest)
 }
 
 func (p *SteamappPuller) init() error {
@@ -80,14 +72,6 @@ func (p *SteamappPuller) init() error {
 		return err
 	}
 	return nil
-}
-
-func (p *SteamappPuller) setBranch(appID int, digest, reference string) error {
-	if err := p.init(); err != nil {
-		return err
-	}
-
-	return p.Store.Set(fmt.Sprintf("steamapp:%d::digest:%s", appID, digest), reference)
 }
 
 func (p *SteamappPuller) GetManifest(ctx context.Context, name string, reference string) (*Manifest, error) {
@@ -100,6 +84,10 @@ func (p *SteamappPuller) GetManifest(ctx context.Context, name string, reference
 
 	if reference == "latest" {
 		reference = "public"
+	}
+
+	if err := p.init(); err != nil {
+		return nil, err
 	}
 
 	if manifest, err := p.getManifest(appID, reference); err == nil {
@@ -169,6 +157,10 @@ func (p *SteamappPuller) GetBlob(ctx context.Context, name string, digest string
 
 	image := p.Base
 
+	if err := p.init(); err != nil {
+		return nil, err
+	}
+
 	if branch, err := p.getBranch(appID, digest); err == nil {
 		layer, err := p.getLayer(ctx, appID, branch)
 		if err != nil {
@@ -202,9 +194,13 @@ func (p *SteamappPuller) GetBlob(ctx context.Context, name string, digest string
 }
 
 func (p *SteamappPuller) getLayer(ctx context.Context, appID int, branch string) (Blob, error) {
-	layer, err := img.ReproducibleBuildLayerInDirFromOpener(
+	layer, err := steamappimgutil.ReproducibleBuildLayerInDirFromOpener(
 		func() (io.ReadCloser, error) {
-			return steamapp.Open(ctx, appID, steamapp.WithLogin(p.Username, p.Password, ""), steamapp.WithBeta(branch, ""))
+			return steamapp.Open(ctx, appID,
+				steamapp.WithLogin(p.Username, p.Password, ""),
+				steamapp.WithBeta(branch, ""),
+				steamapp.WithStore(p.Store),
+			)
 		},
 		p.Dir,
 		p.User,
@@ -238,5 +234,6 @@ func (p *SteamappPuller) getConfig(ctx context.Context, image v1.Image, appID in
 		steamapp.WithInstallDir(p.Dir),
 		steamapp.WithBeta(branch, ""),
 		steamapp.WithLaunchType("server"),
+		steamapp.WithStore(p.Store),
 	)
 }

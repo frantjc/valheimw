@@ -53,6 +53,10 @@ github.com/frantjc/go-steamcmd v0.0.0-20250103194756-658ca37482d5 h1:FqIOiWVMg28
 github.com/frantjc/go-steamcmd v0.0.0-20250103194756-658ca37482d5/go.mod h1:5oIIDBZM0iFVHWgkmLEpqywNmvRpLsZzpC2yLKkOcBM=
 github.com/frantjc/go-steamcmd v0.0.0-20250103210246-6b579c8abd1d h1:ywSvSRJG9OTj6ed4BYXaTOSwjx4L0XwfH/FuUDel+iY=
 github.com/frantjc/go-steamcmd v0.0.0-20250103210246-6b579c8abd1d/go.mod h1:5oIIDBZM0iFVHWgkmLEpqywNmvRpLsZzpC2yLKkOcBM=
+github.com/frantjc/go-steamcmd v0.0.0-20250103214106-1ba45815dde1 h1:h0Asy1C6ampXQye5h2TSp9HdeBZcxRmYv1LEKTYGKYs=
+github.com/frantjc/go-steamcmd v0.0.0-20250103214106-1ba45815dde1/go.mod h1:5oIIDBZM0iFVHWgkmLEpqywNmvRpLsZzpC2yLKkOcBM=
+github.com/frantjc/go-steamcmd v0.0.0-20250103222657-7e73d30cce71 h1:gn/Cc68wB2z29DFTu0ljm6aJVaSolrPgs/nv171wm4k=
+github.com/frantjc/go-steamcmd v0.0.0-20250103222657-7e73d30cce71/go.mod h1:5oIIDBZM0iFVHWgkmLEpqywNmvRpLsZzpC2yLKkOcBM=
 github.com/frantjc/x v0.0.0-20241124205504-36ac48ec4307 h1:w9KZ/2lUuz8EL9lGtNIFdExsFaabbo1mjPqzbzz59jA=
 github.com/frantjc/x v0.0.0-20241124205504-36ac48ec4307/go.mod h1:jzQwn2fyR0LRUO37WetnmJkZWmVR2GjhCD1QuaAJSPo=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=

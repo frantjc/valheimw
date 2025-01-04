@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/frantjc/go-steamcmd"
+	"github.com/frantjc/sindri/internal/appinfoutil"
 	xslice "github.com/frantjc/x/slice"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
@@ -22,17 +23,12 @@ func ImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt) (*
 		opt(o)
 	}
 
-	if err := steamcmd.Run(ctx,
-		o.login,
-		steamcmd.AppInfoRequest(appID),
-		steamcmd.AppInfoPrint(appID),
-	); err != nil {
+	appInfo, err := appinfoutil.GetAppInfo(ctx, appID,
+		appinfoutil.WithLogin(o.login.Username, o.login.Password, o.login.SteamGuardCode),
+		appinfoutil.WithStore(o.store),
+	)
+	if err != nil {
 		return nil, err
-	}
-
-	appInfo, found := steamcmd.GetAppInfo(appID)
-	if !found {
-		return nil, fmt.Errorf("app info not found")
 	}
 
 	for _, launch := range appInfo.Config.Launch {

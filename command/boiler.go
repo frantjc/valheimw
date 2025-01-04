@@ -13,7 +13,7 @@ import (
 
 	"github.com/frantjc/sindri"
 	"github.com/frantjc/sindri/distrib"
-	"github.com/frantjc/sindri/distrib/cache"
+	"github.com/frantjc/sindri/internal/cache"
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/spf13/cobra"

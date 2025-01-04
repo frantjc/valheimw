@@ -1,10 +1,9 @@
-package img
+package steamappimgutil
 
 import (
 	"archive/tar"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"path/filepath"
 
@@ -19,43 +18,43 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
-type BuildSteamappOpts struct {
+type SteamappImageOpts struct {
 	steamappOpts []steamapp.Opt
 	baseImage    v1.Image
 	baseImageRef string
 	uname, gname string
 }
 
-type BuildSteamappOpt func(*BuildSteamappOpts)
+type SteamappImageOpt func(*SteamappImageOpts)
 
-func WithSteamappOpts(opts ...steamapp.Opt) BuildSteamappOpt {
-	return func(o *BuildSteamappOpts) {
+func WithSteamappOpts(opts ...steamapp.Opt) SteamappImageOpt {
+	return func(o *SteamappImageOpts) {
 		o.steamappOpts = append(o.steamappOpts, opts...)
 	}
 }
 
-func WithBaseImage(baseImage v1.Image) BuildSteamappOpt {
-	return func(o *BuildSteamappOpts) {
+func WithBaseImage(baseImage v1.Image) SteamappImageOpt {
+	return func(o *SteamappImageOpts) {
 		o.baseImageRef = ""
 		o.baseImage = baseImage
 	}
 }
 
-func WithBaseImageRef(baseImageRef string) BuildSteamappOpt {
-	return func(o *BuildSteamappOpts) {
+func WithBaseImageRef(baseImageRef string) SteamappImageOpt {
+	return func(o *SteamappImageOpts) {
 		o.baseImageRef = baseImageRef
 	}
 }
 
-func WithUser(uname, gname string) BuildSteamappOpt {
-	return func(o *BuildSteamappOpts) {
+func WithUser(uname, gname string) SteamappImageOpt {
+	return func(o *SteamappImageOpts) {
 		o.uname = uname
 		o.gname = gname
 	}
 }
 
-func SteamappImage(ctx context.Context, appID int, opts ...BuildSteamappOpt) (v1.Image, error) {
-	o := &BuildSteamappOpts{
+func SteamappImage(ctx context.Context, appID int, opts ...SteamappImageOpt) (v1.Image, error) {
+	o := &SteamappImageOpts{
 		baseImage: empty.Image,
 	}
 
@@ -111,10 +110,6 @@ func SteamappImage(ctx context.Context, appID int, opts ...BuildSteamappOpt) (v1
 }
 
 func ReproducibleBuildLayerInDirFromOpener(o tarball.Opener, dir, uname, gname string) (v1.Layer, error) {
-	if filepath.IsAbs(dir) {
-		return nil, fmt.Errorf("dir must be a relative path: %s", dir)
-	}
-
 	return tarball.LayerFromOpener(
 		func() (io.ReadCloser, error) {
 			rc1, err := o()
