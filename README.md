@@ -15,12 +15,6 @@ It also runs an HTTP server alongside the Valheim server which provides endpoint
 - Get information from the world's `.fwl` file.
 - Go to the world's [valheim-map.world](https://valheim-map.world/) page.
 
-Lastly, it documents all arguments that can be passed to Valheim's server.
-
-```sh
-docker run --rm ghcr.io/frantjc/valheimw --help
-```
-
 See [examples/valheimw](examples/valheimw).
 
 ## boiler

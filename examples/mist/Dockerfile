@@ -16,7 +16,7 @@ RUN apt-get update -y \
     && mist thunderstore://denikson/BepInExPack_Valheim /root/valheim \
     # Install EquipmentAndQuickSlots to /root/valheim/BepInEx/plugins.
     && mist thunderstore://RandyKnapp/EquipmentAndQuickSlots /root/valheim/BepInEx/plugins \
-    # Cleanup after `mist`.
+    # Cleanup.
     && mist --clean \
     && rm /usr/local/bin/mist \
     && apt-get remove -y \

@@ -6,7 +6,7 @@ services:
     environment:
       VALHEIM_PASSWORD: hellothere
     volumes:
-      - ../../hack:/home/valheimw/.cache
+      - ./hack:/home/valheimw/.cache
     ports:
       - 2456:2456/udp
       - 8080:8080

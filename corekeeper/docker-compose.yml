@@ -1,4 +1,7 @@
 services:
-  corekeeper:
-    image: ghcr.io/frantjc/corekeeper:public
-    build: .
+  boiler:
+    image: ghcr.io/frantjc/boiler
+    volumes:
+      - ../hack:/home/boiler/.cache
+    ports:
+      - 5000:5000

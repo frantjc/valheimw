@@ -1,3 +1,5 @@
 services:
   valheim:
     build: .
+    ports:
+      - 2456:2456/udp

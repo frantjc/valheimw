@@ -2,6 +2,17 @@ services:
   boiler:
     image: ghcr.io/frantjc/boiler
     ports:
-      - 8080:8080
+      - 5000:5000
+    # boiler caches stuff in this directory, so its worth
+    # persisting it to speed up subsequent image pulls.
     volumes:
-      - ../../hack:/home/boiler/.cache
+      - ./hack:/home/boiler/.cache
+  valheim:
+    # Default tag is "latest" which gets mapped to the Steam app branch "public"
+    image: localhost:5000/896660
+    # start_server_xterm.sh just execs start_server.sh with xterm,
+    # so avoid the extra dependency on xterm.
+    entrypoint:
+      - /home/boil/steamapp/start_server.sh
+    ports:
+      - 2456:2456/udp
