@@ -91,7 +91,7 @@ func NewBoiler() *cobra.Command {
 
 	cmd.SetVersionTemplate("{{ .Name }}{{ .Version }} " + runtime.Version() + "\n")
 
-	cmd.Flags().StringVar(&addr, "addr", ":8080", "address")
+	cmd.Flags().StringVar(&addr, "addr", ":5000", "address")
 
 	cmd.Flags().StringVar(&registry.Username, "username", "", "Steam username")
 	cmd.Flags().StringVar(&registry.Password, "password", "", "Steam password")

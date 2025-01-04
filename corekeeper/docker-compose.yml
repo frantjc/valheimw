@@ -1,3 +1,4 @@
 services:
   corekeeper:
+    image: ghcr.io/frantjc/corekeeper:public
     build: .
