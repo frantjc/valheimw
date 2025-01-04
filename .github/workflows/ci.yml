@@ -1,0 +1,43 @@
+name: CI
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  build-push-corekeeper:
+    runs-on: ubuntu-latest
+    services:
+      boiler:
+        image: ghcr.io/frantjc/boiler
+        ports:
+          - 5000:5000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.23
+      - uses: golangci/golangci-lint-action@v6.1.1
+      - uses: docker/build-push-action@v6
+        with:
+          context: corekeeper
+          load: true
+      - uses: docker/build-push-action@v6
+        with:
+          context: examples/mist
+          load: true
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          build-args: |
+            tool=valheimw
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          build-args: |
+            tool=boiler
