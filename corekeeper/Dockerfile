@@ -1,6 +1,6 @@
 # Default tag is "latest" which gets mapped to the Steam app branch "public"
 # FROM boil.frantj.cc/1963720
-FROM localhost:8080/1963720
+FROM localhost:5000/1963720
 USER root
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends \

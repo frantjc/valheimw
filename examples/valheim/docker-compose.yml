@@ -2,7 +2,7 @@ services:
   valheim:
     # Default tag is "latest" which gets mapped to the Steam app branch "public"
     # image: boil.frantj.cc/896660
-    image: localhost:8080/896660
+    image: localhost:5000/896660
     # start_server_xterm.sh just execs start_server.sh with xterm,
     # so avoid the extra dependency on xterm.
     entrypoint:

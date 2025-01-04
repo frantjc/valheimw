@@ -10,12 +10,12 @@ jobs:
       boiler:
         image: ghcr.io/frantjc/boiler
         ports:
-          - 8080:8080
+          - 5000:5000
     steps:
       - name: Run docker
         run: |
-          docker pull boiler:8080/1963720
-          docker tag boiler:8080/1963720 localhost:8080/1963720
+          docker pull boiler:5000/1963720
+          docker tag boiler:5000/1963720 localhost:5000/1963720
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
