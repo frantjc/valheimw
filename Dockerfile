@@ -17,7 +17,7 @@ RUN apt-get update -y \
         libatomic1 \
         libpulse-dev \
         libpulse0 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
     && groupadd --system valheimw \
     && useradd --system --gid valheimw --shell /bin/bash --create-home valheimw
@@ -30,7 +30,7 @@ RUN apt-get update -y \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         lib32gcc-s1 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
     && groupadd --system boiler \
     && useradd --system --gid boiler --shell /bin/bash --create-home boiler

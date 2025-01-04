@@ -1,4 +1,4 @@
 FROM debian:stable-slim
-RUN groupadd -r boil
-RUN useradd -r -g boil -m -d /home/boil -s /bin/bash boil
+RUN groupadd --system boil \
+    && useradd --system --gid boil --shell /bin/bash --create-home boil
 USER boil

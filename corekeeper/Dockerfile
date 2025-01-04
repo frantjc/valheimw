@@ -13,7 +13,7 @@ RUN apt-get update -y \
         libxi6 \
         xvfb \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
     # The Core Keeper server SEGFAUTs without this.
     && ln -s /home/boil/steamapp/linux64/steamclient.so /usr/lib/x86_64-linux-gnu/steamclient.so \
     # Something keeps setting this back to root.
