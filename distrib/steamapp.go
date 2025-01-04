@@ -1,7 +1,9 @@
 package distrib
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +14,7 @@ import (
 	"github.com/frantjc/sindri/steamapp"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/opencontainers/go-digest"
 )
 
 type SteamappPuller struct {
@@ -50,8 +53,8 @@ func (p *SteamappPuller) getManifest(appID int, reference string) (*Manifest, er
 	return nil, errValNotFound
 }
 
-func (p *SteamappPuller) setBranch(appID int, digest, reference string) error {
-	return p.Store.Set(fmt.Sprintf("branch::%d::%s", appID, digest), reference)
+func (p *SteamappPuller) setBranch(appID int, digest, branch string) error {
+	return p.Store.Set(fmt.Sprintf("branch::%d::%s", appID, digest), branch)
 }
 
 func (p *SteamappPuller) getBranch(appID int, digest string) (string, error) {
@@ -123,13 +126,22 @@ func (p *SteamappPuller) GetManifest(ctx context.Context, name string, reference
 		return nil, err
 	}
 
-	digest := manifest.Config.Digest.String()
+	// TODO: image.Digest() does not produce the correct digest,
+	// so we do it here "manually" for now.
+
+	buf := new(bytes.Buffer)
+
+	if err = json.NewEncoder(buf).Encode(manifest); err != nil {
+		return nil, err
+	}
+
+	digest := digest.FromBytes(buf.Bytes()).String()
 
 	if err = p.setManifest(appID, digest, manifest); err != nil {
 		return nil, err
 	}
 
-	if err = p.setBranch(appID, digest, reference); err != nil {
+	if err = p.setBranch(appID, manifest.Config.Digest.String(), reference); err != nil {
 		return nil, err
 	}
 

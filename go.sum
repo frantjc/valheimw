@@ -45,16 +45,6 @@ github.com/frantjc/go-ingress v0.3.0 h1:TtQ+b8nOeiUnLXBCBxM6VAKAsYCj6ahNHJ9KR9ze
 github.com/frantjc/go-ingress v0.3.0/go.mod h1:+OiXfXH9Dh3ETg0XFa7YCOvwI+DkRzj4HWiH2DHXTJo=
 github.com/frantjc/go-reproducible-builds v0.0.0-20241021140423-9651d3e86a85 h1:7IN4exvYdunKQACelEvSSqfD0LOEKE7k0ktCoJIST5g=
 github.com/frantjc/go-reproducible-builds v0.0.0-20241021140423-9651d3e86a85/go.mod h1:S/4KZSEVb6q7WxGx1Z/kBzlJaiuTUzWQaRoxRBfxB0w=
-github.com/frantjc/go-steamcmd v0.0.0-20241224034836-75296cb9d919 h1:15ihiSeYdxYuyVGP1wfSO/l9cYzm1bpdYelRxsJpYZk=
-github.com/frantjc/go-steamcmd v0.0.0-20241224034836-75296cb9d919/go.mod h1:5oIIDBZM0iFVHWgkmLEpqywNmvRpLsZzpC2yLKkOcBM=
-github.com/frantjc/go-steamcmd v0.0.0-20250103183513-f93ebb4c9fda h1:43XsCBDyH3XZdD7O9bkP9GCOT7BJXMM8fCd3kYSBI7M=
-github.com/frantjc/go-steamcmd v0.0.0-20250103183513-f93ebb4c9fda/go.mod h1:5oIIDBZM0iFVHWgkmLEpqywNmvRpLsZzpC2yLKkOcBM=
-github.com/frantjc/go-steamcmd v0.0.0-20250103194756-658ca37482d5 h1:FqIOiWVMg28bxhVgZIyNef24rXh6OGrmHtQUSZwJc/g=
-github.com/frantjc/go-steamcmd v0.0.0-20250103194756-658ca37482d5/go.mod h1:5oIIDBZM0iFVHWgkmLEpqywNmvRpLsZzpC2yLKkOcBM=
-github.com/frantjc/go-steamcmd v0.0.0-20250103210246-6b579c8abd1d h1:ywSvSRJG9OTj6ed4BYXaTOSwjx4L0XwfH/FuUDel+iY=
-github.com/frantjc/go-steamcmd v0.0.0-20250103210246-6b579c8abd1d/go.mod h1:5oIIDBZM0iFVHWgkmLEpqywNmvRpLsZzpC2yLKkOcBM=
-github.com/frantjc/go-steamcmd v0.0.0-20250103214106-1ba45815dde1 h1:h0Asy1C6ampXQye5h2TSp9HdeBZcxRmYv1LEKTYGKYs=
-github.com/frantjc/go-steamcmd v0.0.0-20250103214106-1ba45815dde1/go.mod h1:5oIIDBZM0iFVHWgkmLEpqywNmvRpLsZzpC2yLKkOcBM=
 github.com/frantjc/go-steamcmd v0.0.0-20250103222657-7e73d30cce71 h1:gn/Cc68wB2z29DFTu0ljm6aJVaSolrPgs/nv171wm4k=
 github.com/frantjc/go-steamcmd v0.0.0-20250103222657-7e73d30cce71/go.mod h1:5oIIDBZM0iFVHWgkmLEpqywNmvRpLsZzpC2yLKkOcBM=
 github.com/frantjc/x v0.0.0-20241124205504-36ac48ec4307 h1:w9KZ/2lUuz8EL9lGtNIFdExsFaabbo1mjPqzbzz59jA=

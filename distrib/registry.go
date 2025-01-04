@@ -1,6 +1,7 @@
 package distrib
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/uuid"
+	"github.com/opencontainers/go-digest"
 )
 
 const (
@@ -75,8 +77,6 @@ func Handler(reg Puller) http.Handler {
 						)
 					)
 
-					log.WithValues()
-
 					log.Info(ep)
 
 					switch ep {
@@ -99,10 +99,12 @@ func Handler(reg Puller) http.Handler {
 							return
 						}
 
-						w.Header().Set(HeaderDockerContentDigest, manifest.Config.Digest.String())
 						w.Header().Set("Content-Type", string(manifest.MediaType))
-
-						_ = json.NewEncoder(w).Encode(manifest)
+						buf := new(bytes.Buffer)
+						_ = json.NewEncoder(buf).Encode(manifest)
+						digest.SHA256.Hash().Sum(buf.Bytes())
+						w.Header().Set(HeaderDockerContentDigest, digest.FromBytes(buf.Bytes()).String())
+						_, _ = io.Copy(w, buf)
 						return
 					case "blobs":
 						if r.Method == http.MethodHead {

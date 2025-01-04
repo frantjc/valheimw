@@ -13,6 +13,7 @@ require (
 	github.com/google/go-containerregistry v0.20.2
 	github.com/google/uuid v1.6.0
 	github.com/mmatczuk/anyflag v0.0.0-20240709090339-eb9e24cd1b44
+	github.com/opencontainers/go-digest v1.0.0
 	github.com/philippgille/gokv v0.7.0
 	github.com/philippgille/gokv/encoding v0.7.0
 	github.com/philippgille/gokv/gomap v0.7.0
@@ -45,7 +46,6 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/term v0.5.0 // indirect
-	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/philippgille/gokv/util v0.7.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
