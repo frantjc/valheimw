@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -23,6 +24,7 @@ import (
 	"github.com/frantjc/sindri/thunderstore"
 	"github.com/frantjc/sindri/valheim"
 	xtar "github.com/frantjc/x/archive/tar"
+	"github.com/go-logr/logr"
 	"github.com/mmatczuk/anyflag"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -57,54 +59,71 @@ func NewValheimw() *cobra.Command {
 					return err
 				}
 
-				eg, ctx := errgroup.WithContext(cmd.Context())
+				var (
+					ctx            = logr.NewContextWithSlogLogger(cmd.Context(), slog.Default())
+					log            = logr.FromContextOrDiscard(ctx)
+					eg, installCtx = errgroup.WithContext(ctx)
+				)
 
-				pkgs, err := thunderstore.DependencyTree(ctx, mods...)
-				if err != nil {
-					return err
-				}
+				if len(mods) > 0 {
+					log.Info("resolving dependency tree")
 
-				for _, pkg := range pkgs {
-					dir := fmt.Sprintf("BepInEx/plugins/%s", pkg.String())
-
-					if pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName {
-						opts.BepInEx = true
-						dir = ""
+					pkgs, err := thunderstore.DependencyTree(ctx, mods...)
+					if err != nil {
+						return err
 					}
 
-					eg.Go(func() error {
-						return sindri.Extract(ctx,
-							fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()),
-							filepath.Join(wd, dir),
-						)
-					})
-				}
+					for _, pkg := range pkgs {
+						dir := fmt.Sprintf("BepInEx/plugins/%s", pkg.String())
 
-				if !opts.BepInEx && len(pkgs) > 0 {
-					opts.BepInEx = true
+						if pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName {
+							opts.BepInEx = true
+							dir = ""
+						}
 
-					eg.Go(func() error {
-						return sindri.Extract(ctx,
-							fmt.Sprintf("%s://%s-%s", thunderstore.Scheme, bepInExNamespace, bepInExName),
-							wd,
-						)
-					})
+						log.Info("installing package", "package", pkg.String(), "rel", dir)
+
+						eg.Go(func() error {
+							return sindri.Extract(installCtx,
+								fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()),
+								filepath.Join(wd, dir),
+							)
+						})
+					}
+
+					if !opts.BepInEx && len(pkgs) > 0 {
+						opts.BepInEx = true
+
+						log.Info("installing bepinex as nothing else requested it")
+
+						eg.Go(func() error {
+							return sindri.Extract(installCtx,
+								fmt.Sprintf("%s://%s-%s", thunderstore.Scheme, bepInExNamespace, bepInExName),
+								wd,
+							)
+						})
+					}
 				}
 
 				o := &steamapp.Opts{}
 				steamapp.WithBeta(beta, betaPassword)(o)
 				steamapp.WithLaunchType("server")(o)
 
+				log.Info("installing Valheim server", "id", valheim.SteamappID)
+
 				eg.Go(func() error {
-					return sindri.Extract(ctx,
+					return sindri.Extract(installCtx,
 						fmt.Sprintf("%s://%d?%s", steamapp.Scheme, valheim.SteamappID, steamapp.URLValues(o).Encode()),
 						wd,
 					)
 				})
 
-				if err = eg.Wait(); err != nil {
+				if err := eg.Wait(); err != nil {
 					return err
 				}
+
+				log.Info("finished installing")
+				log.Info("configuring HTTP server")
 
 				var (
 					zHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -118,6 +137,8 @@ func NewValheimw() *cobra.Command {
 				)
 
 				if !noDB {
+					log.Info("exposing .db-related endpoints")
+
 					var (
 						dbHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							w.Header().Add("Content-Disposition", "attachment")
@@ -140,6 +161,8 @@ func NewValheimw() *cobra.Command {
 				}
 
 				if !noFWL {
+					log.Info("exposing .fwl-related endpoints")
+
 					valheimMapURL, err := url.Parse("https://valheim-map.world?offset=0,0&zoom=0.600&view=0&ver=0.217.22")
 					if err != nil {
 						return err
@@ -263,6 +286,8 @@ func NewValheimw() *cobra.Command {
 				}
 
 				if len(mods) > 0 {
+					log.Info("exposing mod-related endpoints")
+
 					var (
 						modTarHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							tw := tar.NewWriter(w)
@@ -372,7 +397,9 @@ func NewValheimw() *cobra.Command {
 					)
 				}
 
-				sub, err := valheim.NewCommand(ctx, wd, opts)
+				eg, runCtx := errgroup.WithContext(ctx)
+
+				sub, err := valheim.NewCommand(runCtx, wd, opts)
 				if err != nil {
 					return err
 				}
@@ -380,6 +407,8 @@ func NewValheimw() *cobra.Command {
 				sub.Stdin = cmd.InOrStdin()
 				sub.Stdout = cmd.OutOrStdout()
 				sub.Stderr = cmd.ErrOrStderr()
+
+				log.Info("startig Valheim server")
 
 				eg.Go(sub.Run)
 
@@ -396,17 +425,19 @@ func NewValheimw() *cobra.Command {
 				}
 
 				eg.Go(func() error {
+					log.Info("listening...", "addr", l.Addr().String())
+
 					return srv.Serve(l)
 				})
 
 				eg.Go(func() error {
-					<-ctx.Done()
-					cctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second*30)
+					<-runCtx.Done()
+					cctx, cancel := context.WithTimeout(context.WithoutCancel(runCtx), time.Second*30)
 					defer cancel()
 					if err = srv.Shutdown(cctx); err != nil {
 						return err
 					}
-					return ctx.Err()
+					return runCtx.Err()
 				})
 
 				return eg.Wait()

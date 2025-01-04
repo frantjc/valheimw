@@ -40,6 +40,7 @@ func NewBoiler() *cobra.Command {
 			RunE: func(cmd *cobra.Command, args []string) error {
 				var (
 					eg, ctx = errgroup.WithContext(logr.NewContextWithSlogLogger(cmd.Context(), slog.Default()))
+					log     = logr.FromContextOrDiscard(ctx)
 					srv     = &http.Server{
 						Addr:              addr,
 						ReadHeaderTimeout: time.Second * 5,
@@ -64,6 +65,8 @@ func NewBoiler() *cobra.Command {
 				}
 
 				if len(args) > 0 {
+					log.Info("using cache", "url", args[0])
+
 					registry.Store, err = cache.NewStore(args[0])
 					if err != nil {
 						return err
@@ -81,6 +84,8 @@ func NewBoiler() *cobra.Command {
 				})
 
 				eg.Go(func() error {
+					log.Info("listening...", "addr", l.Addr().String())
+
 					return srv.Serve(l)
 				})
 
