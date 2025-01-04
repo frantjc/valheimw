@@ -1,4 +1,7 @@
 version: 2
+before:
+  hooks:
+    - make command/image.tar SEMVER={{ .RawVersion }}
 builds:
   - main: ./cmd/boil
     id: boil

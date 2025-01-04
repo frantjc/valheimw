@@ -26,7 +26,6 @@ jobs:
       - uses: crazy-max/ghaction-upx@v3
         with:
           install-only: true
-      - run: make command/image.tar
       - uses: goreleaser/goreleaser-action@v6
         with:
           args: release --clean
