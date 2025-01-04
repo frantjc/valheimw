@@ -17,12 +17,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      # - name: Run docker pull
-      #   run: |
-      #     docker pull localhost:5000/1963720
       - uses: docker/build-push-action@v6
         with:
-          context: https://github.com/${{ github.owner }}/${{ github.repo }}.git#${{ github.sha }}:corekeeper
+          context: https://github.com/${{ github.repository }}.git#${{ github.sha }}:corekeeper
           push: true
           tags: |
             ghcr.io/frantjc/corekeeper
