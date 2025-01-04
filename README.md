@@ -30,17 +30,6 @@ See [examples/valheimw](examples/valheimw).
 The image's tag maps to the Steam app's branch, except the specific case of the default tag "latest" which maps to the default Steam app branch "public".
 See [examples/boiler](examples/boiler).
 
-## boil
-
-`boil` is the CLI version of `boiler`. It builds an image from a given base and installs the specified Steam app onto it. Since `steamcmd` is never installed on the images, there's no leftover files from it on the image's filesystem or in its layers.
-
-```sh
-boil --base debian:stable-slim 896660 --platformtype linux | docker load
-```
-
-```sh
-docker run --rm boil.frantj.cc/896660:public
-```
 
 ## mist
 
