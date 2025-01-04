@@ -6,10 +6,10 @@ RUN apt-get update -y \
         libatomic1 \
         libpulse-dev \
         libpulse0 \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-RUN groupadd -r valheimw
-RUN useradd -r -g valheimw -m -s /bin/bash valheimw
+    && groupadd --system valheimw \
+    && useradd --system --gid valheimw --shell /bin/bash --create-home valheimw
 USER valheimw
 ENTRYPOINT ["/usr/local/bin/valheimw"]
 COPY valheimw /usr/local/bin

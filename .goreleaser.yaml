@@ -64,6 +64,8 @@ changelog:
       - Merge pull request
       - Merge remote-tracking branch
       - Merge branch
+release:
+  skip_upload: true
 dockers:
   - dockerfile: goreleaser.boiler.Dockerfile
     image_templates:
