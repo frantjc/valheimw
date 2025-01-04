@@ -35,6 +35,12 @@ const (
 	bepInExName      = "BepInExPack_Valheim"
 )
 
+func newSlogr(cmd *cobra.Command, verbosity int) *slog.Logger {
+	return slog.New(slog.NewTextHandler(cmd.OutOrStdout(), &slog.HandlerOptions{
+		Level: slog.LevelError - (slog.LevelError-slog.LevelWarn)*slog.Level(verbosity),
+	}))
+}
+
 func NewValheimw() *cobra.Command {
 	var (
 		addr               string
@@ -60,7 +66,7 @@ func NewValheimw() *cobra.Command {
 				}
 
 				var (
-					ctx            = logr.NewContextWithSlogLogger(cmd.Context(), slog.Default())
+					ctx            = logr.NewContextWithSlogLogger(cmd.Context(), newSlogr(cmd, verbosity))
 					log            = logr.FromContextOrDiscard(ctx)
 					eg, installCtx = errgroup.WithContext(ctx)
 				)

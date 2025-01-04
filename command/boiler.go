@@ -5,7 +5,6 @@ import (
 	"context"
 	_ "embed"
 	"io"
-	"log/slog"
 	"net"
 	"net/http"
 	"runtime"
@@ -25,8 +24,9 @@ var imageTar []byte
 
 func NewBoiler() *cobra.Command {
 	var (
-		addr     string
-		registry = &distrib.SteamappPuller{
+		verbosity int
+		addr      string
+		registry  = &distrib.SteamappPuller{
 			Dir:   "/home/boil/steamapp",
 			User:  "boil",
 			Group: "boil",
@@ -39,14 +39,15 @@ func NewBoiler() *cobra.Command {
 			SilenceUsage:  true,
 			RunE: func(cmd *cobra.Command, args []string) error {
 				var (
-					eg, ctx = errgroup.WithContext(logr.NewContextWithSlogLogger(cmd.Context(), slog.Default()))
+					slog    = newSlogr(cmd, verbosity)
+					eg, ctx = errgroup.WithContext(logr.NewContextWithSlogLogger(cmd.Context(), slog))
 					log     = logr.FromContextOrDiscard(ctx)
 					srv     = &http.Server{
 						Addr:              addr,
 						ReadHeaderTimeout: time.Second * 5,
 						Handler:           distrib.Handler(registry),
 						BaseContext: func(_ net.Listener) context.Context {
-							return logr.NewContextWithSlogLogger(context.Background(), slog.Default())
+							return logr.NewContextWithSlogLogger(context.Background(), slog)
 						},
 					}
 				)
@@ -95,6 +96,7 @@ func NewBoiler() *cobra.Command {
 	)
 
 	cmd.SetVersionTemplate("{{ .Name }}{{ .Version }} " + runtime.Version() + "\n")
+	cmd.Flags().CountVarP(&verbosity, "verbose", "V", "verbosity")
 
 	cmd.Flags().StringVar(&addr, "addr", ":5000", "address")
 
