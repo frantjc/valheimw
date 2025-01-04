@@ -22,4 +22,5 @@ RUN chown -R boil:boil /home/boil
 USER boil
 # launch.sh just execs _launch.sh with gnome,
 # so avoid the extra dependency on gnome.
-ENTRYPOINT ["/home/boil/steamapp/_launch.sh"]
+# Also, log to stdout like a container.
+ENTRYPOINT ["/home/boil/steamapp/_launch.sh", "-logfile", "/dev/stdout"]
