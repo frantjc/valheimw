@@ -113,7 +113,7 @@ func NewValheimw() *cobra.Command {
 
 				o := &steamapp.Opts{}
 				steamapp.WithBeta(beta, betaPassword)(o)
-				steamapp.WithLaunchType("server")(o)
+				steamapp.WithLaunchTypes("server")(o)
 
 				log.Info("installing Valheim server", "id", valheim.SteamappID)
 

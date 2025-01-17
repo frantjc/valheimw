@@ -10,9 +10,10 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/frantjc/go-kv"
 	"github.com/frantjc/sindri"
-	"github.com/frantjc/sindri/distrib"
-	"github.com/frantjc/sindri/internal/cache"
+	"github.com/frantjc/sindri/httpcr"
+	"github.com/frantjc/sindri/steamapp"
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/spf13/cobra"
@@ -26,7 +27,7 @@ func NewBoiler() *cobra.Command {
 	var (
 		verbosity int
 		addr      string
-		registry  = &distrib.SteamappPuller{
+		registry  = &steamapp.Registry{
 			Dir:   "/home/boil/steamapp",
 			User:  "boil",
 			Group: "boil",
@@ -45,7 +46,7 @@ func NewBoiler() *cobra.Command {
 					srv     = &http.Server{
 						Addr:              addr,
 						ReadHeaderTimeout: time.Second * 5,
-						Handler:           distrib.Handler(registry),
+						Handler:           httpcr.Handler(registry),
 						BaseContext: func(_ net.Listener) context.Context {
 							return logr.NewContextWithSlogLogger(context.Background(), slog)
 						},
@@ -66,9 +67,9 @@ func NewBoiler() *cobra.Command {
 				}
 
 				if len(args) > 0 {
-					log.Info("using cache", "url", args[0])
+					log.Info("using key/value store", "url", args[0])
 
-					registry.Store, err = cache.NewStore(args[0])
+					registry.Store, err = kv.Open(ctx, args[0])
 					if err != nil {
 						return err
 					}

@@ -12,7 +12,6 @@ import (
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri"
 	"github.com/frantjc/sindri/internal/appinfoutil"
-	"github.com/frantjc/sindri/internal/steamappimgutil"
 	"github.com/frantjc/sindri/steamapp"
 	xslice "github.com/frantjc/x/slice"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -58,17 +57,17 @@ func NewBoil() *cobra.Command {
 					outputName = output
 				}
 
-				opts := []steamappimgutil.SteamappImageOpt{
-					steamappimgutil.WithBaseImageRef(rawBaseImageRef),
-					steamappimgutil.WithSteamappOpts(
+				opts := []steamapp.ImageOpt{
+					steamapp.WithBaseImageRef(rawBaseImageRef),
+					steamapp.WithOpts(
 						steamapp.WithLogin(username, password, ""),
 						steamapp.WithBeta(beta, betaPassword),
 						steamapp.WithInstallDir(dir),
-						steamapp.WithLaunchType(launchType),
+						steamapp.WithLaunchTypes(launchType),
 					),
 				}
 				if platformType != "" {
-					opts = append(opts, steamappimgutil.WithSteamappOpts(steamapp.WithPlatformType(steamcmd.PlatformType(platformType))))
+					opts = append(opts, steamapp.WithOpts(steamapp.WithPlatformType(steamcmd.PlatformType(platformType))))
 				}
 
 				if rawBaseImageRef == "" {
@@ -83,14 +82,14 @@ func NewBoil() *cobra.Command {
 
 					fmt.Fprintln(updateW, "DONE")
 
-					opts = append(opts, steamappimgutil.WithBaseImage(baseImage))
+					opts = append(opts, steamapp.WithBaseImage(baseImage))
 				}
 
 				ctx := cmd.Context()
 
 				fmt.Fprintf(updateW, "Layering Steam app %d onto image...", appID)
 
-				image, err := steamappimgutil.SteamappImage(ctx, appID, opts...)
+				image, err := steamapp.NewImage(ctx, appID, opts...)
 				if err != nil {
 					return err
 				}

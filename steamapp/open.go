@@ -6,7 +6,9 @@ import (
 	"io"
 	"net/url"
 	"path/filepath"
+	"strings"
 
+	"github.com/frantjc/go-kv"
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/internal/appinfoutil"
 	"github.com/frantjc/sindri/internal/cache"
@@ -22,8 +24,8 @@ type Opts struct {
 	beta, betaPassword string
 	login              steamcmd.Login
 	platformType       steamcmd.PlatformType
-	launchType         string
-	store              cache.Store
+	launchTypes        []string
+	store              kv.Store
 }
 
 type Opt func(*Opts)
@@ -43,14 +45,14 @@ func WithURLValues(query url.Values) Opt {
 			WithPlatformType(
 				steamcmd.PlatformType(query.Get("platformtype")),
 			),
-			WithLaunchType(query.Get("launchtype")),
+			WithLaunchTypes(strings.Split(query.Get("launchtypes"), ",")...),
 		} {
 			opt(o)
 		}
 	}
 }
 
-func WithStore(store cache.Store) Opt {
+func WithStore(store kv.Store) Opt {
 	return func(o *Opts) {
 		o.store = store
 	}
@@ -98,9 +100,9 @@ func WithLogin(username, password, steamGuardCode string) Opt {
 	}
 }
 
-func WithLaunchType(launchType string) Opt {
+func WithLaunchTypes(launchTypes ...string) Opt {
 	return func(o *Opts) {
-		o.launchType = launchType
+		o.launchTypes = append(o.launchTypes, launchTypes...)
 	}
 }
 

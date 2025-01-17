@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/frantjc/go-kv"
 	"github.com/frantjc/go-steamcmd"
-	"github.com/frantjc/sindri/internal/cache"
 )
 
 type GetAppInfoOpts struct {
 	login steamcmd.Login
-	store cache.Store
+	store kv.Store
 }
 
 type GetAppInfoOpt func(*GetAppInfoOpts)
@@ -25,7 +25,7 @@ func WithLogin(username, password, steamGuardCode string) GetAppInfoOpt {
 	}
 }
 
-func WithStore(store cache.Store) GetAppInfoOpt {
+func WithStore(store kv.Store) GetAppInfoOpt {
 	return func(o *GetAppInfoOpts) {
 		o.store = store
 	}
@@ -46,7 +46,7 @@ func GetAppInfo(ctx context.Context, appID int, opts ...GetAppInfoOpt) (*steamcm
 
 	if o.store != nil {
 		appInfo := &steamcmd.AppInfo{}
-		found, err := o.store.Get(fmt.Sprintf("appinfo::%d", appID), appInfo)
+		found, err := o.store.Get(ctx, fmt.Sprintf("appinfo::%d", appID), appInfo)
 		if found {
 			return appInfo, nil
 		} else if err != nil {
@@ -80,7 +80,7 @@ func GetAppInfo(ctx context.Context, appID int, opts ...GetAppInfoOpt) (*steamcm
 		return nil, err
 	case appInfo := <-appInfoC:
 		if o.store != nil {
-			if err = o.store.Set(fmt.Sprintf("appinfo::%d", appID), appInfo); err != nil {
+			if err = o.store.Set(ctx, fmt.Sprintf("appinfo::%d", appID), appInfo); err != nil {
 				return nil, err
 			}
 		}
