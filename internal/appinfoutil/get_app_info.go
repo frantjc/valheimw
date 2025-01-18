@@ -2,15 +2,12 @@ package appinfoutil
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/frantjc/go-kv"
 	"github.com/frantjc/go-steamcmd"
 )
 
 type GetAppInfoOpts struct {
 	login steamcmd.Login
-	store kv.Store
 }
 
 type GetAppInfoOpt func(*GetAppInfoOpts)
@@ -25,13 +22,11 @@ func WithLogin(username, password, steamGuardCode string) GetAppInfoOpt {
 	}
 }
 
-func WithStore(store kv.Store) GetAppInfoOpt {
-	return func(o *GetAppInfoOpts) {
-		o.store = store
-	}
-}
-
 func GetAppInfo(ctx context.Context, appID int, opts ...GetAppInfoOpt) (*steamcmd.AppInfo, error) {
+	if appInfo, found := steamcmd.GetAppInfo(appID); found {
+		return appInfo, nil
+	}
+
 	var (
 		o        = &GetAppInfoOpts{}
 		errC     = make(chan error, 1)
@@ -42,16 +37,6 @@ func GetAppInfo(ctx context.Context, appID int, opts ...GetAppInfoOpt) (*steamcm
 
 	for _, opt := range opts {
 		opt(o)
-	}
-
-	if o.store != nil {
-		appInfo := &steamcmd.AppInfo{}
-		found, err := o.store.Get(ctx, fmt.Sprintf("appinfo::%d", appID), appInfo)
-		if found {
-			return appInfo, nil
-		} else if err != nil {
-			return nil, err
-		}
 	}
 
 	prompt, err := steamcmd.Start(ctx, o.login, steamcmd.AppInfoRequest(appID))
@@ -79,12 +64,6 @@ func GetAppInfo(ctx context.Context, appID int, opts ...GetAppInfoOpt) (*steamcm
 	case err := <-errC:
 		return nil, err
 	case appInfo := <-appInfoC:
-		if o.store != nil {
-			if err = o.store.Set(ctx, fmt.Sprintf("appinfo::%d", appID), appInfo); err != nil {
-				return nil, err
-			}
-		}
-
 		return appInfo, nil
 	}
 }

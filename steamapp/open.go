@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/frantjc/go-kv"
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/internal/appinfoutil"
 	"github.com/frantjc/sindri/internal/cache"
@@ -25,7 +24,6 @@ type Opts struct {
 	login              steamcmd.Login
 	platformType       steamcmd.PlatformType
 	launchTypes        []string
-	store              kv.Store
 }
 
 type Opt func(*Opts)
@@ -49,12 +47,6 @@ func WithURLValues(query url.Values) Opt {
 		} {
 			opt(o)
 		}
-	}
-}
-
-func WithStore(store kv.Store) Opt {
-	return func(o *Opts) {
-		o.store = store
 	}
 }
 
@@ -121,7 +113,6 @@ func Open(ctx context.Context, appID int, opts ...Opt) (io.ReadCloser, error) {
 
 	appInfo, err := appinfoutil.GetAppInfo(ctx, appID,
 		appinfoutil.WithLogin(o.login.Username, o.login.Password, o.login.SteamGuardCode),
-		appinfoutil.WithStore(o.store),
 	)
 	if err != nil {
 		return nil, err

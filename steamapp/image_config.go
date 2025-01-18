@@ -25,7 +25,6 @@ func NewImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt)
 
 	appInfo, err := appinfoutil.GetAppInfo(ctx, appID,
 		appinfoutil.WithLogin(o.login.Username, o.login.Password, o.login.SteamGuardCode),
-		appinfoutil.WithStore(o.store),
 	)
 	if err != nil {
 		return nil, err

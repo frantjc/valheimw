@@ -8,26 +8,25 @@ import (
 	"strings"
 
 	"github.com/frantjc/go-ingress"
+	"github.com/frantjc/sindri/internal/imgutil"
 	xhttp "github.com/frantjc/x/net/http"
 	"github.com/go-logr/logr"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/uuid"
-	"github.com/opencontainers/go-digest"
 )
 
 const (
-	HeaderDockerContentDigest                 = "Docker-Content-Digest"
+	HeaderDockerContentDigest = "Docker-Content-Digest"
 )
 
 type (
 	Manifest = v1.Manifest
 	Blob     = v1.Layer
-	Digest   = digest.Digest
 )
 
 type Registry interface {
 	HeadManifest(ctx context.Context, name string, reference string) error
-	GetManifest(ctx context.Context, name string, reference string) (*Manifest, Digest, error)
+	GetManifest(ctx context.Context, name string, reference string) (*Manifest, error)
 	HeadBlob(ctx context.Context, name string, digest string) error
 	GetBlob(ctx context.Context, name string, digest string) (Blob, error)
 }
@@ -90,7 +89,14 @@ func Handler(reg Registry) http.Handler {
 							return
 						}
 
-						manifest, digest, err := reg.GetManifest(r.Context(), name, reference)
+						manifest, err := reg.GetManifest(r.Context(), name, reference)
+						if err != nil {
+							log.Error(err, ep)
+							http.Error(w, err.Error(), http.StatusInternalServerError)
+							return
+						}
+
+						digest, err := imgutil.GetManifestDigest(manifest)
 						if err != nil {
 							log.Error(err, ep)
 							http.Error(w, err.Error(), http.StatusInternalServerError)

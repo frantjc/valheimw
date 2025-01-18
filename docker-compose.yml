@@ -20,6 +20,8 @@ services:
       context: .
       args:
         tool: boiler
+    command:
+      - -VV
     volumes:
       - ./hack:/home/boiler/.cache
     ports:
