@@ -27,7 +27,7 @@ jobs:
           load: true
       - uses: docker/build-push-action@v6
         with:
-          context: examples/mist
+          context: mist
           load: true
       - uses: docker/build-push-action@v6
         with:
