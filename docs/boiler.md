@@ -6,7 +6,11 @@ The image's name refers to a Steam app ID. Check out [SteamDB](https://steamdb.i
 
 The image's tag maps to the Steam app's branch, except the specific case of the default tag "latest" which maps to the default Steam app branch "public".
 
-Layers and manifests are cached after being pulled via tag so that subsequent pulls via digest will function and be snappy. Subsequent pulls via tag will always cause `boiler` to rebuild the container image in case a new build has been released on the given branch, albiet a bit faster if a new build has not been released since no cacheing need take place in said scenario.
+Layers and manifests are cached after being pulled via tag so that subsequent pulls via digest will function and be snappy. Subsequent pulls via tag will always cause `boiler` to rebuild the container image in case a new build has been released on the given branch, albiet faster, especially if a new build has not been released since no cacheing would need to be done.
+
+Often, additional layers often need added on top of what `boiler` provides. This is because Steam apps sometimes have entrypoints that are non-configurable without editing files that they provide and frequently have additional system dependencies that need to be installed (maintaining a database of such additional layers for use by `boiler` to automatically fix its container images would be cool, and I am open to the idea).
+
+There is currently no public instance of `boiler` (although I am open to the idea), so you must run your own. Thankfully, doing so is easy.
 
 Taking the Valheim server as an example of how `boiler` could be used, consider a directory with the following `docker-compose.yml`:
 
