@@ -3,4 +3,6 @@ FROM localhost:5000/2394010
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
-        xdg-utils
+        xdg-utils \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean

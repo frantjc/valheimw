@@ -1,12 +1,12 @@
 services:
   boiler:
     image: ghcr.io/frantjc/boiler
-    ports:
-      - 5000:5000
     # boiler caches stuff in this directory, so its worth
     # persisting it to speed up subsequent image pulls.
     volumes:
       - ./hack:/home/boiler/.cache
+    ports:
+      - 5000:5000
   valheim:
     # Default tag is "latest" which gets mapped to the Steam app branch "public"
     image: localhost:5000/896660

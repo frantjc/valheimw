@@ -1,6 +1,6 @@
 services:
   valheimw:
-    image: ghcr.io/frantjc/valheimw:3.0.0
+    image: ghcr.io/frantjc/valheimw:3.0.1
     command:
       - --mod=RandyKnapp/EquipmentAndQuickSlots
     environment:
