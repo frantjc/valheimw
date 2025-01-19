@@ -55,7 +55,11 @@ func NewImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt)
 				cfg.Entrypoint = []string{
 					filepath.Join(o.installDir, launch.Executable),
 				}
-				cfg.Cmd = regexp.MustCompile(`\s+`).Split(launch.Arguments, -1)
+				if cmd := xslice.Filter(regexp.MustCompile(`\s+`).Split(launch.Arguments, -1), func(arg string, _ int) bool {
+					return arg != ""
+				}); len(cmd) > 0 {
+					cfg.Cmd = cmd
+				}
 				cfg.WorkingDir = o.installDir
 				return cfg, nil
 			}

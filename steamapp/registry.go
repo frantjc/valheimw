@@ -13,7 +13,9 @@ import (
 	"github.com/frantjc/sindri/internal/imgutil"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/opencontainers/go-digest"
 	"gocloud.dev/blob"
 	"golang.org/x/sync/errgroup"
@@ -251,6 +253,23 @@ func (r *Registry) GetBlob(ctx context.Context, name string, digest string) (htt
 	key := filepath.Join(name, "blobs", hash.String())
 
 	if ok, err := r.Bucket.Exists(ctx, key); ok {
+		rc, err := r.Bucket.NewReader(ctx, key, nil)
+		if err != nil {
+			return nil, err
+		}
+		defer rc.Close()
+
+		configFile := &v1.ConfigFile{}
+
+		if err = json.NewDecoder(rc).Decode(configFile); err == nil {
+			b, err := json.Marshal(configFile)
+			if err != nil {
+				return nil, err
+			}
+
+			return static.NewLayer(b, types.OCIConfigJSON), nil
+		}
+
 		return tarball.LayerFromOpener(func() (io.ReadCloser, error) {
 			return r.Bucket.NewReader(ctx, key, nil)
 		})

@@ -24,7 +24,6 @@ See [examples/valheimw](examples/valheimw).
 The image's tag maps to the Steam app's branch, except the specific case of the default tag "latest" which maps to the default Steam app branch "public".
 See [examples/boiler](examples/boiler).
 
-
 ## mist
 
 `mist` is a CLI intended for use in Dockerfiles to install Steam apps, Steam Workshop items, and [thunderstore.io](https://thunderstore.io/) mods. See [examples/mist](examples/mist).
