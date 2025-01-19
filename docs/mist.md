@@ -1,3 +1,10 @@
+# Mist
+
+`mist` is a CLI tool for use in `Dockerfile`s to install Steam apps, Steam Workshop items, and [thunderstore.io](https://thunderstore.io/) mods. It uses [GoCloud's URL concept](https://gocloud.dev/concepts/urls/) to expose installing the content from the different sources using a similar command.
+
+The following `Dockerfile` builds a container image for a modded Valheim server and provides an excellent example for how to use `mist`:
+
+```Dockerfile
 FROM debian:stable-slim
 COPY --from=ghcr.io/frantjc/mist /mist /usr/local/bin
 RUN apt-get update -y \
@@ -11,6 +18,7 @@ RUN apt-get update -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     # Install the Valheim server to /root/valheim.
+    # "896660" refers to the Steam app ID of the Valheim server.
     && mist steamapp://896660 /root/valheim \
     # Install BepInEx to /root/valheim.
     && mist thunderstore://denikson/BepInExPack_Valheim /root/valheim \
@@ -24,3 +32,4 @@ RUN apt-get update -y \
         lib32gcc-s1
 WORKDIR /root/valheim/
 ENTRYPOINT ["/root/valheim/start_server.sh"]
+```

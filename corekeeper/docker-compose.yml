@@ -1,7 +1,5 @@
 services:
   boiler:
     image: ghcr.io/frantjc/boiler
-    volumes:
-      - ../hack:/home/boiler/.cache
     ports:
       - 5000:5000

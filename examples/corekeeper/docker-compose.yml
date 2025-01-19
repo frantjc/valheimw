@@ -1,6 +1,0 @@
-services:
-  corekeeper:
-    image: ghcr.io/frantjc/corekeeper
-    volumes:
-      # The Core Keeper server stores its save data here
-      - ./hack:/home/boil/.config/unity3d/Pugstorm/Core Keeper/DedicatedServer

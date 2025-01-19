@@ -201,12 +201,9 @@ func NewValheimw() *cobra.Command {
 							if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/json") {
 								seedJSONHandler(w, r)
 								return
-							} else if strings.Contains(accept, "text/plain") {
-								seedTxtHandler(w, r)
-								return
 							}
 
-							w.WriteHeader(http.StatusNotAcceptable)
+							seedTxtHandler(w, r)
 						})
 						mapHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							seed, err := valheim.ReadWorldSeed(opts.SaveDir, opts.World)
@@ -403,9 +400,9 @@ func NewValheimw() *cobra.Command {
 					)
 				}
 
-				eg, runCtx := errgroup.WithContext(ctx)
+				eg, egctx := errgroup.WithContext(ctx)
 
-				sub, err := valheim.NewCommand(runCtx, wd, opts)
+				sub, err := valheim.NewCommand(egctx, wd, opts)
 				if err != nil {
 					return err
 				}
@@ -414,7 +411,7 @@ func NewValheimw() *cobra.Command {
 				sub.Stdout = cmd.OutOrStdout()
 				sub.Stderr = cmd.ErrOrStderr()
 
-				log.Info("startig Valheim server")
+				log.Info("starting Valheim server")
 
 				eg.Go(sub.Run)
 
@@ -437,13 +434,13 @@ func NewValheimw() *cobra.Command {
 				})
 
 				eg.Go(func() error {
-					<-runCtx.Done()
-					cctx, cancel := context.WithTimeout(context.WithoutCancel(runCtx), time.Second*30)
+					<-egctx.Done()
+					cctx, cancel := context.WithTimeout(context.WithoutCancel(egctx), time.Second*30)
 					defer cancel()
 					if err = srv.Shutdown(cctx); err != nil {
 						return err
 					}
-					return runCtx.Err()
+					return egctx.Err()
 				})
 
 				return eg.Wait()
