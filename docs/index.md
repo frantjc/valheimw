@@ -1,6 +1,6 @@
 Sindri began as a tool specifically for managing a modded Valheim server in a container. As such, it's name originated from [Norse mythology](https://en.wikipedia.org/wiki/Sindri_(mythology)).
 
-Since then, it has grown into a more generalized form as a toolkit for turning Steam app servers into container images--modded or otherwise. While it still boasts a tool that is an especially helpful wrapper around the Valheim server, it also contains several other tools that support efforts in building minimal container images for other Steam apps as well as Steam app servers for other games.
+Since then, it has grown into a more generalized form as a toolkit for turning Steam app servers into container images--modded or otherwise. While it still boasts a tool that is an especially helpful wrapper around the Valheim server, it also includes container images for other game's Steam app servers as well as other tools to support efforts building minimal container images for any Steam app servers.
 
 These tools include:
 
