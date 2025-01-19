@@ -23,11 +23,11 @@ jobs:
       - uses: golangci/golangci-lint-action@v6.1.1
       - uses: docker/build-push-action@v6
         with:
-          context: corekeeper
+          context: mist
           load: true
       - uses: docker/build-push-action@v6
         with:
-          context: mist
+          context: corekeeper
           load: true
       - uses: docker/build-push-action@v6
         with:
