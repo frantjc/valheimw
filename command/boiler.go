@@ -7,15 +7,18 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"path/filepath"
 	"runtime"
 	"time"
 
 	"github.com/frantjc/sindri"
-	"github.com/frantjc/sindri/distrib"
+	"github.com/frantjc/sindri/httpcr"
 	"github.com/frantjc/sindri/internal/cache"
+	"github.com/frantjc/sindri/steamapp"
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/spf13/cobra"
+	"gocloud.dev/blob/fileblob"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -26,7 +29,7 @@ func NewBoiler() *cobra.Command {
 	var (
 		verbosity int
 		addr      string
-		registry  = &distrib.SteamappPuller{
+		registry  = &steamapp.Registry{
 			Dir:   "/home/boil/steamapp",
 			User:  "boil",
 			Group: "boil",
@@ -34,10 +37,9 @@ func NewBoiler() *cobra.Command {
 		cmd = &cobra.Command{
 			Use:           "boiler",
 			Version:       sindri.SemVer(),
-			Args:          cobra.MaximumNArgs(1),
 			SilenceErrors: true,
 			SilenceUsage:  true,
-			RunE: func(cmd *cobra.Command, args []string) error {
+			RunE: func(cmd *cobra.Command, _ []string) error {
 				var (
 					slog    = newSlogr(cmd, verbosity)
 					eg, ctx = errgroup.WithContext(logr.NewContextWithSlogLogger(cmd.Context(), slog))
@@ -45,7 +47,7 @@ func NewBoiler() *cobra.Command {
 					srv     = &http.Server{
 						Addr:              addr,
 						ReadHeaderTimeout: time.Second * 5,
-						Handler:           distrib.Handler(registry),
+						Handler:           httpcr.Handler(registry),
 						BaseContext: func(_ net.Listener) context.Context {
 							return logr.NewContextWithSlogLogger(context.Background(), slog)
 						},
@@ -65,13 +67,12 @@ func NewBoiler() *cobra.Command {
 					return err
 				}
 
-				if len(args) > 0 {
-					log.Info("using cache", "url", args[0])
-
-					registry.Store, err = cache.NewStore(args[0])
-					if err != nil {
-						return err
-					}
+				registry.Bucket, err = fileblob.OpenBucket(filepath.Join(cache.Dir, "boiler"), &fileblob.Options{
+					CreateDir: true,
+					NoTempDir: true,
+				})
+				if err != nil {
+					return err
 				}
 
 				eg.Go(func() error {

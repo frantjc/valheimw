@@ -7,9 +7,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	_ "github.com/frantjc/go-kv/mem"
+	_ "github.com/frantjc/go-kv/redis"
 	"github.com/frantjc/sindri/command"
 	xerrors "github.com/frantjc/x/errors"
 	xos "github.com/frantjc/x/os"
+	_ "gocloud.dev/blob/fileblob"
+	_ "gocloud.dev/blob/memblob"
+	_ "gocloud.dev/blob/s3blob"
 )
 
 func main() {

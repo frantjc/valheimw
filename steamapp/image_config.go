@@ -13,7 +13,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-func ImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt) (*v1.Config, error) {
+func NewImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt) (*v1.Config, error) {
 	o := &Opts{
 		installDir:   "/",
 		platformType: steamcmd.DefaultPlatformType,
@@ -25,15 +25,18 @@ func ImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt) (*
 
 	appInfo, err := appinfoutil.GetAppInfo(ctx, appID,
 		appinfoutil.WithLogin(o.login.Username, o.login.Password, o.login.SteamGuardCode),
-		appinfoutil.WithStore(o.store),
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	noLaunchType := len(o.launchTypes) == 0
+
 	for _, launch := range appInfo.Config.Launch {
-		if strings.Contains(launch.Config.OSList, o.platformType.String()) {
-			if o.launchType == "" || strings.EqualFold(launch.Type, o.launchType) {
+		if launch.Config != nil && strings.Contains(launch.Config.OSList, o.platformType.String()) {
+			if noLaunchType || xslice.Some(o.launchTypes, func(launchType string, _ int) bool {
+				return strings.EqualFold(launch.Type, launchType)
+			}) {
 				if cfg.Labels == nil {
 					cfg.Labels = map[string]string{}
 				}
@@ -52,9 +55,11 @@ func ImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt) (*
 				cfg.Entrypoint = []string{
 					filepath.Join(o.installDir, launch.Executable),
 				}
-				cfg.Cmd = xslice.Filter(regexp.MustCompile(`\s+`).Split(launch.Arguments, -1), func(arg string, _ int) bool {
+				if cmd := xslice.Filter(regexp.MustCompile(`\s+`).Split(launch.Arguments, -1), func(arg string, _ int) bool {
 					return arg != ""
-				})
+				}); len(cmd) > 0 {
+					cfg.Cmd = cmd
+				}
 				cfg.WorkingDir = o.installDir
 				return cfg, nil
 			}
@@ -62,8 +67,8 @@ func ImageConfig(ctx context.Context, appID int, cfg *v1.Config, opts ...Opt) (*
 	}
 
 	launchTypeAddendum := ""
-	if o.launchType != "" {
-		launchTypeAddendum = fmt.Sprintf("for launch type %s", o.launchType)
+	if !noLaunchType {
+		launchTypeAddendum = fmt.Sprintf(" for launch types %s", o.launchTypes)
 	}
 
 	return nil, fmt.Errorf("app ID %d does not support %s, only %s%s", appInfo.Common.GameID, o.platformType, appInfo.Common.OSList, launchTypeAddendum)

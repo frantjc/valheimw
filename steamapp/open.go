@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"path/filepath"
+	"strings"
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/internal/appinfoutil"
@@ -22,8 +23,7 @@ type Opts struct {
 	beta, betaPassword string
 	login              steamcmd.Login
 	platformType       steamcmd.PlatformType
-	launchType         string
-	store              cache.Store
+	launchTypes        []string
 }
 
 type Opt func(*Opts)
@@ -43,16 +43,10 @@ func WithURLValues(query url.Values) Opt {
 			WithPlatformType(
 				steamcmd.PlatformType(query.Get("platformtype")),
 			),
-			WithLaunchType(query.Get("launchtype")),
+			WithLaunchTypes(strings.Split(query.Get("launchtypes"), ",")...),
 		} {
 			opt(o)
 		}
-	}
-}
-
-func WithStore(store cache.Store) Opt {
-	return func(o *Opts) {
-		o.store = store
 	}
 }
 
@@ -98,9 +92,9 @@ func WithLogin(username, password, steamGuardCode string) Opt {
 	}
 }
 
-func WithLaunchType(launchType string) Opt {
+func WithLaunchTypes(launchTypes ...string) Opt {
 	return func(o *Opts) {
-		o.launchType = launchType
+		o.launchTypes = append(o.launchTypes, launchTypes...)
 	}
 }
 
@@ -119,7 +113,6 @@ func Open(ctx context.Context, appID int, opts ...Opt) (io.ReadCloser, error) {
 
 	appInfo, err := appinfoutil.GetAppInfo(ctx, appID,
 		appinfoutil.WithLogin(o.login.Username, o.login.Password, o.login.SteamGuardCode),
-		appinfoutil.WithStore(o.store),
 	)
 	if err != nil {
 		return nil, err

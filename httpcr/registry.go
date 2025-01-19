@@ -1,7 +1,6 @@
-package distrib
+package httpcr
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -9,17 +8,15 @@ import (
 	"strings"
 
 	"github.com/frantjc/go-ingress"
+	"github.com/frantjc/sindri/internal/imgutil"
 	xhttp "github.com/frantjc/x/net/http"
 	"github.com/go-logr/logr"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/uuid"
-	"github.com/opencontainers/go-digest"
 )
 
 const (
-	HeaderDockerContentDigest                 = "Docker-Content-Digest"
-	HeaderDockerDistributionAPIVersion        = "Docker-Distribution-Api-Version"
-	DockerDistributionAPIVersionRegistry2Dot0 = "registry/2.0"
+	HeaderDockerContentDigest = "Docker-Content-Digest"
 )
 
 type (
@@ -27,20 +24,20 @@ type (
 	Blob     = v1.Layer
 )
 
-type Puller interface {
+type Registry interface {
 	HeadManifest(ctx context.Context, name string, reference string) error
 	GetManifest(ctx context.Context, name string, reference string) (*Manifest, error)
 	HeadBlob(ctx context.Context, name string, digest string) error
 	GetBlob(ctx context.Context, name string, digest string) (Blob, error)
 }
 
-func Handler(reg Puller) http.Handler {
+func Handler(reg Registry) http.Handler {
 	return ingress.New(
 		ingress.ExactPath("/v2/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if reg != nil {
 				// OCI does not require this, but the Docker v2 spec include it, and GCR sets this.
 				// Docker distribution v2 clients may fallback to an older version if this is not set.
-				w.Header().Set(HeaderDockerDistributionAPIVersion, DockerDistributionAPIVersionRegistry2Dot0)
+				w.Header().Set("Docker-Distribution-Api-Version", "registry/2.0")
 				w.WriteHeader(http.StatusOK)
 				return
 			}
@@ -99,12 +96,16 @@ func Handler(reg Puller) http.Handler {
 							return
 						}
 
+						digest, err := imgutil.GetManifestDigest(manifest)
+						if err != nil {
+							log.Error(err, ep)
+							http.Error(w, err.Error(), http.StatusInternalServerError)
+							return
+						}
+
 						w.Header().Set("Content-Type", string(manifest.MediaType))
-						buf := new(bytes.Buffer)
-						_ = json.NewEncoder(buf).Encode(manifest)
-						digest.SHA256.Hash().Sum(buf.Bytes())
-						w.Header().Set(HeaderDockerContentDigest, digest.FromBytes(buf.Bytes()).String())
-						_, _ = io.Copy(w, buf)
+						w.Header().Set(HeaderDockerContentDigest, digest.String())
+						_ = json.NewEncoder(w).Encode(manifest)
 						return
 					case "blobs":
 						if r.Method == http.MethodHead {

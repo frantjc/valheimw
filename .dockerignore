@@ -33,5 +33,7 @@ values*.yaml
 
 # misc
 .*
+docs/
+examples/
 hack/
 *.md
