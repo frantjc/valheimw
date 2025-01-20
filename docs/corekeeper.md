@@ -20,10 +20,10 @@ This `docker-compose.yml` runs the Core Keeper server. To use it, place it in a 
 docker compose up
 ```
 
-> If Core Keeper errors with `Segmentation fault (core dumped)`, you have likely ran into a permissions issue. Run `chmod -R 777 ./hack` and try again.
+> If Core Keeper errors with `Segmentation fault (core dumped)`, you have likely ran into a permissions issue. Run `chmod -R 777 ./save` and try again.
 
 The server's save data will be stored in `./save`.
 
-Notably, the Core Keeper server does not any ports exposed, instead using _magic_ to connect players to the server.
+Notably, the Core Keeper server does not any ports exposed, instead using _magic_ to allow players to connect to the server.
 
 Once the container finishes starting up, the game ID will be in its logs and can be used to connect to the server.
