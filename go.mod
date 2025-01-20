@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/adrg/xdg v0.5.3
-	github.com/docker/docker v27.4.1+incompatible
+	github.com/docker/docker v27.5.0+incompatible
 	github.com/frantjc/go-ingress v0.3.0
 	github.com/frantjc/go-reproducible-builds v0.0.0-20241021140423-9651d3e86a85
 	github.com/frantjc/go-steamcmd v0.0.0-20250103222657-7e73d30cce71
