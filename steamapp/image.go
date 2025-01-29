@@ -227,6 +227,8 @@ func getDefinition(ctx context.Context, appID int, opts *BuildImageOpts) (*llb.D
 			User(opts.User)
 	}
 
+	// TODO: Does this layer get cached indefinitely, disallowing pulls
+	// from getting new builds pushed to the same branch?
 	state = steamcmdState.
 		Run(llb.Shlexf("steamcmd %s", strings.Join(arg, " "))).
 		AddMount("/mnt", state).

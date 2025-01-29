@@ -10,11 +10,6 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    services:
-      boiler:
-        image: ghcr.io/frantjc/boiler
-        ports:
-          - 5000:5000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -24,10 +19,6 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: mist
-          load: true
-      - uses: docker/build-push-action@v6
-        with:
-          context: corekeeper
           load: true
       - uses: docker/build-push-action@v6
         with:

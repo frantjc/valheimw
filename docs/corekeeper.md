@@ -1,23 +1,35 @@
 # Core Keeper
 
-Sindri has a pre-built container image for the Core Keeper server for my own use because, unlike Docker, Kubernetes does not support building container images, only running them.
-
-This container image gets built using [`boiler`](boiler.md) and takes care of installing the Core Keeper server's additional dependencies, smoothing out some of its quirks and ensuring that it does not run as root.
-
 Consider a directory with the following `docker-compose.yml`:
 
 ```yml
 services:
+  boiler:
+    image: ghcr.io/frantjc/boiler
+    ports:
+      - 5000:5000
   corekeeper:
-    image: ghcr.io/frantjc/corekeeper
+    image: localhost:5000/1963720
     volumes:
-      - ./save:/home/boil/.config/unity3d/Pugstorm/Core Keeper/DedicatedServer
+      - ./save:/home/steam/.config/unity3d/Pugstorm/Core Keeper/DedicatedServer
+    depends_on:
+      - boiler
 ```
+
+> The Core Keeper server is one of a few Steam apps that is included in the hardcoded database, so it works out of the box.
+
+> "1963720" refers to the Steam app ID of the Core Keeper server.
 
 This `docker-compose.yml` runs the Core Keeper server. To use it, place it in a directory and run the following command there:
 
 ```sh
-docker compose up
+docker compose up --detach boiler
+```
+
+Next, build and run the Core Keeper server. This will pull a minimal container image with it pre-installed from `boiler` and then run the Core Keeper server container:
+
+```sh
+docker compose up --detach corekeeper
 ```
 
 > If Core Keeper errors with `Segmentation fault (core dumped)`, you have likely ran into a permissions issue. Run `chmod -R 777 ./save` and try again.
