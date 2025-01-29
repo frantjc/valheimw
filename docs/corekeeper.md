@@ -4,10 +4,18 @@ Consider a directory with the following `docker-compose.yml`:
 
 ```yml
 services:
+  buildkitd:
+    image: moby/buildkit
+    privileged: true
+    command:
+      - --addr
+      - tcp://0.0.0.0:1234
   boiler:
     image: ghcr.io/frantjc/boiler
     ports:
       - 5000:5000
+    depends_on:
+      - buildkitd
   corekeeper:
     image: localhost:5000/1963720
     volumes:
