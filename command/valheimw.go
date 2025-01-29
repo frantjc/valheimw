@@ -43,13 +43,15 @@ func newSlogr(cmd *cobra.Command, verbosity int) *slog.Logger {
 
 func NewValheimw() *cobra.Command {
 	var (
-		addr               string
-		beta, betaPassword string
-		mods               []string
-		verbosity          int
-		noDB, noFWL        bool
-		playerLists        = &valheim.PlayerLists{}
-		opts               = &valheim.Opts{
+		addr     string
+		openOpts = &steamapp.OpenOpts{
+			LaunchType: "server",
+		}
+		mods        []string
+		verbosity   int
+		noDB, noFWL bool
+		playerLists = &valheim.PlayerLists{}
+		opts        = &valheim.Opts{
 			Password: os.Getenv("VALHEIM_PASSWORD"),
 		}
 		cmd = &cobra.Command{
@@ -111,15 +113,11 @@ func NewValheimw() *cobra.Command {
 					}
 				}
 
-				o := &steamapp.Opts{}
-				steamapp.WithBeta(beta, betaPassword)(o)
-				steamapp.WithLaunchTypes("server")(o)
-
 				log.Info("installing Valheim server", "id", valheim.SteamappID)
 
 				eg.Go(func() error {
 					return sindri.Extract(installCtx,
-						fmt.Sprintf("%s://%d?%s", steamapp.Scheme, valheim.SteamappID, steamapp.URLValues(o).Encode()),
+						fmt.Sprintf("%s://%d?%s", steamapp.Scheme, valheim.SteamappID, steamapp.URLValues(openOpts).Encode()),
 						wd,
 					)
 				})
@@ -577,8 +575,8 @@ func NewValheimw() *cobra.Command {
 	cmd.Flags().Int64SliceVar(&playerLists.BannedIDs, "ban", nil, "Valheim server banned Steam IDs")
 	cmd.Flags().Int64SliceVar(&playerLists.PermittedIDs, "permit", nil, "Valheim server permitted Steam IDs")
 
-	cmd.Flags().StringVar(&beta, "beta", "", "Steam beta branch")
-	cmd.Flags().StringVar(&betaPassword, "beta-password", "", "Steam beta password")
+	cmd.Flags().StringVar(&openOpts.Beta, "beta", "", "Steam beta branch")
+	cmd.Flags().StringVar(&openOpts.BetaPassword, "beta-password", "", "Steam beta password")
 
 	return cmd
 }

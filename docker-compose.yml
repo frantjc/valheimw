@@ -14,6 +14,12 @@ services:
     ports:
       - 2456:2456/udp
       - 8080:8080
+  buildkitd:
+    image: moby/buildkit
+    privileged: true
+    command:
+      - --addr
+      - tcp://0.0.0.0:1234
   boiler:
     image: ghcr.io/frantjc/boiler
     build:
@@ -22,7 +28,10 @@ services:
         tool: boiler
     command:
       - -VV
+      - tcp://buildkitd:1234
     volumes:
       - ./hack:/home/boiler/.cache
     ports:
       - 5000:5000
+    depends_on:
+      - buildkitd

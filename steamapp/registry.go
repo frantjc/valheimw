@@ -1,6 +1,7 @@
 package steamapp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,29 +10,27 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/frantjc/sindri/httpcr"
+	"github.com/frantjc/sindri/contreg"
 	"github.com/frantjc/sindri/internal/imgutil"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/opencontainers/go-digest"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"gocloud.dev/blob"
 	"golang.org/x/sync/errgroup"
 )
 
-type Registry struct {
-	Base               v1.Image
-	Dir                string
-	Username, Password string
-	User, Group        string
-	Bucket             *blob.Bucket
+type PullRegistry struct {
+	Database     Database
+	ImageBuilder *ImageBuilder
+	Bucket       *blob.Bucket
 }
 
-var _ httpcr.Registry = &Registry{}
+var _ contreg.Puller = &PullRegistry{}
 
-func (r *Registry) HeadManifest(ctx context.Context, name string, reference string) error {
+func (r *PullRegistry) HeadManifest(ctx context.Context, name string, reference string) error {
 	appID, err := strconv.Atoi(name)
 	if err != nil {
 		return err
@@ -46,19 +45,17 @@ func (r *Registry) HeadManifest(ctx context.Context, name string, reference stri
 		}
 		defer rc.Close()
 
-		manifest := &httpcr.Manifest{}
+		manifest := &contreg.Manifest{}
 
 		if err = json.NewDecoder(rc).Decode(manifest); err != nil {
 			return err
 		}
-
-		return nil
 	}
 
 	return nil
 }
 
-func (r *Registry) GetManifest(ctx context.Context, name string, reference string) (*httpcr.Manifest, error) {
+func (r *PullRegistry) GetManifest(ctx context.Context, name string, reference string) (*contreg.Manifest, error) {
 	appID, err := strconv.Atoi(name)
 	if err != nil {
 		return nil, err
@@ -75,7 +72,7 @@ func (r *Registry) GetManifest(ctx context.Context, name string, reference strin
 		}
 		defer rc.Close()
 
-		manifest := &httpcr.Manifest{}
+		manifest := &contreg.Manifest{}
 
 		if err = json.NewDecoder(rc).Decode(manifest); err != nil {
 			return nil, err
@@ -84,24 +81,30 @@ func (r *Registry) GetManifest(ctx context.Context, name string, reference strin
 		return manifest, nil
 	}
 
-	image := r.Base
-
-	cfg, err := r.getConfig(ctx, image, appID, reference)
+	opts, err := r.Database.GetBuildImageOpts(ctx, appID, reference)
 	if err != nil {
 		return nil, err
 	}
 
-	image, err = mutate.Config(image, *cfg)
+	key := filepath.Join(name, fmt.Sprintf("%s.tar", reference))
+
+	wc, err := r.Bucket.NewWriter(ctx, key, nil)
 	if err != nil {
 		return nil, err
 	}
+	go func() {
+		<-ctx.Done()
+		_ = r.Bucket.Delete(context.WithoutCancel(ctx), key)
+	}()
+	defer wc.Close()
 
-	layer, err := r.getLayer(ctx, appID, reference)
-	if err != nil {
+	if err := r.ImageBuilder.BuildImage(ctx, appID, opts, &BuildImageOpts{Output: wc}); err != nil {
 		return nil, err
 	}
 
-	image, err = mutate.AppendLayers(image, layer)
+	image, err := tarball.Image(func() (io.ReadCloser, error) {
+		return r.Bucket.NewReader(ctx, key, nil)
+	}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -149,16 +152,10 @@ func (r *Registry) GetManifest(ctx context.Context, name string, reference strin
 			return err
 		}
 
-		layer, err := image.LayerByDigest(manifest.Config.Digest)
+		cfgfb, err := image.RawConfigFile()
 		if err != nil {
 			return err
 		}
-
-		rc, err := layer.Compressed()
-		if err != nil {
-			return err
-		}
-		defer rc.Close()
 
 		wc, err := r.Bucket.NewWriter(egctx, key, nil)
 		if err != nil {
@@ -166,11 +163,11 @@ func (r *Registry) GetManifest(ctx context.Context, name string, reference strin
 		}
 		defer wc.Close()
 
-		if _, err := io.Copy(wc, rc); err != nil {
+		if _, err := wc.Write(cfgfb); err != nil {
 			return err
 		}
 
-		return errors.Join(rc.Close(), wc.Close())
+		return wc.Close()
 	})
 
 	layers, err := image.Layers()
@@ -220,7 +217,7 @@ func (r *Registry) GetManifest(ctx context.Context, name string, reference strin
 	return manifest, nil
 }
 
-func (r *Registry) HeadBlob(ctx context.Context, name string, digest string) error {
+func (r *PullRegistry) HeadBlob(ctx context.Context, name string, digest string) error {
 	hash, err := v1.NewHash(digest)
 	if err != nil {
 		return err
@@ -237,7 +234,7 @@ func (r *Registry) HeadBlob(ctx context.Context, name string, digest string) err
 	return fmt.Errorf("layer not found: %s@%s", name, digest)
 }
 
-func (r *Registry) GetBlob(ctx context.Context, name string, digest string) (httpcr.Blob, error) {
+func (r *PullRegistry) GetBlob(ctx context.Context, name string, digest string) (contreg.Blob, error) {
 	appID, err := strconv.Atoi(name)
 	if err != nil {
 		return nil, err
@@ -259,15 +256,14 @@ func (r *Registry) GetBlob(ctx context.Context, name string, digest string) (htt
 		}
 		defer rc.Close()
 
-		configFile := &v1.ConfigFile{}
+		var (
+			configFile = &specs.Image{}
+			buf        = new(bytes.Buffer)
+		)
 
-		if err = json.NewDecoder(rc).Decode(configFile); err == nil {
-			b, err := json.Marshal(configFile)
-			if err != nil {
-				return nil, err
-			}
-
-			return static.NewLayer(b, types.OCIConfigJSON), nil
+		if err = json.NewDecoder(io.TeeReader(rc, buf)).Decode(configFile); err == nil {
+			// The media type here must match with the ExportEntry from Buildkitd.
+			return static.NewLayer(buf.Bytes(), types.DockerConfigJSON), nil
 		}
 
 		return tarball.LayerFromOpener(func() (io.ReadCloser, error) {
@@ -278,38 +274,4 @@ func (r *Registry) GetBlob(ctx context.Context, name string, digest string) (htt
 	}
 
 	return nil, fmt.Errorf("layer not found: %s@%s", name, digest)
-}
-
-func (r *Registry) getLayer(ctx context.Context, appID int, branch string) (httpcr.Blob, error) {
-	layer, err := imgutil.ReproducibleBuildLayerInDirFromOpener(
-		func() (io.ReadCloser, error) {
-			return Open(ctx, appID,
-				WithLogin(r.Username, r.Password, ""),
-				WithBeta(branch, ""),
-			)
-		},
-		r.Dir,
-		r.User,
-		r.Group,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return layer, nil
-}
-
-func (r *Registry) getConfig(ctx context.Context, image v1.Image, appID int, branch string) (*v1.Config, error) {
-	cfgf, err := image.ConfigFile()
-	if err != nil {
-		return nil, err
-	}
-
-	return NewImageConfig(
-		ctx, appID, &cfgf.Config,
-		WithLogin(r.Username, r.Password, ""),
-		WithInstallDir(r.Dir),
-		WithBeta(branch, ""),
-		WithLaunchTypes("server", "default"),
-	)
 }

@@ -8,7 +8,7 @@ import (
 // VersionCore is the SemVer version core of sindri.
 // Meant to be be overridden at build time, but kept
 // up-to-date sometimes to best support `go install`.
-var VersionCore = "3.0.1"
+var VersionCore = "4.0.0"
 
 // SemVer returns the semantic version of forge as built
 // from VersionCore and debug build info.

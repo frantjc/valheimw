@@ -1,10 +1,9 @@
 package command
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
-	"io"
+	"fmt"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -12,42 +11,40 @@ import (
 	"time"
 
 	"github.com/frantjc/sindri"
-	"github.com/frantjc/sindri/httpcr"
+	"github.com/frantjc/sindri/contreg"
 	"github.com/frantjc/sindri/internal/cache"
 	"github.com/frantjc/sindri/steamapp"
 	"github.com/go-logr/logr"
-	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/moby/buildkit/client"
 	"github.com/spf13/cobra"
-	"gocloud.dev/blob/fileblob"
+	"gocloud.dev/blob"
 	"golang.org/x/sync/errgroup"
 )
-
-//go:embed image.tar
-var imageTar []byte
 
 func NewBoiler() *cobra.Command {
 	var (
 		verbosity int
 		addr      string
-		registry  = &steamapp.Registry{
-			Dir:   "/home/boil/steamapp",
-			User:  "boil",
-			Group: "boil",
-		}
-		cmd = &cobra.Command{
+		bucket    string
+		db        string
+		cmd       = &cobra.Command{
 			Use:           "boiler",
+			Args:          cobra.ExactArgs(1),
 			Version:       sindri.SemVer(),
 			SilenceErrors: true,
 			SilenceUsage:  true,
-			RunE: func(cmd *cobra.Command, _ []string) error {
+			RunE: func(cmd *cobra.Command, args []string) error {
 				var (
-					slog    = newSlogr(cmd, verbosity)
-					eg, ctx = errgroup.WithContext(logr.NewContextWithSlogLogger(cmd.Context(), slog))
-					log     = logr.FromContextOrDiscard(ctx)
-					srv     = &http.Server{
+					slog     = newSlogr(cmd, verbosity)
+					eg, ctx  = errgroup.WithContext(logr.NewContextWithSlogLogger(cmd.Context(), slog))
+					log      = logr.FromContextOrDiscard(ctx)
+					registry = &steamapp.PullRegistry{
+						ImageBuilder: &steamapp.ImageBuilder{},
+					}
+					srv = &http.Server{
 						Addr:              addr,
 						ReadHeaderTimeout: time.Second * 5,
-						Handler:           httpcr.Handler(registry),
+						Handler:           contreg.NewPullHandler(registry),
 						BaseContext: func(_ net.Listener) context.Context {
 							return logr.NewContextWithSlogLogger(context.Background(), slog)
 						},
@@ -60,17 +57,17 @@ func NewBoiler() *cobra.Command {
 				}
 				defer l.Close()
 
-				registry.Base, err = tarball.Image(func() (io.ReadCloser, error) {
-					return io.NopCloser(bytes.NewReader(imageTar)), nil
-				}, nil)
+				registry.Bucket, err = blob.OpenBucket(ctx, bucket)
 				if err != nil {
 					return err
 				}
 
-				registry.Bucket, err = fileblob.OpenBucket(filepath.Join(cache.Dir, "boiler"), &fileblob.Options{
-					CreateDir: true,
-					NoTempDir: true,
-				})
+				registry.ImageBuilder.Client, err = client.New(ctx, args[0])
+				if err != nil {
+					return err
+				}
+
+				registry.Database, err = steamapp.OpenDatabase(ctx, db)
 				if err != nil {
 					return err
 				}
@@ -100,9 +97,8 @@ func NewBoiler() *cobra.Command {
 	cmd.Flags().CountVarP(&verbosity, "verbose", "V", "verbosity")
 
 	cmd.Flags().StringVar(&addr, "addr", ":5000", "address")
-
-	cmd.Flags().StringVar(&registry.Username, "username", "", "Steam username")
-	cmd.Flags().StringVar(&registry.Password, "password", "", "Steam password")
+	cmd.Flags().StringVar(&bucket, "bucket", fmt.Sprintf("file://%s?create_dir=1&no_tmp_dir=1", filepath.Join(cache.Dir, "boiler")), "bucket URL")
+	cmd.Flags().StringVar(&db, "db", fmt.Sprintf("dummy://%s", steamapp.DefaultDir), "database URL")
 
 	return cmd
 }

@@ -1,5 +1,0 @@
-services:
-  boiler:
-    image: ghcr.io/frantjc/boiler
-    ports:
-      - 5000:5000

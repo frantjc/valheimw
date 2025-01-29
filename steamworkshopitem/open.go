@@ -12,75 +12,64 @@ import (
 	xtar "github.com/frantjc/x/archive/tar"
 )
 
-type Opts struct {
-	login        steamcmd.Login
-	platformType steamcmd.PlatformType
+type OpenOpts struct {
+	Login        steamcmd.Login
+	PlatformType steamcmd.PlatformType
 }
 
-type Opt func(*Opts)
-
-func WithURLValues(query url.Values) Opt {
-	return func(o *Opts) {
-		for _, opt := range []Opt{
-			WithLogin(
-				query.Get("username"),
-				query.Get("password"),
-				query.Get("steamguardcode"),
-			),
-			WithPlatformType(
-				steamcmd.PlatformType(query.Get("platformtype")),
-			),
-		} {
-			opt(o)
-		}
+func (o *OpenOpts) Apply(opts *OpenOpts) {
+	if o.Login.Username != "" {
+		opts.Login = o.Login
+	}
+	if o.PlatformType != "" {
+		opts.PlatformType = o.PlatformType
 	}
 }
 
-func URLValues(o *Opts) url.Values {
+type OpenOpt interface {
+	Apply(*OpenOpts)
+}
+
+func WithURLValues(query url.Values) OpenOpt {
+	return &OpenOpts{
+		Login: steamcmd.Login{
+			Username:       query.Get("username"),
+			Password:       query.Get("password"),
+			SteamGuardCode: query.Get("steamguardcode"),
+		},
+		PlatformType: steamcmd.PlatformType(query.Get("platformtype")),
+	}
+}
+
+func URLValues(o *OpenOpts) url.Values {
 	query := url.Values{}
-	query.Add("username", o.login.Username)
-	query.Add("password", o.login.Password)
-	query.Add("steamguardcode", o.login.SteamGuardCode)
-	query.Add("platformtype", o.platformType.String())
+	query.Add("username", o.Login.Username)
+	query.Add("password", o.Login.Password)
+	query.Add("steamguardcode", o.Login.SteamGuardCode)
+	query.Add("platformtype", o.PlatformType.String())
 	return query
-}
-
-func WithPlatformType(platformType steamcmd.PlatformType) Opt {
-	return func(o *Opts) {
-		o.platformType = platformType
-	}
-}
-
-func WithLogin(username, password, steamGuardCode string) Opt {
-	return func(o *Opts) {
-		o.login = steamcmd.Login{
-			Username:       username,
-			Password:       password,
-			SteamGuardCode: steamGuardCode,
-		}
-	}
 }
 
 const (
 	Scheme = "steamworkshopitem"
 )
 
-func Open(ctx context.Context, appID, publishedFileID int, opts ...Opt) (io.ReadCloser, error) {
-	o := &Opts{
-		platformType: steamcmd.DefaultPlatformType,
+func Open(ctx context.Context, appID, publishedFileID int, opts ...OpenOpt) (io.ReadCloser, error) {
+	o := &OpenOpts{
+		PlatformType: steamcmd.DefaultPlatformType,
 	}
 
 	for _, opt := range opts {
-		opt(o)
+		opt.Apply(o)
 	}
-	installDir := filepath.Join(cache.Dir, Scheme, o.platformType.String(), fmt.Sprint(appID), fmt.Sprint(publishedFileID))
+	installDir := filepath.Join(cache.Dir, Scheme, o.PlatformType.String(), fmt.Sprint(appID), fmt.Sprint(publishedFileID))
 
 	commands := []steamcmd.Command{
 		steamcmd.ForceInstallDir(installDir),
-		o.login,
+		o.Login,
 	}
-	if o.platformType != "" {
-		commands = append(commands, steamcmd.ForcePlatformType(o.platformType))
+	if o.PlatformType != "" {
+		commands = append(commands, steamcmd.ForcePlatformType(o.PlatformType))
 	}
 	commands = append(commands,
 		&steamcmd.WorkshopDownloadItem{
