@@ -1,8 +1,9 @@
-package httpcr
+package contreg
 
 import (
-	"context"
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -11,7 +12,6 @@ import (
 	"github.com/frantjc/sindri/internal/imgutil"
 	xhttp "github.com/frantjc/x/net/http"
 	"github.com/go-logr/logr"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/uuid"
 )
 
@@ -19,22 +19,10 @@ const (
 	HeaderDockerContentDigest = "Docker-Content-Digest"
 )
 
-type (
-	Manifest = v1.Manifest
-	Blob     = v1.Layer
-)
-
-type Registry interface {
-	HeadManifest(ctx context.Context, name string, reference string) error
-	GetManifest(ctx context.Context, name string, reference string) (*Manifest, error)
-	HeadBlob(ctx context.Context, name string, digest string) error
-	GetBlob(ctx context.Context, name string, digest string) (Blob, error)
-}
-
-func Handler(reg Registry) http.Handler {
+func NewPullHandler(puller Puller) http.Handler {
 	return ingress.New(
 		ingress.ExactPath("/v2/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if reg != nil {
+			if puller != nil {
 				// OCI does not require this, but the Docker v2 spec include it, and GCR sets this.
 				// Docker distribution v2 clients may fallback to an older version if this is not set.
 				w.Header().Set("Docker-Distribution-Api-Version", "registry/2.0")
@@ -47,7 +35,7 @@ func Handler(reg Registry) http.Handler {
 		ingress.PrefixPath("/v2",
 			xhttp.AllowHandler(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					if reg == nil {
+					if puller == nil {
 						http.NotFound(w, r)
 						return
 					}
@@ -74,12 +62,13 @@ func Handler(reg Registry) http.Handler {
 						)
 					)
 
+					r = r.WithContext(logr.NewContext(r.Context(), log))
 					log.Info(ep)
 
 					switch ep {
 					case "manifests":
 						if r.Method == http.MethodHead {
-							if err := reg.HeadManifest(r.Context(), name, reference); err != nil {
+							if err := puller.HeadManifest(r.Context(), name, reference); err != nil {
 								log.Error(err, ep)
 								http.Error(w, err.Error(), http.StatusInternalServerError)
 								return
@@ -89,7 +78,7 @@ func Handler(reg Registry) http.Handler {
 							return
 						}
 
-						manifest, err := reg.GetManifest(r.Context(), name, reference)
+						manifest, err := puller.GetManifest(r.Context(), name, reference)
 						if err != nil {
 							log.Error(err, ep)
 							http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -103,13 +92,21 @@ func Handler(reg Registry) http.Handler {
 							return
 						}
 
+						buf := new(bytes.Buffer)
+						if err = json.NewEncoder(buf).Encode(manifest); err != nil {
+							log.Error(err, ep)
+							http.Error(w, err.Error(), http.StatusInternalServerError)
+							return
+						}
+
+						w.Header().Set("Content-Length", fmt.Sprint(buf.Len()))
 						w.Header().Set("Content-Type", string(manifest.MediaType))
 						w.Header().Set(HeaderDockerContentDigest, digest.String())
-						_ = json.NewEncoder(w).Encode(manifest)
+						_, _ = io.Copy(w, buf)
 						return
 					case "blobs":
 						if r.Method == http.MethodHead {
-							if err := reg.HeadBlob(r.Context(), name, reference); err != nil {
+							if err := puller.HeadBlob(r.Context(), name, reference); err != nil {
 								log.Error(err, ep)
 								http.Error(w, err.Error(), http.StatusInternalServerError)
 								return
@@ -119,7 +116,7 @@ func Handler(reg Registry) http.Handler {
 							return
 						}
 
-						blob, err := reg.GetBlob(r.Context(), name, reference)
+						blob, err := puller.GetBlob(r.Context(), name, reference)
 						if err != nil {
 							log.Error(err, ep)
 							http.Error(w, err.Error(), http.StatusInternalServerError)

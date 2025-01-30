@@ -16,15 +16,17 @@ import (
 	xslice "github.com/frantjc/x/slice"
 )
 
-type Opts struct {
-	client *Client
+type OpenOpts struct {
+	Client *Client
 }
 
-type Opt func(*Opts)
+type Opt interface {
+	Apply(*OpenOpts)
+}
 
-func WithClient(cli *Client) Opt {
-	return func(o *Opts) {
-		o.client = cli
+func (o *OpenOpts) Apply(opts *OpenOpts) {
+	if o.Client != nil {
+		opts.Client = o.Client
 	}
 }
 
@@ -33,15 +35,15 @@ const (
 )
 
 func Open(ctx context.Context, pkg *Package, opts ...Opt) (io.ReadCloser, error) {
-	o := &Opts{
-		client: DefaultClient,
+	o := &OpenOpts{
+		Client: DefaultClient,
 	}
 
 	for _, opt := range opts {
-		opt(o)
+		opt.Apply(o)
 	}
 
-	pkgZip, err := o.client.GetPackageZip(ctx, pkg)
+	pkgZip, err := o.Client.GetPackageZip(ctx, pkg)
 	if err != nil {
 		return nil, err
 	}

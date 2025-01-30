@@ -60,13 +60,6 @@ func NewCommand(ctx context.Context, dir string, opts *Opts) (*exec.Cmd, error) 
 			unstrippedCorlib = filepath.Join(cmd.Dir, "unstripped_corlib")
 		)
 
-		// TODO: Should this ever be _x64?
-		// if strings.Contains(runtime.GOARCH, "amd64") {
-		// 	libdoorstop += "_x64"
-		// } else {
-		// 	libdoorstop += "_x86"
-		// }
-
 		switch runtime.GOOS {
 		case "windows":
 			return nil, fmt.Errorf("%s incompatible with BepInEx", runtime.GOOS)
@@ -78,7 +71,7 @@ func NewCommand(ctx context.Context, dir string, opts *Opts) (*exec.Cmd, error) 
 
 		cmd.Env = os.Environ()
 
-		if _, err := os.Stat(doorstopLibs); err == nil {
+		if fi, err := os.Stat(doorstopLibs); err == nil && fi.IsDir() {
 			cmd.Env = append(
 				cmd.Env,
 				"DOORSTOP_ENABLED=TRUE",

@@ -1,34 +1,35 @@
 # Palworld
 
-Sindri provides no special support for the Palworld server beyond this document describing how one could use Sindri to build and run the Palworld server in a container.
-
-Consider a directory with the following `docker-compose.yml` and `Dockerfile`:
+Consider a directory with the following `docker-compose.yml`:
 
 ```yml
 services:
+  buildkitd:
+    image: moby/buildkit:rootless
+    security_opt:
+      - seccomp:unconfined
+      - apparmor=unconfined
+    command:
+      - --addr
+      - tcp://0.0.0.0:1234
+      - --oci-worker-no-process-sandbox
   boiler:
     image: ghcr.io/frantjc/boiler
+    command:
+      - tcp://buildkitd:1234
     ports:
       - 5000:5000
+    depends_on:
+      - buildkitd
   palworld:
-    build: .
+    image: localhost:5000/2394010
     ports:
       - 8211:8211/udp
     depends_on:
       - boiler
 ```
 
-```Dockerfile
-FROM localhost:5000/2394010
-USER root
-RUN apt-get update -y \
-    && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        xdg-utils \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-USER boil
-```
+> The Palworld server is one of a few Steam apps that is included in the hardcoded database, so it works out of the box.
 
 > "2394010" refers to the Steam app ID of the Palworld server.
 
@@ -40,7 +41,7 @@ First, run [`boiler`](boiler.md) in the background. We will use it to pre-build 
 docker compose up --detach boiler
 ```
 
-Next, build and run the Palworld server. This will pull a minimal container image with it pre-installed from `boiler`, install extra dependencies via the `Dockerfile` and then run the Palworld server container:
+Next, build and run the Palworld server. This will pull a minimal container image with it pre-installed from `boiler` and then run the Palworld server container:
 
 ```sh
 docker compose up --detach palworld

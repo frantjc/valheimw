@@ -1,22 +1,5 @@
 version: 2
-before:
-  hooks:
-    - make command/image.tar SEMVER={{ .RawVersion }}
 builds:
-  - main: ./cmd/boil
-    id: boil
-    binary: boil
-    ldflags:
-      - -s -w -X github.com/frantjc/sindri.VersionCore={{ .RawVersion }}
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-    goarch:
-      - amd64
-    hooks:
-      post:
-        - upx {{ .Path }}
   - main: ./cmd/boiler
     id: boiler
     binary: boiler
