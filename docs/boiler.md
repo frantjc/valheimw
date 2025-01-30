@@ -17,13 +17,18 @@ Taking the Valheim server as an example of how `boiler` could be used, consider 
 ```yml
 services:
   buildkitd:
-    image: moby/buildkit
-    privileged: true
+    image: moby/buildkit:rootless
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
     command:
       - --addr
       - tcp://0.0.0.0:1234
+      - --oci-worker-no-process-sandbox
   boiler:
     image: ghcr.io/frantjc/boiler
+    command:
+      - tcp://buildkitd:1234
     ports:
       - 5000:5000
     depends_on:

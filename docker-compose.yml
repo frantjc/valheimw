@@ -15,11 +15,14 @@ services:
       - 2456:2456/udp
       - 8080:8080
   buildkitd:
-    image: moby/buildkit
-    privileged: true
+    image: moby/buildkit:rootless
+    security_opt:
+      - seccomp:unconfined
+      - apparmor=unconfined
     command:
       - --addr
       - tcp://0.0.0.0:1234
+      - --oci-worker-no-process-sandbox
   boiler:
     image: ghcr.io/frantjc/boiler
     build:
