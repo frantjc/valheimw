@@ -24,7 +24,7 @@ services:
   corekeeper:
     image: localhost:5000/1963720
     volumes:
-      - ./save:/home/steam/.config/unity3d/Pugstorm/Core Keeper/DedicatedServer
+      - ./saves:/home/steam/.config/unity3d/Pugstorm/Core Keeper/DedicatedServer
     depends_on:
       - boiler
 ```
@@ -47,7 +47,7 @@ docker compose up --detach corekeeper
 
 > If Core Keeper errors with `Segmentation fault (core dumped)`, you have likely ran into a permissions issue. Run `chmod -R 777 ./save` and try again.
 
-The server's save data will be stored in `./save`.
+The server's save data will be stored in `./saves`.
 
 Notably, the Core Keeper server does not any ports exposed, instead using _magic_ to allow players to connect to the server.
 

@@ -4,6 +4,6 @@ Since then, it has grown into a more generalized form as a toolkit for turning S
 
 These tools include:
 
-- [`boiler`](boiler.md), a read-only container registry for pulling images with Steam apps pre-installed on them on-demand.
+- [`boiler`](boiler.md), a container image for a read-only container registry for pulling images with Steam apps pre-installed on them, built on-demand.
 - [`valheimw`](valheim.md), a container image containing a wrapper around the Valheim server that manages its mods via [thunderstore.io](https://valheim.thunderstore.io/) and runs an HTTP server alongside it to provide additional functionality.
 - [`mist`](mist.md), a CLI tool for use in `Dockerfile`s to install Steam apps, Steam Workshop items, and [thunderstore.io](https://thunderstore.io/) mods.
