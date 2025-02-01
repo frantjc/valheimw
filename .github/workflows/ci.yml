@@ -59,7 +59,7 @@ jobs:
       - uses: frantjc/actions/ghcr-delete-images@v0
         with:
           token: ${{ secrets.GH_PAT }}
-          tags: |
+          images: |
             ghcr.io/frantjc/boiler:${{ github.sha }}
       - uses: docker/login-action@v3
         with:
@@ -96,12 +96,12 @@ jobs:
     steps:
       - uses: docker/build-push-action@v6
         with:
-          context: ${{ github.server_url }}/${{ github.repository }}#${{ github.ref }}:testdata/mist
+          context: ${{ github.server_url }}/${{ github.repository }}#${{ github.sha }}:testdata/mist
           load: true
           build-args: |
             mist_tag=${{ github.ref }}
       - uses: frantjc/actions/ghcr-delete-images@v0
         with:
           token: ${{ secrets.GH_PAT }}
-          tags: |
+          images: |
             ghcr.io/frantjc/mist:${{ github.sha }}
