@@ -99,7 +99,7 @@ jobs:
           context: ${{ github.server_url }}/${{ github.repository }}.git#${{ github.ref }}:testdata/mist
           load: true
           build-args: |
-            mist_tag=${{ github.ref }}
+            mist_tag=${{ github.sha }}
       - uses: frantjc/actions/ghcr-delete-images@v0
         with:
           token: ${{ secrets.GH_PAT }}
