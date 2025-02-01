@@ -15,6 +15,7 @@ import (
 	"github.com/frantjc/sindri/steamapp"
 	"github.com/go-logr/logr"
 	"github.com/moby/buildkit/client"
+	"github.com/moby/buildkit/util/appdefaults"
 	"github.com/spf13/cobra"
 	"gocloud.dev/blob"
 	"golang.org/x/sync/errgroup"
@@ -24,15 +25,15 @@ func NewBoiler() *cobra.Command {
 	var (
 		verbosity int
 		addr      string
+		buildkitd string
 		bucket    string
 		db        string
 		cmd       = &cobra.Command{
 			Use:           "boiler",
-			Args:          cobra.ExactArgs(1),
 			Version:       sindri.SemVer(),
 			SilenceErrors: true,
 			SilenceUsage:  true,
-			RunE: func(cmd *cobra.Command, args []string) error {
+			RunE: func(cmd *cobra.Command, _ []string) error {
 				var (
 					slog     = newSlogr(cmd, verbosity)
 					eg, ctx  = errgroup.WithContext(logr.NewContextWithSlogLogger(cmd.Context(), slog))
@@ -61,7 +62,7 @@ func NewBoiler() *cobra.Command {
 					return err
 				}
 
-				registry.ImageBuilder.Client, err = client.New(ctx, args[0])
+				registry.ImageBuilder.Client, err = client.New(ctx, buildkitd)
 				if err != nil {
 					return err
 				}
@@ -96,6 +97,7 @@ func NewBoiler() *cobra.Command {
 	cmd.Flags().CountVarP(&verbosity, "verbose", "V", "verbosity")
 
 	cmd.Flags().StringVar(&addr, "addr", ":5000", "address")
+	cmd.Flags().StringVar(&buildkitd, "buildkitd", appdefaults.Address, "BuildKitd URL")
 	cmd.Flags().StringVar(&bucket, "bucket", fmt.Sprintf("file://%s?create_dir=1&no_tmp_dir=1", filepath.Join(cache.Dir, "boiler")), "bucket URL")
 	cmd.Flags().StringVar(&db, "db", fmt.Sprintf("dummy://%s", steamapp.DefaultDir), "database URL")
 

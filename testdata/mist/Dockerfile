@@ -1,5 +1,8 @@
+ARG mist_tag=latest
+FROM ghcr.io/frantjc/mist:$mist_tag AS mist
+
 FROM debian:stable-slim
-COPY --from=ghcr.io/frantjc/mist /mist /usr/local/bin
+COPY --from=mist /mist /usr/local/bin
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends \
         ca-certificates \

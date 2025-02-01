@@ -19,8 +19,8 @@ services:
   buildkitd:
     image: moby/buildkit:rootless
     security_opt:
-      - seccomp:unconfined
-      - apparmor:unconfined
+      - seccomp=unconfined
+      - apparmor=unconfined
     command:
       - --addr
       - tcp://0.0.0.0:1234

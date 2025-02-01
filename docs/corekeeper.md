@@ -7,7 +7,7 @@ services:
   buildkitd:
     image: moby/buildkit:rootless
     security_opt:
-      - seccomp:unconfined
+      - seccomp=unconfined
       - apparmor=unconfined
     command:
       - --addr

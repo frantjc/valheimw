@@ -7,8 +7,10 @@ on:
   pull_request:
     branches:
       - main
+permissions:
+  packages: write
 jobs:
-  ci:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,19 +18,91 @@ jobs:
         with:
           go-version: 1.23
       - uses: golangci/golangci-lint-action@v6.2.0
+  build-valheimw:
+    runs-on: ubuntu-latest
+    steps:
       - uses: docker/build-push-action@v6
         with:
-          context: mist
-          load: true
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
           load: true
           build-args: |
             tool=valheimw
+  build-boiler:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: .
-          load: true
+          push: true
           build-args: |
             tool=boiler
+          tags: |
+            ghcr.io/frantjc/boiler:${{ github.sha }}
+  test-boiler:
+    runs-on: ubuntu-latest
+    needs: build-boiler
+    services:
+      buildkitd:
+        image: moby/buildkit
+        options: --privileged
+        volumes:
+          - /run/buildkit:/run/buildkit
+      boiler:
+        image: ghcr.io/frantjc/boiler:${{ github.sha }}
+        ports:
+          - 5000:5000
+        volumes:
+          - /run/buildkit:/run/buildkit
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run docker pull Valheim server
+        run: |
+          docker pull localhost:5000/896660
+      - name: Run docker pull Core Keeper server
+        run: |
+          docker pull localhost:5000/1963720
+      - name: Run docker pull Palworld server
+        run: |
+          docker pull localhost:5000/2394010
+      - uses: frantjc/actions/ghcr-delete-images@v0
+        with:
+          token: ${{ secrets.GH_PAT }}
+          images: |
+            ghcr.io/frantjc/boiler:${{ github.sha }}
+  build-mist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          push: true
+          build-args: |
+            tool=mist
+          tags: |
+            ghcr.io/frantjc/mist:${{ github.sha }}
+  test-mist:
+    runs-on: ubuntu-latest
+    needs: build-mist
+    steps:
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ github.server_url }}/${{ github.repository }}.git#${{ github.ref }}:testdata/mist
+          load: true
+          build-args: |
+            mist_tag=${{ github.sha }}
+      - uses: frantjc/actions/ghcr-delete-images@v0
+        with:
+          token: ${{ secrets.GH_PAT }}
+          images: |
+            ghcr.io/frantjc/mist:${{ github.sha }}
