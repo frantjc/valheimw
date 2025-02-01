@@ -18,10 +18,7 @@ RUN apt-get update -y \
         libpulse-dev \
         libpulse0 \
     && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean \
-    && groupadd --system valheimw \
-    && useradd --system --gid valheimw --shell /bin/bash --create-home valheimw
-USER valheimw
+    && apt-get clean
 ENTRYPOINT ["/usr/local/bin/valheimw"]
 COPY --from=build /valheimw /usr/local/bin
 
@@ -31,10 +28,7 @@ RUN apt-get update -y \
         ca-certificates \
         lib32gcc-s1 \
     && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean \
-    && groupadd --system boiler \
-    && useradd --system --gid boiler --shell /bin/bash --create-home boiler
-USER boiler
+    && apt-get clean
 ENTRYPOINT ["/usr/local/bin/boiler"]
 COPY --from=build /boiler /usr/local/bin
 
