@@ -48,13 +48,13 @@ jobs:
       buildkitd:
         image: moby/buildkit
         volumes:
-          - /run/buildkitd:/run/buildkitd
+          - /run/buildkit:/run/buildkit
       boiler:
         image: ghcr.io/frantjc/boiler:${{ github.sha }}
         ports:
           - 5000:5000
         volumes:
-          - /run/buildkitd:/run/buildkitd
+          - /run/buildkit:/run/buildkit
     steps:
       - uses: frantjc/actions/ghcr-delete-images@v0
         with:
@@ -96,7 +96,7 @@ jobs:
     steps:
       - uses: docker/build-push-action@v6
         with:
-          context: ${{ github.server_url }}/${{ github.repository }}#${{ github.sha }}:testdata/mist
+          context: ${{ github.server_url }}/${{ github.repository }}.git#${{ github.sha }}:testdata/mist
           load: true
           build-args: |
             mist_tag=${{ github.ref }}
