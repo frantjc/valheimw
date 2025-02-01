@@ -7,6 +7,8 @@ on:
   pull_request:
     branches:
       - main
+permissions:
+  packages: write
 jobs:
   lint:
     runs-on: ubuntu-latest

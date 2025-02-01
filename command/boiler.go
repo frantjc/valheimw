@@ -33,7 +33,7 @@ func NewBoiler() *cobra.Command {
 			Version:       sindri.SemVer(),
 			SilenceErrors: true,
 			SilenceUsage:  true,
-			RunE: func(cmd *cobra.Command, args []string) error {
+			RunE: func(cmd *cobra.Command, _ []string) error {
 				var (
 					slog     = newSlogr(cmd, verbosity)
 					eg, ctx  = errgroup.WithContext(logr.NewContextWithSlogLogger(cmd.Context(), slog))
