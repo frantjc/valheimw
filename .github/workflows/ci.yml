@@ -8,7 +8,7 @@ on:
     branches:
       - main
 jobs:
-  ci:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,19 +16,67 @@ jobs:
         with:
           go-version: 1.23
       - uses: golangci/golangci-lint-action@v6.2.0
+  build:
       - uses: docker/build-push-action@v6
         with:
-          context: mist
-          load: true
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
           load: true
           build-args: |
             tool=valheimw
       - uses: docker/build-push-action@v6
         with:
-          context: .
-          load: true
+          push: true
           build-args: |
             tool=boiler
+          tags: |
+            ghcr.io/frantjc/boiler:${{ github.sha }}
+      - uses: docker/build-push-action@v6
+        with:
+          push: true
+          build-args: |
+            tool=mist
+          tags: |
+            ghcr.io/frantjc/mist:${{ github.sha }}
+  test-boiler:
+    runs-on: ubuntu-latest
+    needs: build
+    services:
+      buildkitd:
+        image: moby/buildkit
+        volumes:
+          - /run/buildkitd:/run/buildkitd
+      boiler:
+        image: ghcr.io/frantjc/boiler:${{ github.sha }}
+        ports:
+          - 5000:5000
+        volumes:
+          - /run/buildkitd:/run/buildkitd
+    steps:
+      - uses: frantjc/actions/delete-ghcr-images@v0
+        with:
+          token: ${{ secrets.PAT }}
+          tags: |
+            ghcr.io/frantjc/boiler:${{ github.sha }}
+      - name: Run docker pull Valheim server
+        run: |
+          docker pull localhost:5000/896660
+      - name: Run docker pull Core Keeper server
+        run: |
+          docker pull localhost:5000/1963720
+      - name: Run docker pull Palworld server
+        run: |
+          docker pull localhost:5000/2394010
+  test-mist:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ github.server_url }}/${{ github.repository }}#${{ github.ref }}:testdata/mist
+          load: true
+          build-args: |
+            mist_tag=${{ github.ref }}
+      - uses: frantjc/actions/delete-ghcr-images@v0
+        with:
+          token: ${{ secrets.PAT }}
+          tags: |
+            ghcr.io/frantjc/mist:${{ github.sha }}
