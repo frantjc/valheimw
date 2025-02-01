@@ -47,6 +47,7 @@ jobs:
     services:
       buildkitd:
         image: moby/buildkit
+        options: --privileged
         volumes:
           - /run/buildkit:/run/buildkit
       boiler:
