@@ -56,7 +56,7 @@ jobs:
         volumes:
           - /run/buildkitd:/run/buildkitd
     steps:
-      - uses: frantjc/actions/delete-ghcr-images@v0
+      - uses: frantjc/actions/ghcr-delete-images@v0
         with:
           token: ${{ secrets.GH_PAT }}
           tags: |
@@ -100,7 +100,7 @@ jobs:
           load: true
           build-args: |
             mist_tag=${{ github.ref }}
-      - uses: frantjc/actions/delete-ghcr-images@v0
+      - uses: frantjc/actions/ghcr-delete-images@v0
         with:
           token: ${{ secrets.GH_PAT }}
           tags: |

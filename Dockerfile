@@ -38,7 +38,7 @@ USER boiler
 ENTRYPOINT ["/usr/local/bin/boiler"]
 COPY --from=build /boiler /usr/local/bin
 
-FROM scratch
+FROM scratch AS mist
 COPY --from=build /mist /mist
 
 FROM $tool
