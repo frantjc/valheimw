@@ -18,7 +18,6 @@ func NewMist() *cobra.Command {
 		clean bool
 		cmd   = &cobra.Command{
 			Use:           "mist",
-			Version:       sindri.SemVer(),
 			SilenceErrors: true,
 			SilenceUsage:  true,
 			RunE: func(cmd *cobra.Command, args []string) error {

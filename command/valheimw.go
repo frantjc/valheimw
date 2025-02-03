@@ -56,7 +56,6 @@ func NewValheimw() *cobra.Command {
 		}
 		cmd = &cobra.Command{
 			Use:           "valheimw",
-			Version:       sindri.SemVer(),
 			SilenceErrors: true,
 			SilenceUsage:  true,
 			RunE: func(cmd *cobra.Command, _ []string) error {

@@ -23,9 +23,12 @@ import (
 func main() {
 	var (
 		ctx, stop = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		cmd       = command.NewBoiler()
 	)
 
-	err := xerrors.Ignore(command.NewBoiler().ExecuteContext(ctx), context.Canceled)
+	cmd.Version = SemVer()
+
+	err := xerrors.Ignore(cmd.ExecuteContext(ctx), context.Canceled)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 	}

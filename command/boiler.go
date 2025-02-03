@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/frantjc/sindri"
 	"github.com/frantjc/sindri/contreg"
 	"github.com/frantjc/sindri/internal/cache"
 	"github.com/frantjc/sindri/steamapp"
@@ -30,7 +29,6 @@ func NewBoiler() *cobra.Command {
 		db        string
 		cmd       = &cobra.Command{
 			Use:           "boiler",
-			Version:       sindri.SemVer(),
 			SilenceErrors: true,
 			SilenceUsage:  true,
 			RunE: func(cmd *cobra.Command, _ []string) error {

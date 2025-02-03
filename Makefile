@@ -4,7 +4,7 @@ GIT ?= git
 
 all: fmt lint
 
-fmt generate:
+fmt generate test:
 	@$(GO) $@ ./...
 
 lint:

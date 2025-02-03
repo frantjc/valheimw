@@ -1,24 +1,29 @@
-package sindri
+package main
 
 import (
 	"runtime/debug"
 	"strings"
 )
 
-// VersionCore is the SemVer version core of sindri.
-// Meant to be be overridden at build time, but kept
-// up-to-date sometimes to best support `go install`.
-var VersionCore = "3.1.0"
+// GoReleaser sets these.
+var (
+	version = "3.1.0"
+	commit  = ""
+	date    = ""
+	builtBy = ""
+)
 
-// SemVer returns the semantic version of forge as built
-// from VersionCore and debug build info.
+// SemVer returns the semantic version of `boiler` as
+// built from GoReleaser ldflags and debug build info.
 func SemVer() string {
-	semver := VersionCore
+	semver := version
 
 	if buildInfo, ok := debug.ReadBuildInfo(); ok {
 		var (
 			revision string
 			modified bool
+			_        = date
+			_        = builtBy
 		)
 		for _, setting := range buildInfo.Settings {
 			switch setting.Key {
@@ -27,6 +32,10 @@ func SemVer() string {
 			case "vcs.modified":
 				modified = setting.Value == "true"
 			}
+		}
+
+		if revision == "" {
+			revision = commit
 		}
 
 		if revision != "" {
