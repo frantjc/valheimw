@@ -130,7 +130,9 @@ func (r *PullRegistry) GetManifest(ctx context.Context, name string, reference s
 			return err
 		}
 
-		wc, err := r.Bucket.NewWriter(egctx, key, nil)
+		wc, err := r.Bucket.NewWriter(egctx, key, &blob.WriterOptions{
+			ContentType: "application/json",
+		})
 		if err != nil {
 			return err
 		}
@@ -157,7 +159,9 @@ func (r *PullRegistry) GetManifest(ctx context.Context, name string, reference s
 			return err
 		}
 
-		wc, err := r.Bucket.NewWriter(egctx, key, nil)
+		wc, err := r.Bucket.NewWriter(egctx, key, &blob.WriterOptions{
+			ContentType: "application/json",
+		})
 		if err != nil {
 			return err
 		}
@@ -196,7 +200,15 @@ func (r *PullRegistry) GetManifest(ctx context.Context, name string, reference s
 			}
 			defer rc.Close()
 
-			wc, err := r.Bucket.NewWriter(egctx, key, nil)
+			mediaType, err := layer.MediaType()
+			if err != nil {
+				return err
+			}
+
+			wc, err := r.Bucket.NewWriter(egctx, key, &blob.WriterOptions{
+				ContentType:     string(mediaType),
+				ContentEncoding: "gzip",
+			})
 			if err != nil {
 				return err
 			}

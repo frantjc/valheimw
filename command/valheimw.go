@@ -254,17 +254,20 @@ func NewValheimw() *cobra.Command {
 							}
 							defer gzw.Close()
 
-							w.Header().Add("Content-Type", "application/gzip")
+							w.Header().Add("Content-Type", "application/tar")
+							w.Header().Add("Content-Encoding", "gzip")
 							w.Header().Add("Content-Disposition", "attachment")
 
 							_, _ = io.Copy(gzw, xtar.Compress(filepath.Join(opts.SaveDir, "worlds_local")))
 						})
 						worldsHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/gzip") {
-								w.Header().Add("Content-Disposition", "filename=file worlds.tar.gz")
-								worldsTgzHandler(w, r)
-								return
-							} else if strings.Contains(accept, "application/tar") {
+							if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/tar") {
+								if acceptEncoding := r.Header.Get("Accept-Encoding"); strings.Contains(acceptEncoding, "gzip") {
+									w.Header().Add("Content-Disposition", "filename=file worlds.tar.gz")
+									worldsTgzHandler(w, r)
+									return
+								}
+
 								w.Header().Add("Content-Disposition", "filename=file worlds.tar")
 								worldsTarHandler(w, r)
 								return
@@ -338,7 +341,8 @@ func NewValheimw() *cobra.Command {
 							tw := tar.NewWriter(gzw)
 							defer tw.Close()
 
-							w.Header().Add("Content-Type", "application/gzip")
+							w.Header().Add("Content-Type", "application/tar")
+							w.Header().Add("Content-Encoding", "application/gzip")
 							w.Header().Add("Content-Disposition", "attachment")
 
 							for _, mod := range mods {
@@ -374,11 +378,11 @@ func NewValheimw() *cobra.Command {
 							}
 						})
 						modHdrHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/gzip") {
-								w.Header().Add("Content-Disposition", "filename=file mods.tar.gz")
-								modTgzHandler(w, r)
-								return
-							} else if strings.Contains(accept, "application/tar") {
+							if accept := r.Header.Get("Accept"); strings.Contains(accept, "application/tar") {
+								if acceptEncoding := r.Header.Get("Accept-Encoding"); strings.Contains(acceptEncoding, "gzip") {
+									w.Header().Add("Content-Disposition", "filename=file mods.tar.gz")
+									modTgzHandler(w, r)
+								}
 								w.Header().Add("Content-Disposition", "filename=file mods.tar")
 								modTarHandler(w, r)
 								return
