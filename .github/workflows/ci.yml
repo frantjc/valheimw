@@ -97,7 +97,7 @@ jobs:
     steps:
       - uses: docker/build-push-action@v6
         with:
-          context: ${{ github.server_url }}/${{ github.repository }}.git#${{ github.ref }}:testdata/mist
+          context: ${{ github.server_url }}/${{ github.repository }}.git#${{ github.sha }}:testdata/mist
           load: true
           build-args: |
             mist_tag=${{ github.sha }}

@@ -102,7 +102,7 @@ type ImageBuilder struct {
 
 const (
 	DefaultUser             = "steam"
-	DefaultDir              = "/home/steam"
+	DefaultDir              = "/home/" + DefaultUser
 	DefaultLaunchType       = "server"
 	DefaultBaseImageRef     = "docker.io/library/debian:stable-slim"
 	DefaultSteamcmdImageRef = "docker.io/steamcmd/steamcmd:latest"
