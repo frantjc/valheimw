@@ -52,7 +52,7 @@ func NewCommand(ctx context.Context, dir string, opts *Opts) (*exec.Cmd, error) 
 
 	cmd.Dir = dir
 
-	if opts.BepInEx && false {
+	if opts.BepInEx {
 		var (
 			doorstopLibs     = filepath.Join(cmd.Dir, "doorstop_libs")
 			libdoorstop      = filepath.Join(doorstopLibs, "libdoorstop_x86") // ext added below

@@ -74,5 +74,27 @@ func (b *depTreeBldr) buildDependencyTree(ctx context.Context, pkgNames ...strin
 		pkgs = append(pkgs, depPkgs...)
 	}
 
-	return pkgs, nil
+	return dedupePkgs(pkgs), nil
+}
+
+func dedupePkgs(pkgs []Package) []Package {
+	seenPkgs := map[string]Package{}
+
+	for _, pkg := range pkgs {
+		key := fmt.Sprintf("%s|%s", pkg.Namespace, pkg.Name)
+		if seenPkg, ok := seenPkgs[key]; !ok || seenPkg.VersionNumber == "" {
+			seenPkgs[key] = pkg
+		}
+	}
+
+	var (
+		deduped = make([]Package, len(seenPkgs))
+		i       = 0
+	)
+	for _, pkg := range seenPkgs {
+		deduped[i] = pkg
+		i++
+	}
+
+	return deduped
 }
