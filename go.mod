@@ -14,7 +14,7 @@ require (
 	github.com/mmatczuk/anyflag v0.0.0-20240709090339-eb9e24cd1b44
 	github.com/moby/buildkit v0.19.0
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/spf13/cobra v1.8.1
+	github.com/spf13/cobra v1.9.1
 	gocloud.dev v0.40.0
 	golang.org/x/sync v0.11.0
 )
@@ -89,7 +89,7 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/tonistiigi/fsutil v0.0.0-20250113203817-b14e27f4135a // indirect
 	github.com/tonistiigi/go-csvvalue v0.0.0-20240710180619-ddb21b71c0b4 // indirect
 	github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea // indirect
