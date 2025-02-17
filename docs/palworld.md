@@ -16,7 +16,7 @@ services:
   boiler:
     image: ghcr.io/frantjc/boiler
     command:
-      - tcp://buildkitd:1234
+      - --buildkitd=tcp://buildkitd:1234
     ports:
       - 5000:5000
     depends_on:

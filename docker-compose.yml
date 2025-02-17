@@ -26,7 +26,7 @@ services:
         tool: boiler
     command:
       - -VV
-      - tcp://buildkitd:1234
+      - --buildkitd=tcp://buildkitd:1234
     volumes:
       - ./hack:/root/.cache
     ports:

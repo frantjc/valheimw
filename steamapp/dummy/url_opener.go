@@ -43,20 +43,20 @@ func (g *Database) GetBuildImageOpts(_ context.Context, appID int, _ string) (*s
 		return &steamapp.GettableBuildImageOpts{
 			AptPkgs: []string{
 				"ca-certificates",
-				"lib32gcc-s1",
-				"libatomic1",
-				"libpulse-dev",
-				"libpulse0",
 			},
 			LaunchType: "server",
 			Execs: []string{
-				fmt.Sprintf("rm -r %s %s %s",
+				fmt.Sprintf("rm -r %s %s %s %s",
 					filepath.Join(g.Dir, "docker"),
 					filepath.Join(g.Dir, "docker_start_server.sh"),
 					filepath.Join(g.Dir, "start_server_xterm.sh"),
+					filepath.Join(g.Dir, "start_server.sh"),
+				),
+				fmt.Sprintf("ln -s %s /usr/lib/x86_64-linux-gnu/steamclient.so",
+					filepath.Join(g.Dir, "linux64/steamclient.so"),
 				),
 			},
-			Entrypoint: []string{filepath.Join(g.Dir, "start_server.sh")},
+			Entrypoint: []string{filepath.Join(g.Dir, "valheim_server.x86_64")},
 		}, nil
 	case 1963720:
 		// Core Keeper server.

@@ -23,7 +23,7 @@ services:
       - apparmor=unconfined
     command:
       - --addr
-      - tcp://0.0.0.0:1234
+      - --buildkitd=tcp://0.0.0.0:1234
       - --oci-worker-no-process-sandbox
   boiler:
     image: ghcr.io/frantjc/boiler
@@ -35,6 +35,14 @@ services:
       - buildkitd
   valheim:
     image: localhost:5000/896660
+    command:
+      - -name
+      - My server
+      - -world
+      - Dedicated
+      - -password
+      - secret
+      - -crossplay
     ports:
       - 2456:2456/udp
     depends_on:
