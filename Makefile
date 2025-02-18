@@ -2,8 +2,6 @@ GO ?= go
 GOLANGCI-LINT ?= golangci-lint
 GIT ?= git
 
-all: fmt lint
-
 fmt generate test:
 	@$(GO) $@ ./...
 
@@ -18,4 +16,4 @@ release:
 	@$(GIT) tag v$(SEMVER)
 	@$(GIT) push --tags
 
-.PHONY: all fmt generate lint proto gen release
+.PHONY: fmt generate lint gen release
