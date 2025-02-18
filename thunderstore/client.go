@@ -144,6 +144,7 @@ func (c *Client) GetPackageZip(ctx context.Context, p *Package) (*ZipReadableClo
 		if err != nil {
 			return nil, err
 		}
+		pkg.FullName = pkg.Latest.FullName
 
 		return c.GetPackageZip(ctx, pkg)
 	}

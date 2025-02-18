@@ -14,9 +14,6 @@ RUN apt-get update -y \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         lib32gcc-s1 \
-        libatomic1 \
-        libpulse-dev \
-        libpulse0 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 ENTRYPOINT ["/usr/local/bin/valheimw"]

@@ -5,7 +5,7 @@ services:
       args:
         tool: valheimw
     command:
-      - --mod=RandyKnapp/EquipmentAndQuickSlots
+      - --mod=SpikeHimself/XPortal
     volumes:
       - ./hack:/root/.cache
     environment:

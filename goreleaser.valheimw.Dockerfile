@@ -3,9 +3,6 @@ RUN apt-get update -y \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         lib32gcc-s1 \
-        libatomic1 \
-        libpulse-dev \
-        libpulse0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system valheimw \

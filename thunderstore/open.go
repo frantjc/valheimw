@@ -60,7 +60,10 @@ func Open(ctx context.Context, pkg *Package, opts ...Opt) (io.ReadCloser, error)
 		return f
 	})
 
-	installDir := filepath.Join(cache.Dir, Scheme, pkg.Namespace, pkg.Name, pkg.VersionNumber)
+	var (
+		baseDir    = filepath.Join(cache.Dir, Scheme, pkg.Namespace)
+		installDir = filepath.Join(baseDir, pkg.Name, pkg.VersionNumber)
+	)
 
 	if err := xzip.Extract(pkgZipRdr, installDir); err != nil {
 		return nil, err
@@ -71,7 +74,7 @@ func Open(ctx context.Context, pkg *Package, opts ...Opt) (io.ReadCloser, error)
 	return xio.ReadCloser{
 		Reader: rc,
 		Closer: xio.CloserFunc(func() error {
-			return errors.Join(rc.Close(), os.RemoveAll(installDir))
+			return errors.Join(rc.Close(), os.RemoveAll(baseDir))
 		}),
 	}, nil
 }
