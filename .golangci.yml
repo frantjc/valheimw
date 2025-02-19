@@ -16,7 +16,7 @@ linters:
     - revive
     - unconvert
     # test
-    - tenv
+    - usetesting
     - testpackage
     - thelper
     # auto-fix

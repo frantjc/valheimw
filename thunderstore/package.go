@@ -79,11 +79,12 @@ func (u *URL) MarshalJSON() ([]byte, error) {
 }
 
 func (p *Package) String() string {
-	if p.VersionNumber != "" {
+	switch {
+	case p.VersionNumber != "":
 		return strings.Join([]string{p.Namespace, p.Name, p.VersionNumber}, "-")
-	} else if p.Latest != nil {
+	case p.Latest != nil:
 		return strings.Join([]string{p.Latest.Namespace, p.Latest.Name, p.Latest.VersionNumber}, "-")
-	} else if p.FullName != "" {
+	case p.FullName != "":
 		return p.FullName
 	}
 
