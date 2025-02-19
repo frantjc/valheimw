@@ -62,7 +62,7 @@ func NewValheimw() *cobra.Command {
 				wd := filepath.Join(cache.Dir, "valheimw")
 				defer os.RemoveAll(wd)
 
-				if err := os.MkdirAll(wd, 0777); err != nil {
+				if err := os.MkdirAll(wd, 0775); err != nil {
 					return err
 				}
 
@@ -101,7 +101,7 @@ func NewValheimw() *cobra.Command {
 					if !opts.BepInEx && len(pkgs) > 0 {
 						opts.BepInEx = true
 
-						log.Info("installing bepinex as nothing else requested it")
+						log.Info("installing latest BepInEx as nothing specified a specific version as a dependency")
 
 						eg.Go(func() error {
 							return sindri.Extract(installCtx,

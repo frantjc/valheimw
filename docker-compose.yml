@@ -5,7 +5,9 @@ services:
       args:
         tool: valheimw
     command:
+      - -VV
       - --mod=SpikeHimself/XPortal
+      - --mod=ValheimModding/Jotunn/2.23.2
     volumes:
       - ./hack:/root/.cache
     environment:

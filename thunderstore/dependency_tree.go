@@ -12,12 +12,10 @@ func DependencyTree(ctx context.Context, pkgNames ...string) ([]Package, error) 
 
 type depTreeBldr struct {
 	client   *Client
-	seenPkgs map[string]struct{}
+	seenPkgs map[string]Package
 }
 
 func (b *depTreeBldr) buildDependencyTree(ctx context.Context, pkgNames ...string) ([]Package, error) {
-	pkgs := []Package{}
-
 	for _, pkgName := range pkgNames {
 		u, err := url.Parse(pkgName)
 		if err != nil {
@@ -38,10 +36,10 @@ func (b *depTreeBldr) buildDependencyTree(ctx context.Context, pkgNames ...strin
 		}
 
 		if b.seenPkgs == nil {
-			b.seenPkgs = map[string]struct{}{}
+			b.seenPkgs = map[string]Package{}
 		}
 
-		if _, found := b.seenPkgs[pkg.String()]; found {
+		if _, found := b.seenPkgs[pkg.Versionless()]; found && pkg.VersionNumber == "" {
 			continue
 		}
 
@@ -49,52 +47,31 @@ func (b *depTreeBldr) buildDependencyTree(ctx context.Context, pkgNames ...strin
 			b.client = DefaultClient
 		}
 
-		pkg, err = b.client.GetPackage(ctx, pkg)
+		p, err := b.client.GetPackage(ctx, pkg)
 		if err != nil {
 			return nil, err
 		}
 
-		if _, found := b.seenPkgs[pkg.String()]; found {
-			continue
-		}
+		b.seenPkgs[pkg.Versionless()] = *p
 
-		b.seenPkgs[pkg.String()] = struct{}{}
-
-		pkgs = append(pkgs, *pkg)
 		deps := pkg.Dependencies
 		if pkg.Latest != nil {
 			deps = pkg.Latest.Dependencies
 		}
 
-		depPkgs, err := b.buildDependencyTree(ctx, deps...)
-		if err != nil {
+		if _, err = b.buildDependencyTree(ctx, deps...); err != nil {
 			return nil, err
-		}
-
-		pkgs = append(pkgs, depPkgs...)
-	}
-
-	return dedupePkgs(pkgs), nil
-}
-
-func dedupePkgs(pkgs []Package) []Package {
-	seenPkgs := map[string]Package{}
-
-	for _, pkg := range pkgs {
-		key := fmt.Sprintf("%s|%s", pkg.Namespace, pkg.Name)
-		if seenPkg, ok := seenPkgs[key]; !ok || seenPkg.VersionNumber == "" {
-			seenPkgs[key] = pkg
 		}
 	}
 
 	var (
-		deduped = make([]Package, len(seenPkgs))
-		i       = 0
+		pkgs = make([]Package, len(b.seenPkgs))
+		i    int
 	)
-	for _, pkg := range seenPkgs {
-		deduped[i] = pkg
+	for _, seenPkg := range b.seenPkgs {
+		pkgs[i] = seenPkg
 		i++
 	}
 
-	return deduped
+	return pkgs, nil
 }

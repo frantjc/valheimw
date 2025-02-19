@@ -79,16 +79,19 @@ func (u *URL) MarshalJSON() ([]byte, error) {
 }
 
 func (p *Package) String() string {
-	if p.FullName == "" {
-		return strings.Join(
-			xslice.Filter([]string{p.Namespace, p.Name, p.VersionNumber}, func(s string, _ int) bool {
-				return s != ""
-			}),
-			"-",
-		)
+	if p.VersionNumber != "" {
+		return strings.Join([]string{p.Namespace, p.Name, p.VersionNumber}, "-")
+	} else if p.Latest != nil {
+		return strings.Join([]string{p.Latest.Namespace, p.Latest.Name, p.Latest.VersionNumber}, "-")
+	} else if p.FullName != "" {
+		return p.FullName
 	}
 
-	return p.FullName
+	return strings.Join([]string{p.Namespace, p.Name}, "-")
+}
+
+func (p *Package) Versionless() string {
+	return strings.Join([]string{p.Namespace, p.Name}, "-")
 }
 
 func ParsePackage(s string) (*Package, error) {
