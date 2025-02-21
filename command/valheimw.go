@@ -70,9 +70,10 @@ func NewValheimw() *cobra.Command {
 					ctx            = logr.NewContextWithSlogLogger(cmd.Context(), newSlogr(cmd, verbosity))
 					log            = logr.FromContextOrDiscard(ctx)
 					eg, installCtx = errgroup.WithContext(ctx)
+					modded         = len(mods) > 0
 				)
 
-				if len(mods) > 0 {
+				if modded {
 					log.Info("resolving dependency tree")
 
 					pkgs, err := thunderstore.DependencyTree(ctx, mods...)
@@ -98,7 +99,7 @@ func NewValheimw() *cobra.Command {
 						})
 					}
 
-					if !opts.BepInEx && len(pkgs) > 0 {
+					if !opts.BepInEx && modded {
 						opts.BepInEx = true
 
 						log.Info("installing latest BepInEx as nothing specified a specific version as a dependency")
@@ -125,7 +126,33 @@ func NewValheimw() *cobra.Command {
 					return err
 				}
 
+				if modded {
+					var (
+						saveCfgDir    = filepath.Join(opts.SaveDir, "config")
+						bepInExCfgDir = filepath.Join(wd, "BepInEx/config")
+					)
+
+					if err := os.MkdirAll(saveCfgDir, 0775); err != nil {
+						return err
+					}
+
+					if err := xtar.Extract(
+						tar.NewReader(xtar.Compress(saveCfgDir)),
+						bepInExCfgDir,
+					); err != nil {
+						return err
+					}
+
+					defer func() {
+						_ = xtar.Extract(
+							tar.NewReader(xtar.Compress(bepInExCfgDir)),
+							saveCfgDir,
+						)
+					}()
+				}
+
 				log.Info("finished installing")
+
 				log.Info("configuring HTTP server")
 
 				var (
