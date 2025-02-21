@@ -10,7 +10,7 @@ lint:
 
 gen: generate
 
-SEMVER ?= 3.1.3
+SEMVER ?= 3.2.0
 
 release:
 	@$(GIT) tag v$(SEMVER)
