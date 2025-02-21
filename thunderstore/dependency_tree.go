@@ -7,7 +7,22 @@ import (
 )
 
 func DependencyTree(ctx context.Context, pkgNames ...string) ([]Package, error) {
-	return new(depTreeBldr).buildDependencyTree(ctx, pkgNames...)
+	b := new(depTreeBldr)
+
+	if err := b.buildDependencyTree(ctx, pkgNames...); err != nil {
+		return nil, err
+	}
+
+	var (
+		pkgs = make([]Package, len(b.seenPkgs))
+		i    int
+	)
+	for _, seenPkg := range b.seenPkgs {
+		pkgs[i] = seenPkg
+		i++
+	}
+
+	return pkgs, nil
 }
 
 type depTreeBldr struct {
@@ -15,20 +30,20 @@ type depTreeBldr struct {
 	seenPkgs map[string]Package
 }
 
-func (b *depTreeBldr) buildDependencyTree(ctx context.Context, pkgNames ...string) ([]Package, error) {
+func (b *depTreeBldr) buildDependencyTree(ctx context.Context, pkgNames ...string) error {
 	for _, pkgName := range pkgNames {
 		u, err := url.Parse(pkgName)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if u.Scheme != "" && u.Scheme != Scheme {
-			return nil, fmt.Errorf("unsupported scheme %s", u.Scheme)
+			return fmt.Errorf("unsupported scheme %s", u.Scheme)
 		}
 
 		pkg, err := ParsePackage(fmt.Sprintf("%s%s", u.Host, u.Path))
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if b == nil {
@@ -49,29 +64,20 @@ func (b *depTreeBldr) buildDependencyTree(ctx context.Context, pkgNames ...strin
 
 		p, err := b.client.GetPackage(ctx, pkg)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		b.seenPkgs[pkg.Versionless()] = *p
+		b.seenPkgs[p.Versionless()] = *p
 
-		deps := pkg.Dependencies
-		if pkg.Latest != nil {
-			deps = pkg.Latest.Dependencies
+		deps := p.Dependencies
+		if p.Latest != nil {
+			deps = p.Latest.Dependencies
 		}
 
-		if _, err = b.buildDependencyTree(ctx, deps...); err != nil {
-			return nil, err
+		if err = b.buildDependencyTree(ctx, deps...); err != nil {
+			return err
 		}
 	}
 
-	var (
-		pkgs = make([]Package, len(b.seenPkgs))
-		i    int
-	)
-	for _, seenPkg := range b.seenPkgs {
-		pkgs[i] = seenPkg
-		i++
-	}
-
-	return pkgs, nil
+	return nil
 }
