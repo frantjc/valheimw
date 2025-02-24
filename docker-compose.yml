@@ -21,6 +21,8 @@ services:
     command:
       - --addr
       - tcp://0.0.0.0:1234
+    networks:
+      - postgres
   boiler:
     build:
       context: .
@@ -29,9 +31,29 @@ services:
     command:
       - -VV
       - --buildkitd=tcp://buildkitd:1234
+      - --db=postgres://phish3y:pwd@postgres:5432/steamapp?sslmode=disable
     volumes:
       - ./hack:/root/.cache
     ports:
       - 5000:5000
     depends_on:
       - buildkitd
+    networks:
+      - postgres
+  valheim:
+    image: localhost:5000/896660
+    command:
+      - -name
+      - My server
+      - -world
+      - Dedicated
+      - -password
+      - secret
+      - -crossplay
+    ports:
+      - 2456:2456/udp
+    depends_on:
+      - boiler
+networks:
+  postgres:
+    external: true
