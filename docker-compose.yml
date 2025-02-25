@@ -21,8 +21,14 @@ services:
     command:
       - --addr
       - tcp://0.0.0.0:1234
-    networks:
-      - postgres
+  postgres:
+    image: postgres:17
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: sindri
+      POSTGRES_USER: sindri
+      POSTGRES_PASSWORD: changeme
   boiler:
     build:
       context: .
@@ -31,15 +37,13 @@ services:
     command:
       - -VV
       - --buildkitd=tcp://buildkitd:1234
-      - --db=postgres://phish3y:pwd@postgres:5432/steamapp?sslmode=disable
+      - --db=postgres://sindri:changeme@postgres:5432/sindri?sslmode=disable
     volumes:
       - ./hack:/root/.cache
     ports:
       - 5000:5000
     depends_on:
       - buildkitd
-    networks:
-      - postgres
   valheim:
     image: localhost:5000/896660
     command:
@@ -54,6 +58,3 @@ services:
       - 2456:2456/udp
     depends_on:
       - boiler
-networks:
-  postgres:
-    external: true

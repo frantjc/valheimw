@@ -37,7 +37,7 @@ type Database struct {
 
 var _ steamapp.Database = &Database{}
 
-func (g *Database) GetBuildImageOpts(
+func (g Database) GetBuildImageOpts(
 	_ context.Context, 
 	appID int, 
 	_ string,
@@ -93,4 +93,8 @@ func (g *Database) GetBuildImageOpts(
 
 	// Assume it works out of the box.
 	return &steamapp.GettableBuildImageOpts{}, nil
+}
+
+func (g Database) Close() error {
+	return nil
 }

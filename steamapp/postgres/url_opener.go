@@ -33,7 +33,6 @@ func (d *DatabaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamap
 		return nil, fmt.Errorf("invalid scheme %s, expected %s", u.Scheme, Scheme)
 	}
 
-	// TODO when/where do we want to close this?
 	db, err := sqlx.Open(u.Scheme, u.String())
 	if err != nil {
 		return nil, err
@@ -54,7 +53,7 @@ type Database struct {
 
 var _ steamapp.Database = &Database{}
 
-func (g *Database) GetBuildImageOpts(
+func (g Database) GetBuildImageOpts(
 	_ context.Context,
 	appID int,
 	_ string,
@@ -95,4 +94,8 @@ func (g *Database) GetBuildImageOpts(
 		Entrypoint:   o.Entrypoint,
 		Cmd:          o.Cmd,
 	}, nil
+}
+
+func (g Database) Close() error {
+	return g.db.Close()
 }
