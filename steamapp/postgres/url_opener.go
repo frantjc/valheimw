@@ -12,7 +12,7 @@ import (
 	"github.com/frantjc/sindri/steamapp"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	_ "github.com/lib/pq"
+	_ "github.com/lib/pq" // postgres driver
 )
 
 const (
@@ -44,6 +44,24 @@ func (d *DatabaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamap
 		return nil, err
 	}
 
+	q := `
+		CREATE TABLE IF NOT EXISTS steamapps (
+			appid integer primary key,
+			datecreated timestamp without time zone not null,
+			baseimage text not null,
+			aptpackages text[] not null,
+			launchtype text not null,
+			platformtype text not null,
+			execs text[] not null,
+			entrypoint text[] not null,
+			cmd text[] not null
+		)
+	`
+	_, err = db.Exec(q)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Database{db}, nil
 }
 
@@ -53,7 +71,7 @@ type Database struct {
 
 var _ steamapp.Database = &Database{}
 
-func (g Database) GetBuildImageOpts(
+func (g *Database) GetBuildImageOpts(
 	_ context.Context,
 	appID int,
 	_ string,
@@ -96,6 +114,6 @@ func (g Database) GetBuildImageOpts(
 	}, nil
 }
 
-func (g Database) Close() error {
+func (g *Database) Close() error {
 	return g.db.Close()
 }
