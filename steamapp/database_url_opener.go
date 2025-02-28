@@ -52,6 +52,7 @@ func (o *GettableBuildImageOpts) Apply(opts *BuildImageOpts) {
 
 type Database interface {
 	GetBuildImageOpts(context.Context, int, string) (*GettableBuildImageOpts, error)
+	Close() error
 }
 
 type DatabaseURLOpener interface {

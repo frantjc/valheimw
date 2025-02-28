@@ -11,6 +11,8 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-containerregistry v0.20.3
 	github.com/google/uuid v1.6.0
+	github.com/jmoiron/sqlx v1.4.0
+	github.com/lib/pq v1.10.9
 	github.com/mmatczuk/anyflag v0.0.0-20240709090339-eb9e24cd1b44
 	github.com/moby/buildkit v0.19.0
 	github.com/opencontainers/go-digest v1.0.0

@@ -9,6 +9,7 @@ import (
 
 	"github.com/frantjc/sindri/command"
 	_ "github.com/frantjc/sindri/steamapp/dummy"
+	_ "github.com/frantjc/sindri/steamapp/postgres"
 	xerrors "github.com/frantjc/x/errors"
 	xos "github.com/frantjc/x/os"
 	_ "github.com/moby/buildkit/client/connhelper/dockercontainer"

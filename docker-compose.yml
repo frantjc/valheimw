@@ -21,6 +21,19 @@ services:
     command:
       - --addr
       - tcp://0.0.0.0:1234
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: sindri
+      POSTGRES_USER: sindri
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sindri -d sindri"]
+      interval: 3s
+      retries: 3
+      start_period: 10s
   boiler:
     build:
       context: .
@@ -29,9 +42,27 @@ services:
     command:
       - -VV
       - --buildkitd=tcp://buildkitd:1234
+      - --db=postgres://sindri:${POSTGRES_PASSWORD:-changeme}@postgres:5432/sindri?sslmode=disable
     volumes:
       - ./hack:/root/.cache
     ports:
       - 5000:5000
     depends_on:
-      - buildkitd
+      buildkitd:
+        condition: service_started 
+      postgres:
+        condition: service_healthy
+  valheim:
+    image: localhost:5000/896660
+    command:
+      - -name
+      - My server
+      - -world
+      - Dedicated
+      - -password
+      - secret
+      - -crossplay
+    ports:
+      - 2456:2456/udp
+    depends_on:
+      - boiler
