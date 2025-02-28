@@ -27,11 +27,15 @@ func init() {
 
 type DatabaseURLOpener struct{}
 
-func (d *DatabaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamapp.Database, error) {
+func (d *DatabaseURLOpener) OpenDatabase(ctx context.Context, u *url.URL) (steamapp.Database, error) {
 	if u.Scheme != Scheme {
 		return nil, fmt.Errorf("invalid scheme %s, expected %s", u.Scheme, Scheme)
 	}
 
+	return NewDatabase(ctx, u)
+}
+
+func NewDatabase(ctx context.Context, u *url.URL) (*Database, error) {
 	db, err := sqlx.Open(u.Scheme, u.String())
 	if err != nil {
 		return nil, err
@@ -39,7 +43,7 @@ func (d *DatabaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamap
 
 	db.SetMaxOpenConns(5)
 
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		return nil, err
 	}
 
@@ -56,8 +60,7 @@ func (d *DatabaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamap
 			cmd text[] not null
 		)
 	`
-	_, err = db.Exec(q)
-	if err != nil {
+	if _, err = db.ExecContext(ctx, q); err != nil {
 		return nil, err
 	}
 
@@ -71,7 +74,7 @@ type Database struct {
 var _ steamapp.Database = &Database{}
 
 func (g *Database) GetBuildImageOpts(
-	_ context.Context,
+	ctx context.Context,
 	appID int,
 	_ string,
 ) (*steamapp.GettableBuildImageOpts, error) {
@@ -93,7 +96,7 @@ func (g *Database) GetBuildImageOpts(
 		WHERE appid = $1
 	`
 	var o Opts
-	if err := g.db.Get(&o, q, appID); err != nil {
+	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			// Assume it works out of the box.
 			return &steamapp.GettableBuildImageOpts{}, nil

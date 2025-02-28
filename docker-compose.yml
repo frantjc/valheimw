@@ -34,6 +34,19 @@ services:
       interval: 3s
       retries: 3
       start_period: 10s
+  stoker:
+    build:
+      context: .
+      args:
+        tool: stoker
+    command:
+      - -VV
+      - --db=postgres://sindri:${POSTGRES_PASSWORD:-changeme}@postgres:5432/sindri?sslmode=disable
+    ports:
+      - 5050:5050
+    depends_on:
+      postgres:
+        condition: service_healthy
   boiler:
     build:
       context: .

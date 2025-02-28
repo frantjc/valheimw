@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	"github.com/frantjc/sindri/contreg"
@@ -22,34 +21,29 @@ import (
 
 func NewBoiler() *cobra.Command {
 	var (
-		verbosity int
-		addr      string
+		addr      int
 		buildkitd string
 		bucket    string
 		db        string
 		cmd       = &cobra.Command{
-			Use:           "boiler",
-			SilenceErrors: true,
-			SilenceUsage:  true,
+			Use: "boiler",
 			RunE: func(cmd *cobra.Command, _ []string) error {
 				var (
-					slog     = newSlogr(cmd, verbosity)
-					eg, ctx  = errgroup.WithContext(logr.NewContextWithSlogLogger(cmd.Context(), slog))
+					eg, ctx  = errgroup.WithContext(cmd.Context())
 					log      = logr.FromContextOrDiscard(ctx)
 					registry = &steamapp.PullRegistry{
 						ImageBuilder: &steamapp.ImageBuilder{},
 					}
 					srv = &http.Server{
-						Addr:              addr,
 						ReadHeaderTimeout: time.Second * 5,
 						Handler:           contreg.NewPullHandler(registry),
 						BaseContext: func(_ net.Listener) context.Context {
-							return logr.NewContextWithSlogLogger(context.Background(), slog)
+							return ctx
 						},
 					}
 				)
 
-				l, err := net.Listen("tcp", addr)
+				l, err := net.Listen("tcp", fmt.Sprintf(":%d", addr))
 				if err != nil {
 					return err
 				}
@@ -92,13 +86,10 @@ func NewBoiler() *cobra.Command {
 		}
 	)
 
-	cmd.SetVersionTemplate("{{ .Name }}{{ .Version }} " + runtime.Version() + "\n")
-	cmd.Flags().CountVarP(&verbosity, "verbose", "V", "verbosity")
-
-	cmd.Flags().StringVar(&addr, "addr", ":5000", "address")
-	cmd.Flags().StringVar(&buildkitd, "buildkitd", appdefaults.Address, "BuildKitd URL")
-	cmd.Flags().StringVar(&bucket, "bucket", fmt.Sprintf("file://%s?create_dir=1&no_tmp_dir=1", filepath.Join(cache.Dir, "boiler")), "bucket URL")
-	cmd.Flags().StringVar(&db, "db", fmt.Sprintf("dummy://%s", steamapp.DefaultDir), "database URL")
+	cmd.Flags().IntVar(&addr, "addr", 5000, "Port for boiler to listen on.")
+	cmd.Flags().StringVar(&buildkitd, "buildkitd", appdefaults.Address, "BuildKitd URL for boiler.")
+	cmd.Flags().StringVar(&bucket, "bucket", fmt.Sprintf("file://%s?create_dir=1&no_tmp_dir=1", filepath.Join(cache.Dir, "boiler")), "Bucket URL for boiler.")
+	cmd.Flags().StringVar(&db, "db", fmt.Sprintf("dummy://%s", steamapp.DefaultDir), "Database URL for boiler.")
 
 	return cmd
 }
