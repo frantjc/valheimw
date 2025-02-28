@@ -22,13 +22,13 @@ services:
       - --addr
       - tcp://0.0.0.0:1234
   postgres:
-    image: postgres:17
+    image: postgres:17-alpine
     ports:
       - 5432:5432
     environment:
       POSTGRES_DB: sindri
       POSTGRES_USER: sindri
-      POSTGRES_PASSWORD: changeme
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sindri -d sindri"]
       interval: 3s
@@ -42,7 +42,7 @@ services:
     command:
       - -VV
       - --buildkitd=tcp://buildkitd:1234
-      - --db=postgres://sindri:${POSTGRES_PASSWORD}@postgres:5432/sindri?sslmode=disable
+      - --db=postgres://sindri:${POSTGRES_PASSWORD:-changeme}@postgres:5432/sindri?sslmode=disable
     volumes:
       - ./hack:/root/.cache
     ports:
