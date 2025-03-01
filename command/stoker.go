@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/frantjc/sindri/internal/api"
+	shttp "github.com/frantjc/sindri/internal/adapters/in/http"
 	"github.com/frantjc/sindri/steamapp/postgres"
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
@@ -45,7 +45,7 @@ func NewStoker() *cobra.Command {
 				}
 				defer database.Close()
 
-				srv.Handler = api.NewHandler(path, database)
+				srv.Handler = shttp.NewHandler(path, database)
 
 				l, err := net.Listen("tcp", fmt.Sprintf(":%d", addr))
 				if err != nil {
