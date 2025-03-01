@@ -9,10 +9,6 @@ cache/
 
 .DS_Store
 
-rootfs/
-privileged
-version
-
 node_modules/
 
 site/
