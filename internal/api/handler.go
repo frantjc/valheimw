@@ -23,6 +23,7 @@ func NewHandler(basePath string, db *postgres.Database) http.Handler {
 
 	r.Route(h.Path, func(r chi.Router) {
 		var _ = h.Database
+		var _ = r
 	})
 
 	r.NotFound(http.NotFound)
