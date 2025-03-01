@@ -37,7 +37,7 @@ func NewMist() *cobra.Command {
 
 	cmd.SetVersionTemplate("{{ .Name }}{{ .Version }} " + runtime.Version() + "\n")
 
-	cmd.Flags().BoolVar(&clean, "clean", false, "If set, clean the cache and exit")
+	cmd.Flags().BoolVar(&clean, "clean", false, "Clean the cache and exit")
 
 	return cmd
 }
