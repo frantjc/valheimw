@@ -72,9 +72,9 @@ func NewStoker() *cobra.Command {
 		}
 	)
 
-	cmd.Flags().IntVarP(&addr, "addr", "a", 5050, "Port for stoker to listen on.")
-	cmd.Flags().StringVar(&db, "db", "postgres://localhost:5432?sslmode=disable", "Database URL for stoker.")
-	cmd.Flags().StringVar(&path, "path", "", "Base path for stoker.")
+	cmd.Flags().IntVarP(&addr, "addr", "a", 5050, "Port for stoker to listen on")
+	cmd.Flags().StringVar(&db, "db", "postgres://localhost:5432?sslmode=disable", "Database URL for stoker")
+	cmd.Flags().StringVar(&path, "path", "", "Base path for stoker")
 
 	return cmd
 }
