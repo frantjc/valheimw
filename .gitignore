@@ -9,7 +9,7 @@ bin/
 dist/
 
 # docker-compose
-hack/
+cache/
 
 # macOS
 .DS_Store

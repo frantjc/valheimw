@@ -5,7 +5,7 @@ bin/
 
 dist/
 
-hack/
+cache/
 
 .DS_Store
 
