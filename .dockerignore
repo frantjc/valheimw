@@ -1,39 +1,17 @@
-# macOS
-.DS_Store
-
-# terraform
-.terraform/
-*terraform.tfstate.*
-
-# IDE
-.vscode/
 .idea/
+.vscode/
 
-# secret
-.kube/
+bin/
 
-# goreleaser
 dist/
 
-# go
-vendor/
+cache/
 
-# git-crypt
-.git-crypt/
+.DS_Store
 
-# GitHub
-.github/
+node_modules/
 
-# Helm
-values*.yaml
+site/
+gh-pages/
 
-# Docker
-*Dockerfile
-*compose.*
-
-# misc
-.*
-docs/
-examples/
-hack/
-*.md
+.env

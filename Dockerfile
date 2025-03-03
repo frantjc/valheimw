@@ -32,4 +32,8 @@ COPY --from=build /boiler /usr/local/bin
 FROM scratch AS mist
 COPY --from=build /mist /mist
 
+FROM scratch AS stoker
+COPY --from=build /stoker /stoker
+ENTRYPOINT ["/stoker"]
+
 FROM $tool

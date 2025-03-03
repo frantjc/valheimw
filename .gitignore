@@ -1,23 +1,24 @@
-# macOS
-.DS_Store
-
-# terraform
-.terraform/
-*terraform.tfstate.*
-
 # IDE
-.vscode/
 .idea/
+.vscode/
 
-# secret
-.kube/
+# make
+bin/
 
 # goreleaser
 dist/
 
-# go
-vendor/
+# docker-compose
+cache/
 
-hack/
+# macOS
+.DS_Store
+
+# nodejs
+node_modules/
+
+# mkdocs
+site/
+gh-pages/
 
 .env

@@ -7,13 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -35,29 +33,20 @@ const (
 	bepInExName      = "BepInExPack_Valheim"
 )
 
-func newSlogr(cmd *cobra.Command, verbosity int) *slog.Logger {
-	return slog.New(slog.NewTextHandler(cmd.OutOrStdout(), &slog.HandlerOptions{
-		Level: slog.LevelError - (slog.LevelError-slog.LevelWarn)*slog.Level(verbosity),
-	}))
-}
-
 func NewValheimw() *cobra.Command {
 	var (
-		addr     string
+		addr     int
 		openOpts = &steamapp.OpenOpts{
 			LaunchType: "server",
 		}
 		mods        []string
-		verbosity   int
 		noDB, noFWL bool
 		playerLists = &valheim.PlayerLists{}
 		opts        = &valheim.Opts{
 			Password: os.Getenv("VALHEIM_PASSWORD"),
 		}
 		cmd = &cobra.Command{
-			Use:           "valheimw",
-			SilenceErrors: true,
-			SilenceUsage:  true,
+			Use: "valheimw",
 			RunE: func(cmd *cobra.Command, _ []string) error {
 				wd := filepath.Join(cache.Dir, "valheimw")
 				defer os.RemoveAll(wd)
@@ -67,7 +56,7 @@ func NewValheimw() *cobra.Command {
 				}
 
 				var (
-					ctx            = logr.NewContextWithSlogLogger(cmd.Context(), newSlogr(cmd, verbosity))
+					ctx            = cmd.Context()
 					log            = logr.FromContextOrDiscard(ctx)
 					eg, installCtx = errgroup.WithContext(ctx)
 					modded         = len(mods) > 0
@@ -443,14 +432,13 @@ func NewValheimw() *cobra.Command {
 
 				eg.Go(sub.Run)
 
-				l, err := net.Listen("tcp", addr)
+				l, err := net.Listen("tcp", fmt.Sprintf(":%d", addr))
 				if err != nil {
 					return err
 				}
 				defer l.Close()
 
 				srv := &http.Server{
-					Addr:              addr,
 					ReadHeaderTimeout: time.Second * 5,
 					Handler:           ingress.New(paths...),
 				}
@@ -476,15 +464,12 @@ func NewValheimw() *cobra.Command {
 		}
 	)
 
-	cmd.SetVersionTemplate("{{ .Name }}{{ .Version }} " + runtime.Version() + "\n")
-	cmd.Flags().CountVarP(&verbosity, "verbose", "V", "verbosity")
-
 	cmd.Flags().StringArrayVarP(&mods, "mod", "m", nil, "Thunderstore mods (case-sensitive)")
 
-	cmd.Flags().BoolVar(&noDB, "no-db", false, "do not expose the world .db file for download")
-	cmd.Flags().BoolVar(&noFWL, "no-fwl", false, "do not expose the world .fwl file information")
+	cmd.Flags().BoolVar(&noDB, "no-db", false, "Do not expose the world .db file for download")
+	cmd.Flags().BoolVar(&noFWL, "no-fwl", false, "Do not expose the world .fwl file information")
 
-	cmd.Flags().StringVar(&addr, "addr", ":8080", "address")
+	cmd.Flags().IntVar(&addr, "addr", 8080, "Port for valheimw to listen on")
 
 	cmd.Flags().StringVar(&opts.SaveDir, "savedir", filepath.Join(cache.Dir, "valheim"), "Valheim server -savedir")
 	cmd.Flags().StringVar(&opts.Name, "name", "sindri", "Valheim server -name")
@@ -516,7 +501,7 @@ func NewValheimw() *cobra.Command {
 			),
 		),
 		"preset",
-		"Valheim server -preset",
+		"Valheim server -preset.",
 	)
 
 	cmd.Flags().Var(
@@ -531,7 +516,7 @@ func NewValheimw() *cobra.Command {
 			),
 		),
 		"combat-modifier",
-		"Valheim server -modifier combat",
+		"Valheim server -modifier combat.",
 	)
 
 	cmd.Flags().Var(
@@ -547,7 +532,7 @@ func NewValheimw() *cobra.Command {
 			),
 		),
 		"death-penalty-modifier",
-		"Valheim server -modifier deathpenalty",
+		"Valheim server -modifier deathpenalty.",
 	)
 
 	cmd.Flags().Var(
@@ -563,7 +548,7 @@ func NewValheimw() *cobra.Command {
 			),
 		),
 		"resource-modifier",
-		"Valheim server -modifier resources",
+		"Valheim server -modifier resources.",
 	)
 
 	cmd.Flags().Var(
@@ -579,7 +564,7 @@ func NewValheimw() *cobra.Command {
 			),
 		),
 		"raid-modifier",
-		"Valheim server -modifier raids",
+		"Valheim server -modifier raids.",
 	)
 
 	cmd.Flags().Var(
@@ -593,7 +578,7 @@ func NewValheimw() *cobra.Command {
 			),
 		),
 		"portal-modifier",
-		"Valheim server -modifier portals",
+		"Valheim server -modifier portals.",
 	)
 
 	cmd.Flags().BoolVar(&opts.NoBuildCost, "no-build-cost", false, "Valheim server -setkey nobuildcost")

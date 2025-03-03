@@ -18,14 +18,6 @@ jobs:
         with:
           go-version: 1.23
       - uses: golangci/golangci-lint-action@v6.5.0
-  build-valheimw:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: docker/build-push-action@v6
-        with:
-          load: true
-          build-args: |
-            tool=valheimw
   build-boiler:
     runs-on: ubuntu-latest
     steps:
@@ -106,3 +98,19 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           tags: |
             ghcr.io/frantjc/mist:${{ github.sha }}
+  build-stoker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/build-push-action@v6
+        with:
+          load: true
+          build-args: |
+            tool=stoker
+  build-valheimw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/build-push-action@v6
+        with:
+          load: true
+          build-args: |
+            tool=valheimw

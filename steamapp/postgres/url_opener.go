@@ -18,6 +18,20 @@ const (
 	Scheme = "postgres"
 )
 
+type BuildImageOptsRow struct {
+	AppID        int            `db:"appid"`
+	DateCreated  time.Time      `db:"date_created"`
+	DateUpdated  time.Time      `db:"date_updated"`
+	BaseImageRef string         `db:"base_image"`
+	AptPkgs      pq.StringArray `db:"apt_packages"`
+	LaunchType   string         `db:"launch_type"`
+	PlatformType string         `db:"platform_type"`
+	Execs        pq.StringArray `db:"execs"`
+	Entrypoint   pq.StringArray `db:"entrypoint"`
+	Cmd          pq.StringArray `db:"cmd"`
+	Locked       bool           `db:"locked"`
+}
+
 func init() {
 	steamapp.RegisterDatabase(
 		new(DatabaseURLOpener),
@@ -27,11 +41,15 @@ func init() {
 
 type DatabaseURLOpener struct{}
 
-func (d *DatabaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamapp.Database, error) {
+func (d *DatabaseURLOpener) OpenDatabase(ctx context.Context, u *url.URL) (steamapp.Database, error) {
 	if u.Scheme != Scheme {
 		return nil, fmt.Errorf("invalid scheme %s, expected %s", u.Scheme, Scheme)
 	}
 
+	return NewDatabase(ctx, u)
+}
+
+func NewDatabase(ctx context.Context, u *url.URL) (*Database, error) {
 	db, err := sqlx.Open(u.Scheme, u.String())
 	if err != nil {
 		return nil, err
@@ -39,25 +57,26 @@ func (d *DatabaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamap
 
 	db.SetMaxOpenConns(5)
 
-	if err := db.Ping(); err != nil {
+	if err := db.PingContext(ctx); err != nil {
 		return nil, err
 	}
 
 	q := `
 		CREATE TABLE IF NOT EXISTS steamapps (
-			appid integer primary key,
-			datecreated timestamp without time zone not null,
-			baseimage text not null,
-			aptpackages text[] not null,
-			launchtype text not null,
-			platformtype text not null,
-			execs text[] not null,
-			entrypoint text[] not null,
-			cmd text[] not null
-		)
+			appid INTEGER PRIMARY KEY,
+			date_created TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+			date_updated TIMESTAMP WITHOUT time ZONE NOT NULL,
+			base_image TEXT NOT NULL,
+			apt_packages TEXT[] NOT NULL,
+			launch_type TEXT NOT NULL,
+			platform_type TEXT NOT NULL,
+			execs TEXT[] NOT NULL,
+			entrypoint TEXT[] NOT NULL,
+			cmd TEXT[] NOT NULL,
+			locked BOOLEAN NOT NULL
+		);
 	`
-	_, err = db.Exec(q)
-	if err != nil {
+	if _, err = db.ExecContext(ctx, q); err != nil {
 		return nil, err
 	}
 
@@ -71,29 +90,28 @@ type Database struct {
 var _ steamapp.Database = &Database{}
 
 func (g *Database) GetBuildImageOpts(
-	_ context.Context,
+	ctx context.Context,
 	appID int,
 	_ string,
 ) (*steamapp.GettableBuildImageOpts, error) {
-	type Opts struct {
-		AppID        int            `db:"appid"`
-		DateCreated  time.Time      `db:"datecreated"`
-		BaseImageRef string         `db:"baseimage"`
-		AptPkgs      pq.StringArray `db:"aptpackages"`
-		LaunchType   string         `db:"launchtype"`
-		PlatformType string         `db:"platformtype"`
-		Execs        pq.StringArray `db:"execs"`
-		Entrypoint   pq.StringArray `db:"entrypoint"`
-		Cmd          pq.StringArray `db:"cmd"`
-	}
-
 	q := `
-		SELECT appid, datecreated, baseimage, aptpackages, launchtype, platformtype, execs, entrypoint, cmd
+		SELECT 
+			appid, 
+			date_created, 
+			date_updated, 
+			base_image, 
+			apt_packages, 
+			launch_type, 
+			platform_type, 
+			execs, 
+			entrypoint, 
+			cmd, 
+			locked
 		FROM steamapps
-		WHERE appid = $1
+		WHERE appid = $1;
 	`
-	var o Opts
-	if err := g.db.Get(&o, q, appID); err != nil {
+	var o BuildImageOptsRow
+	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			// Assume it works out of the box.
 			return &steamapp.GettableBuildImageOpts{}, nil
@@ -111,6 +129,90 @@ func (g *Database) GetBuildImageOpts(
 		Entrypoint:   o.Entrypoint,
 		Cmd:          o.Cmd,
 	}, nil
+}
+
+func (g *Database) SelectBuildImageOpts(
+	ctx context.Context,
+	appID int,
+) (*BuildImageOptsRow, error) {
+	q := `
+		SELECT 
+			appid, 
+			date_created, 
+			date_updated, 
+			base_image, 
+			apt_packages, 
+			launch_type, 
+			platform_type, 
+			execs, 
+			entrypoint, 
+			cmd, 
+			locked
+		FROM steamapps
+		WHERE appid = $1;
+	`
+	var o BuildImageOptsRow
+	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Assume it works out of the box.
+			return &BuildImageOptsRow{}, nil
+		}
+
+		return nil, err
+	}
+
+	return &o, nil
+}
+
+func (g *Database) UpsertBuildImageOpts(ctx context.Context, appID int, row BuildImageOptsRow) (*BuildImageOptsRow, error) {
+	q := `
+		INSERT INTO steamapps(
+			appid, 
+			date_created, 
+			date_updated, 
+			base_image, 
+			apt_packages, 
+			launch_type, 
+			platform_type, 
+			execs, 
+			entrypoint, 
+			cmd, 
+			locked
+		)
+		VALUES($1, NOW(), NOW(), $2, $3, $4, $5, $6, $7, $8, false)
+		ON CONFLICT (appid)
+		DO UPDATE SET 
+			date_updated = NOW(), 
+			base_image = $2,
+			apt_packages = $3, 
+			launch_type = $4, 
+			platform_type = $5, 
+			execs = $6, 
+			entrypoint = $7, 
+			cmd = $8
+		RETURNING *;
+	`
+
+	var o BuildImageOptsRow
+	if err := g.db.QueryRowContext(
+		ctx,
+		q,
+		appID,
+		row.BaseImageRef,
+		row.AptPkgs,
+		row.LaunchType,
+		row.PlatformType,
+		row.Execs,
+		row.Entrypoint,
+		row.Cmd,
+	).Scan(
+		&o.AppID, &o.DateCreated, &o.DateUpdated, &o.BaseImageRef, &o.AptPkgs,
+		&o.LaunchType, &o.PlatformType, &o.Execs, &o.Entrypoint, &o.Cmd, &o.Locked,
+	); err != nil {
+		return nil, err
+	}
+
+	return &o, nil
 }
 
 func (g *Database) Close() error {

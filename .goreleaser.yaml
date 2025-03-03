@@ -24,6 +24,18 @@ builds:
     hooks:
       post:
         - upx {{ .Path }}
+  - main: ./cmd/stoker
+    id: stoker
+    binary: stoker
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+    hooks:
+      post:
+        - upx {{ .Path }}
   - main: ./cmd/valheimw
     id: valheimw
     binary: valheimw
@@ -59,6 +71,12 @@ dockers:
       - ghcr.io/frantjc/mist:{{ .Major }}.{{ .Minor }}
       - ghcr.io/frantjc/mist:{{ .Major }}
       - ghcr.io/frantjc/mist:latest
+  - dockerfile: goreleaser.stoker.Dockerfile
+    image_templates:
+      - ghcr.io/frantjc/stoker:{{ .RawVersion }}
+      - ghcr.io/frantjc/stoker:{{ .Major }}.{{ .Minor }}
+      - ghcr.io/frantjc/stoker:{{ .Major }}
+      - ghcr.io/frantjc/stoker:latest
   - dockerfile: goreleaser.valheimw.Dockerfile
     image_templates:
       - ghcr.io/frantjc/valheimw:{{ .RawVersion }}

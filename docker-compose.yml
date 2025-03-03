@@ -9,7 +9,7 @@ services:
       - --mod=SpikeHimself/XPortal
       - --mod=ValheimModding/Jotunn/2.23.2
     volumes:
-      - ./hack:/root/.cache
+      - ./cache:/root/.cache
     environment:
       VALHEIM_PASSWORD: hellothere
     ports:
@@ -34,6 +34,19 @@ services:
       interval: 3s
       retries: 3
       start_period: 10s
+  stoker:
+    build:
+      context: .
+      args:
+        tool: stoker
+    command:
+      - -VV
+      - --db=postgres://sindri:${POSTGRES_PASSWORD:-changeme}@postgres:5432/sindri?sslmode=disable
+    ports:
+      - 5050:5050
+    depends_on:
+      postgres:
+        condition: service_healthy
   boiler:
     build:
       context: .
@@ -44,7 +57,7 @@ services:
       - --buildkitd=tcp://buildkitd:1234
       - --db=postgres://sindri:${POSTGRES_PASSWORD:-changeme}@postgres:5432/sindri?sslmode=disable
     volumes:
-      - ./hack:/root/.cache
+      - ./cache:/root/.cache
     ports:
       - 5000:5000
     depends_on:

@@ -17,9 +17,7 @@ func NewMist() *cobra.Command {
 	var (
 		clean bool
 		cmd   = &cobra.Command{
-			Use:           "mist",
-			SilenceErrors: true,
-			SilenceUsage:  true,
+			Use: "mist",
 			RunE: func(cmd *cobra.Command, args []string) error {
 				if clean {
 					return errors.Join(
@@ -39,7 +37,7 @@ func NewMist() *cobra.Command {
 
 	cmd.SetVersionTemplate("{{ .Name }}{{ .Version }} " + runtime.Version() + "\n")
 
-	cmd.Flags().BoolVar(&clean, "clean", false, "clean cache and exit")
+	cmd.Flags().BoolVar(&clean, "clean", false, "Clean the cache and exit")
 
 	return cmd
 }
