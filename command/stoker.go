@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"time"
 
-	shttp "github.com/frantjc/sindri/internal/adapters/in/http"
+	"github.com/frantjc/sindri/internal/api"
 	"github.com/frantjc/sindri/steamapp/postgres"
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
@@ -45,7 +45,7 @@ func NewStoker() *cobra.Command {
 				}
 				defer database.Close()
 
-				srv.Handler = shttp.NewHandler(path, database)
+				srv.Handler = api.NewHandler(path, database)
 
 				l, err := net.Listen("tcp", fmt.Sprintf(":%d", addr))
 				if err != nil {
@@ -74,7 +74,7 @@ func NewStoker() *cobra.Command {
 
 	cmd.Flags().IntVarP(&addr, "addr", "a", 5050, "Port for stoker to listen on")
 	cmd.Flags().StringVar(&db, "db", "postgres://localhost:5432?sslmode=disable", "Database URL for stoker")
-	cmd.Flags().StringVar(&path, "path", "", "Base path for stoker")
+	cmd.Flags().StringVar(&path, "path", "/", "Base path for stoker")
 
 	return cmd
 }

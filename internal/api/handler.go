@@ -1,4 +1,4 @@
-package http
+package api
 
 import (
 	"net/http"
@@ -20,12 +20,11 @@ func NewHandler(basePath string, db *postgres.Database) http.Handler {
 	)
 
 	r.Use(middleware.RealIP)
+	r.Use(middleware.DefaultLogger)
 
 	r.Route(h.Path, func(r chi.Router) {
-		var _ = h.Database
-		var _ = r
-
 		r.Put("/steamapps/{appID}", h.UpsertSteamApp)
+		r.Get("/steamapps/{appID}", h.GetSteamApp)
 	})
 
 	r.NotFound(http.NotFound)

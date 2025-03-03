@@ -6,16 +6,31 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/frantjc/go-steamcmd"
-	"github.com/frantjc/sindri/internal/domain/steamapp/model"
 	"github.com/frantjc/sindri/steamapp"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 const (
 	Scheme = "postgres"
 )
+
+type BuildImageOptsRow struct {
+	AppID        int            `db:"appid"`
+	DateCreated  time.Time      `db:"date_created"`
+	DateUpdated  time.Time      `db:"date_updated"`
+	BaseImageRef string         `db:"base_image"`
+	AptPkgs      pq.StringArray `db:"apt_packages"`
+	LaunchType   string         `db:"launch_type"`
+	PlatformType string         `db:"platform_type"`
+	Execs        pq.StringArray `db:"execs"`
+	Entrypoint   pq.StringArray `db:"entrypoint"`
+	Cmd          pq.StringArray `db:"cmd"`
+	Locked       bool           `db:"locked"`
+}
 
 func init() {
 	steamapp.RegisterDatabase(
@@ -95,7 +110,7 @@ func (g *Database) GetBuildImageOpts(
 		FROM steamapps
 		WHERE appid = $1;
 	`
-	var o model.BuildImageOptsRow
+	var o BuildImageOptsRow
 	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			// Assume it works out of the box.
@@ -116,7 +131,40 @@ func (g *Database) GetBuildImageOpts(
 	}, nil
 }
 
-func (g *Database) UpsertBuildImageOpts(ctx context.Context, appID int, row model.BuildImageOptsRow) (*model.BuildImageOptsRow, error) {
+func (g *Database) SelectBuildImageOpts(
+	ctx context.Context,
+	appID int,
+) (*BuildImageOptsRow, error) {
+	q := `
+		SELECT 
+			appid, 
+			date_created, 
+			date_updated, 
+			base_image, 
+			apt_packages, 
+			launch_type, 
+			platform_type, 
+			execs, 
+			entrypoint, 
+			cmd, 
+			locked
+		FROM steamapps
+		WHERE appid = $1;
+	`
+	var o BuildImageOptsRow
+	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Assume it works out of the box.
+			return &BuildImageOptsRow{}, nil
+		}
+
+		return nil, err
+	}
+
+	return &o, nil
+}
+
+func (g *Database) UpsertBuildImageOpts(ctx context.Context, appID int, row BuildImageOptsRow) (*BuildImageOptsRow, error) {
 	q := `
 		INSERT INTO steamapps(
 			appid, 
@@ -135,7 +183,7 @@ func (g *Database) UpsertBuildImageOpts(ctx context.Context, appID int, row mode
 		ON CONFLICT (appid)
 		DO UPDATE SET 
 			date_updated = NOW(), 
-			base_image = $2, \
+			base_image = $2,
 			apt_packages = $3, 
 			launch_type = $4, 
 			platform_type = $5, 
@@ -145,9 +193,10 @@ func (g *Database) UpsertBuildImageOpts(ctx context.Context, appID int, row mode
 		RETURNING *;
 	`
 
-	var o model.BuildImageOptsRow
-	if err := g.db.Select(
-		&o, q, 
+	var o BuildImageOptsRow
+	if err := g.db.QueryRowContext(
+		ctx,
+		q,
 		appID,
 		row.BaseImageRef,
 		row.AptPkgs,
@@ -156,6 +205,9 @@ func (g *Database) UpsertBuildImageOpts(ctx context.Context, appID int, row mode
 		row.Execs,
 		row.Entrypoint,
 		row.Cmd,
+	).Scan(
+		&o.AppID, &o.DateCreated, &o.DateUpdated, &o.BaseImageRef, &o.AptPkgs,
+		&o.LaunchType, &o.PlatformType, &o.Execs, &o.Entrypoint, &o.Cmd, &o.Locked,
 	); err != nil {
 		return nil, err
 	}

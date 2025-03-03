@@ -38,7 +38,7 @@ $(LOCALBIN):
 
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
 
-GOLANGCI_LINT_VERSION ?= v1.63.4
+GOLANGCI_LINT_VERSION ?= v1.64.5
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT)
