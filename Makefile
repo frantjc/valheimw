@@ -25,8 +25,6 @@ lint: golangci-lint
 .PHONY: gen
 gen: generate
 
-SEMVER ?= 3.3.0
-
 .PHONY: release
 release:
 	@$(GIT) tag v$(SEMVER)
