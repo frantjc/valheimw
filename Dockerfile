@@ -32,8 +32,22 @@ COPY --from=build /boiler /usr/local/bin
 FROM scratch AS mist
 COPY --from=build /mist /mist
 
-FROM scratch AS stoker
-COPY --from=build /stoker /stoker
-ENTRYPOINT ["/stoker"]
+FROM node:20.11.1-alpine3.19 AS remix
+WORKDIR /src/github.com/frantjc/sindri
+COPY package.json yarn.lock ./
+RUN yarn
+COPY app/ app/
+COPY public/ public/
+COPY *.js *.ts tsconfig.json ./
+RUN yarn build
+
+FROM node:20.11.1-alpine3.19 AS stoker
+ENV NODE_ENV production
+COPY --from=build /stoker /usr/local/bin/stoker
+COPY server.js package.json /app/
+COPY --from=remix /src/github.com/frantjc/sindri/build /app/build/
+COPY --from=remix /src/github.com/frantjc/sindri/node_modules /app/node_modules/
+COPY --from=remix /src/github.com/frantjc/sindri/public /app/public/
+ENTRYPOINT ["stoker"]
 
 FROM $tool

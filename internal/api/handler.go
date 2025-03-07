@@ -9,23 +9,20 @@ import (
 )
 
 type Handler struct {
-	Path     string
 	Database *postgres.Database
 }
 
-func NewHandler(basePath string, db *postgres.Database) http.Handler {
+func NewHandler(db *postgres.Database) http.Handler {
 	var (
-		h = &Handler{Path: basePath, Database: db}
+		h = &Handler{Database: db}
 		r = chi.NewRouter()
 	)
 
 	r.Use(middleware.RealIP)
 	r.Use(middleware.DefaultLogger)
 
-	r.Route(h.Path, func(r chi.Router) {
-		r.Put("/steamapps/{appID}", h.UpsertSteamApp)
-		r.Get("/steamapps/{appID}", h.GetSteamApp)
-	})
+	r.Put("/api/steamapps/{appID}", h.UpsertSteamApp)
+	r.Get("/api/steamapps/{appID}", h.GetSteamApp)
 
 	r.NotFound(http.NotFound)
 
