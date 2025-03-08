@@ -7,13 +7,13 @@ import (
 )
 
 type BuildImageOptsResponse struct {
-	AppID        int       `json:"appid"`
-	DateCreated  time.Time `json:"date_created"`
-	DateUpdated  time.Time `json:"date_updated"`
-	BaseImageRef string    `json:"base_image"`
-	AptPkgs      []string  `json:"apt_packages"`
-	LaunchType   string    `json:"launch_type"`
-	PlatformType string    `json:"platform_type"`
+	AppID        int       `json:"appID"`
+	DateCreated  time.Time `json:"dateCreated"`
+	DateUpdated  time.Time `json:"dateUpdated"`
+	BaseImageRef string    `json:"baseImage"`
+	AptPkgs      []string  `json:"aptPackages"`
+	LaunchType   string    `json:"launchType"`
+	PlatformType string    `json:"platformType"`
 	Execs        []string  `json:"execs"`
 	Entrypoint   []string  `json:"entrypoint"`
 	Cmd          []string  `json:"cmd"`

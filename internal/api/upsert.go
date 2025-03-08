@@ -13,7 +13,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
-func (h *Handler) UpsertSteamApp(w http.ResponseWriter, r *http.Request) {
+func (h *handler) UpsertSteamapp(w http.ResponseWriter, r *http.Request) {
 	logger := logr.FromContextOrDiscard(r.Context())
 
 	appID, err := strconv.Atoi(chi.URLParam(r, "appID"))

@@ -1,12 +1,12 @@
 {
-  "name": "",
+  "name": "sindri",
   "private": true,
   "sideEffects": false,
   "type": "module",
   "scripts": {
     "build": "remix vite:build",
     "dev": "node ./server.js",
-    "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
+    "lint": "eslint --fix --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "cross-env NODE_ENV=production node ./server.js",
     "typecheck": "tsc"
   },
@@ -18,7 +18,6 @@
     "cross-env": "^7.0.3",
     "express": "^4.19.2",
     "isbot": "^4.1.0",
-    "morgan": "^1.10.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

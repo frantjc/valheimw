@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/frantjc/go-ingress"
 	"github.com/frantjc/sindri/internal/api"
 	"github.com/frantjc/sindri/steamapp/postgres"
 	"github.com/go-logr/logr"
@@ -23,18 +22,13 @@ func NewStoker() *cobra.Command {
 	var (
 		addr int
 		db   string
+		opts = &api.Opts{}
 		cmd  = &cobra.Command{
 			Use: "stoker",
 			RunE: func(cmd *cobra.Command, args []string) error {
 				var (
 					eg, ctx = errgroup.WithContext(cmd.Context())
 					log     = logr.FromContextOrDiscard(ctx)
-					srv     = &http.Server{
-						ReadHeaderTimeout: time.Second * 5,
-						BaseContext: func(_ net.Listener) context.Context {
-							return ctx
-						},
-					}
 				)
 
 				u, err := url.Parse(db)
@@ -48,10 +42,9 @@ func NewStoker() *cobra.Command {
 				}
 				defer database.Close()
 
-				var ing = &ingress.Ingress{}
 				if len(args) > 0 {
-					var exec *exec.Cmd
-					ing.DefaultBackend, exec, err = api.NewExecHandlerWithPortFromEnv(ctx, args[0], args[1:]...)
+					var ex *exec.Cmd
+					opts.Fallback, ex, err = api.NewExecHandlerWithPortFromEnv(ctx, args[0], args[1:]...)
 					if err != nil {
 						return err
 					}
@@ -62,9 +55,9 @@ func NewStoker() *cobra.Command {
 					for _, entrypoint := range args[1:] {
 						if fi, err := os.Stat(entrypoint); err == nil {
 							if fi.IsDir() {
-								exec.Dir = filepath.Clean(entrypoint)
+								ex.Dir = filepath.Clean(entrypoint)
 							} else {
-								exec.Dir = filepath.Dir(entrypoint)
+								ex.Dir = filepath.Dir(entrypoint)
 							}
 							break
 						}
@@ -72,27 +65,23 @@ func NewStoker() *cobra.Command {
 
 					eg.Go(func() error {
 						log.Info("running exec fallback server")
-						return exec.Run()
+						return ex.Run()
 					})
 				}
-
-				ing.Paths = []ingress.Path{
-					ingress.ExactPath("/healthz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-						fmt.Fprint(w, "ok")
-					})),
-					ingress.ExactPath("/readyz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-						fmt.Fprint(w, "ok")
-					})),
-					ingress.PrefixPath("/api", api.NewHandler(database)),
-				}
-				
-				srv.Handler = ing
 
 				l, err := net.Listen("tcp", fmt.Sprintf(":%d", addr))
 				if err != nil {
 					return err
 				}
 				defer l.Close()
+
+				srv := &http.Server{
+					ReadHeaderTimeout: time.Second * 5,
+					Handler:           api.NewHandler(database, opts),
+					BaseContext: func(_ net.Listener) context.Context {
+						return ctx
+					},
+				}
 
 				eg.Go(func() error {
 					return srv.Serve(l)
@@ -114,6 +103,7 @@ func NewStoker() *cobra.Command {
 	)
 
 	cmd.Flags().IntVarP(&addr, "addr", "a", 5050, "Port for stoker to listen on")
+	cmd.Flags().StringVarP(&opts.Path, "path", "p", "", "Base URL path for stoker")
 	cmd.Flags().StringVar(&db, "db", "postgres://localhost:5432?sslmode=disable", "Database URL for stoker")
 
 	return cmd
