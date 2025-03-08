@@ -29,6 +29,12 @@ func NewStoker() *cobra.Command {
 				var (
 					eg, ctx = errgroup.WithContext(cmd.Context())
 					log     = logr.FromContextOrDiscard(ctx)
+					srv     = &http.Server{
+						ReadHeaderTimeout: time.Second * 5,
+						BaseContext: func(_ net.Listener) context.Context {
+							return cmd.Context()
+						},
+					}
 				)
 
 				u, err := url.Parse(db)
@@ -63,10 +69,9 @@ func NewStoker() *cobra.Command {
 						}
 					}
 
-					eg.Go(func() error {
-						log.Info("running exec fallback server")
-						return ex.Run()
-					})
+					log.Info("running exec fallback server")
+
+					eg.Go(ex.Run)
 				}
 
 				l, err := net.Listen("tcp", fmt.Sprintf(":%d", addr))
@@ -89,9 +94,7 @@ func NewStoker() *cobra.Command {
 
 				eg.Go(func() error {
 					<-ctx.Done()
-					cctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second*30)
-					defer cancel()
-					if err = srv.Shutdown(cctx); err != nil {
+					if err = srv.Shutdown(context.WithoutCancel(ctx)); err != nil {
 						return err
 					}
 					return ctx.Err()
