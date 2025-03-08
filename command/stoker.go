@@ -79,7 +79,7 @@ func NewStoker() *cobra.Command {
 					ReadHeaderTimeout: time.Second * 5,
 					Handler:           api.NewHandler(database, opts),
 					BaseContext: func(_ net.Listener) context.Context {
-						return ctx
+						return cmd.Context()
 					},
 				}
 

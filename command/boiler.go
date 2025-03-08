@@ -38,7 +38,7 @@ func NewBoiler() *cobra.Command {
 						ReadHeaderTimeout: time.Second * 5,
 						Handler:           contreg.NewPullHandler(registry),
 						BaseContext: func(_ net.Listener) context.Context {
-							return ctx
+							return cmd.Context()
 						},
 					}
 				)
