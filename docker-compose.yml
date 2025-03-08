@@ -42,6 +42,9 @@ services:
     command:
       - -VV
       - --db=postgres://sindri:${POSTGRES_PASSWORD:-changeme}@postgres:5432/sindri?sslmode=disable
+      - --path=/api/v1
+      - node
+      - /app/server.js
     ports:
       - 5050:5050
     depends_on:

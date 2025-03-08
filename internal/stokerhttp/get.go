@@ -1,4 +1,4 @@
-package api
+package stokerhttp
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
-func (h *Handler) GetSteamApp(w http.ResponseWriter, r *http.Request) {
+func (h *handler) GetSteamapp(w http.ResponseWriter, r *http.Request) {
 	logger := logr.FromContextOrDiscard(r.Context())
 
 	appID, err := strconv.Atoi(chi.URLParam(r, "appID"))

@@ -64,7 +64,7 @@ func NewCommand(ctx context.Context, dir string, opts *Opts) (*exec.Cmd, error) 
 	cmd.Dir = dir
 	cmd.Env = append(
 		os.Environ(),
-		"SteamAppId=892970",
+		"SteamappId=892970",
 	)
 
 	if opts.BepInEx {
