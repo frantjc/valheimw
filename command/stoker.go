@@ -29,7 +29,7 @@ func NewStoker() *cobra.Command {
 					srv     = &http.Server{
 						ReadHeaderTimeout: time.Second * 5,
 						BaseContext: func(_ net.Listener) context.Context {
-							return ctx
+							return cmd.Context()
 						},
 					}
 				)
@@ -59,9 +59,7 @@ func NewStoker() *cobra.Command {
 
 				eg.Go(func() error {
 					<-ctx.Done()
-					cctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second*30)
-					defer cancel()
-					if err = srv.Shutdown(cctx); err != nil {
+					if err = srv.Shutdown(context.WithoutCancel(ctx)); err != nil {
 						return err
 					}
 					return ctx.Err()

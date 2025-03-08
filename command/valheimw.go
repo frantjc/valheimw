@@ -441,6 +441,9 @@ func NewValheimw() *cobra.Command {
 				srv := &http.Server{
 					ReadHeaderTimeout: time.Second * 5,
 					Handler:           ingress.New(paths...),
+					BaseContext: func(_ net.Listener) context.Context {
+						return cmd.Context()
+					},
 				}
 
 				eg.Go(func() error {
@@ -451,9 +454,7 @@ func NewValheimw() *cobra.Command {
 
 				eg.Go(func() error {
 					<-egctx.Done()
-					cctx, cancel := context.WithTimeout(context.WithoutCancel(egctx), time.Second*30)
-					defer cancel()
-					if err = srv.Shutdown(cctx); err != nil {
+					if err = srv.Shutdown(context.WithoutCancel(egctx)); err != nil {
 						return err
 					}
 					return egctx.Err()
