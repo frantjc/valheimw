@@ -29,12 +29,6 @@ func NewStoker() *cobra.Command {
 				var (
 					eg, ctx = errgroup.WithContext(cmd.Context())
 					log     = logr.FromContextOrDiscard(ctx)
-					srv     = &http.Server{
-						ReadHeaderTimeout: time.Second * 5,
-						BaseContext: func(_ net.Listener) context.Context {
-							return cmd.Context()
-						},
-					}
 				)
 
 				u, err := url.Parse(db)
