@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/frantjc/sindri/internal/api"
+	"github.com/frantjc/sindri/internal/stokerhttp"
 	"github.com/frantjc/sindri/steamapp/postgres"
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
@@ -22,7 +22,7 @@ func NewStoker() *cobra.Command {
 	var (
 		addr int
 		db   string
-		opts = &api.Opts{}
+		opts = &stokerhttp.Opts{}
 		cmd  = &cobra.Command{
 			Use: "stoker",
 			RunE: func(cmd *cobra.Command, args []string) error {
@@ -44,7 +44,7 @@ func NewStoker() *cobra.Command {
 
 				if len(args) > 0 {
 					var ex *exec.Cmd
-					opts.Fallback, ex, err = api.NewExecHandlerWithPortFromEnv(ctx, args[0], args[1:]...)
+					opts.Fallback, ex, err = stokerhttp.NewExecHandlerWithPortFromEnv(ctx, args[0], args[1:]...)
 					if err != nil {
 						return err
 					}
@@ -77,7 +77,7 @@ func NewStoker() *cobra.Command {
 
 				srv := &http.Server{
 					ReadHeaderTimeout: time.Second * 5,
-					Handler:           api.NewHandler(database, opts),
+					Handler:           stokerhttp.NewAPIHandler(database, opts),
 					BaseContext: func(_ net.Listener) context.Context {
 						return cmd.Context()
 					},

@@ -1,4 +1,4 @@
-package api
+package stokerhttp
 
 import (
 	"net/http"
@@ -47,7 +47,7 @@ type handler struct {
 	Database *postgres.Database
 }
 
-func NewHandler(db *postgres.Database, opts ...Opt) http.Handler {
+func NewAPIHandler(db *postgres.Database, opts ...Opt) http.Handler {
 	var (
 		o = newOpts(opts...)
 		h = &handler{Database: db}
