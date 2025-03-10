@@ -8,7 +8,7 @@ require (
 	github.com/frantjc/go-reproducible-builds v0.0.0-20241021140423-9651d3e86a85
 	github.com/frantjc/go-steamcmd v0.0.0-20250129165536-d57c93d00edf
 	github.com/frantjc/x v0.0.0-20250119064157-ea61a348823d
-	github.com/go-chi/chi v1.5.5
+	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-containerregistry v0.20.3
 	github.com/google/uuid v1.6.0
