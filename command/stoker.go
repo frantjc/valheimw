@@ -22,8 +22,10 @@ func NewStoker() *cobra.Command {
 	var (
 		addr int
 		db   string
-		opts = &stokerhttp.Opts{}
-		cmd  = &cobra.Command{
+		opts = &stokerhttp.Opts{
+			Swagger: true,
+		}
+		cmd = &cobra.Command{
 			Use: "stoker",
 			RunE: func(cmd *cobra.Command, args []string) error {
 				var (

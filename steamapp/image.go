@@ -109,25 +109,25 @@ const (
 	DefaultExportType       = client.ExporterDocker
 )
 
-func getImageConfig(ctx context.Context, appID int, opts *BuildImageOpts) (*specs.ImageConfig, error) {
+func getImageConfig(ctx context.Context, appID int, opts *BuildImageOpts) (*specs.ImageConfig, int, error) {
 	ref, err := name.ParseReference(opts.BaseImageRef)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	img, err := remote.Image(ref, remote.WithContext(ctx))
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	cfgf, err := img.ConfigFile()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	appInfo, err := appinfoutil.GetAppInfo(ctx, appID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	icfg := &specs.ImageConfig{
@@ -160,8 +160,10 @@ func getImageConfig(ctx context.Context, appID int, opts *BuildImageOpts) (*spec
 				if opts.Beta != "" {
 					branchName = opts.Beta
 				}
+				var buildID int
 				icfg.Labels["cc.frantj.sindri.branch"] = branchName
 				if branch, ok := appInfo.Depots.Branches[branchName]; ok {
+					buildID = branch.BuildID
 					icfg.Labels["cc.frantj.sindri.buildid"] = fmt.Sprint(branch.BuildID)
 					icfg.Labels["cc.frantj.sindri.description"] = branch.Description
 				}
@@ -176,15 +178,15 @@ func getImageConfig(ctx context.Context, appID int, opts *BuildImageOpts) (*spec
 						icfg.Cmd = nil
 					}
 				}
-				return icfg, nil
+				return icfg, buildID, nil
 			}
 		}
 	}
 
-	return nil, fmt.Errorf("app ID %d does not support %s, only %s", appInfo.Common.GameID, opts.PlatformType, appInfo.Common.OSList)
+	return nil, 0, fmt.Errorf("app ID %d does not support %s, only %s", appInfo.Common.GameID, opts.PlatformType, appInfo.Common.OSList)
 }
 
-func getDefinition(ctx context.Context, appID int, opts *BuildImageOpts) (*llb.Definition, error) {
+func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts) (*llb.Definition, error) {
 	arg, err := steamcmd.Args(nil,
 		steamcmd.ForceInstallDir(filepath.Join("/mnt", opts.Dir)),
 		steamcmd.Login{},
@@ -227,9 +229,11 @@ func getDefinition(ctx context.Context, appID int, opts *BuildImageOpts) (*llb.D
 			User(opts.User)
 	}
 
-	// TODO: Does this layer get cached indefinitely, disallowing pulls
-	// from getting new builds pushed to the same branch?
 	state = steamcmdState.
+		// `echo`ing the buildid here is to workaround
+		// buildkit cacheing the steamcmd app_update command
+		// when there has been a new build pushed to the branch.
+		Run(llb.Shlexf("echo %d", buildID)).
 		Run(llb.Shlexf("steamcmd %s", strings.Join(arg, " "))).
 		AddMount("/mnt", state).
 		Dir(opts.Dir)
@@ -247,10 +251,10 @@ func getDefinition(ctx context.Context, appID int, opts *BuildImageOpts) (*llb.D
 	return state.Marshal(ctx, llb.LinuxAmd64)
 }
 
-func getSolveOpt(ctx context.Context, appID int, opts *BuildImageOpts) (*client.SolveOpt, error) {
-	icfg, err := getImageConfig(ctx, appID, opts)
+func getSolveOpt(ctx context.Context, appID int, opts *BuildImageOpts) (*client.SolveOpt, int, error) {
+	icfg, buildID, err := getImageConfig(ctx, appID, opts)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	ib, err := json.Marshal(&specs.Image{
@@ -261,7 +265,7 @@ func getSolveOpt(ctx context.Context, appID int, opts *BuildImageOpts) (*client.
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	return &client.SolveOpt{
@@ -276,7 +280,7 @@ func getSolveOpt(ctx context.Context, appID int, opts *BuildImageOpts) (*client.
 				},
 			},
 		},
-	}, nil
+	}, buildID, nil
 }
 
 func (a *ImageBuilder) BuildImage(ctx context.Context, appID int, opts ...BuildImageOpt) error {
@@ -300,12 +304,12 @@ func (a *ImageBuilder) BuildImage(ctx context.Context, appID int, opts ...BuildI
 		opt.Apply(o)
 	}
 
-	solvOpt, err := getSolveOpt(ctx, appID, o)
+	solvOpt, buildID, err := getSolveOpt(ctx, appID, o)
 	if err != nil {
 		return err
 	}
 
-	def, err := getDefinition(ctx, appID, o)
+	def, err := getDefinition(ctx, appID, buildID, o)
 	if err != nil {
 		return err
 	}

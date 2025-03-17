@@ -19,7 +19,7 @@ const (
 )
 
 type BuildImageOptsRow struct {
-	AppID        int            `db:"appid"`
+	AppID        int            `db:"app_id"`
 	DateCreated  time.Time      `db:"date_created"`
 	DateUpdated  time.Time      `db:"date_updated"`
 	BaseImageRef string         `db:"base_image"`
@@ -63,9 +63,9 @@ func NewDatabase(ctx context.Context, u *url.URL) (*Database, error) {
 
 	q := `
 		CREATE TABLE IF NOT EXISTS steamapps (
-			appid INTEGER PRIMARY KEY,
+			app_id INTEGER PRIMARY KEY,
 			date_created TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-			date_updated TIMESTAMP WITHOUT time ZONE NOT NULL,
+			date_updated TIMESTAMP WITHOUT TIME ZONE NOT NULL,
 			base_image TEXT NOT NULL,
 			apt_packages TEXT[] NOT NULL,
 			launch_type TEXT NOT NULL,
@@ -95,20 +95,20 @@ func (g *Database) GetBuildImageOpts(
 	_ string,
 ) (*steamapp.GettableBuildImageOpts, error) {
 	q := `
-		SELECT 
-			appid, 
-			date_created, 
-			date_updated, 
-			base_image, 
-			apt_packages, 
-			launch_type, 
-			platform_type, 
-			execs, 
-			entrypoint, 
-			cmd, 
+		SELECT
+			app_id,
+			date_created,
+			date_updated,
+			base_image,
+			apt_packages,
+			launch_type,
+			platform_type,
+			execs,
+			entrypoint,
+			cmd,
 			locked
 		FROM steamapps
-		WHERE appid = $1;
+		WHERE app_id = $1;
 	`
 	var o BuildImageOptsRow
 	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
@@ -136,59 +136,87 @@ func (g *Database) SelectBuildImageOpts(
 	appID int,
 ) (*BuildImageOptsRow, error) {
 	q := `
-		SELECT 
-			appid, 
-			date_created, 
-			date_updated, 
-			base_image, 
-			apt_packages, 
-			launch_type, 
-			platform_type, 
-			execs, 
-			entrypoint, 
-			cmd, 
+		SELECT
+			app_id,
+			date_created,
+			date_updated,
+			base_image,
+			apt_packages,
+			launch_type,
+			platform_type,
+			execs,
+			entrypoint,
+			cmd,
 			locked
 		FROM steamapps
-		WHERE appid = $1;
+		WHERE app_id = $1;
 	`
 	var o BuildImageOptsRow
 	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			// Assume it works out of the box.
-			return &BuildImageOptsRow{}, nil
-		}
-
 		return nil, err
 	}
 
 	return &o, nil
 }
 
-func (g *Database) UpsertBuildImageOpts(ctx context.Context, appID int, row BuildImageOptsRow) (*BuildImageOptsRow, error) {
+func (g *Database) ListBuildImageOpts(
+	ctx context.Context,
+	offset, limit int,
+) ([]BuildImageOptsRow, error) {
+	q := `
+		SELECT 
+			app_id,
+			date_created,
+			date_updated,
+			base_image,
+			apt_packages,
+			launch_type,
+			platform_type,
+			execs,
+			entrypoint,
+			cmd,
+			locked
+		FROM steamapps
+		ORDER BY date_updated
+		LIMIT $1 OFFSET $2;
+	`
+	var o []BuildImageOptsRow
+	if err := g.db.SelectContext(ctx, &o, q, limit, offset); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return []BuildImageOptsRow{}, nil
+		}
+
+		return nil, err
+	}
+
+	return o, nil
+}
+
+func (g *Database) UpsertBuildImageOpts(ctx context.Context, appID int, row *BuildImageOptsRow) (*BuildImageOptsRow, error) {
 	q := `
 		INSERT INTO steamapps(
-			appid, 
-			date_created, 
-			date_updated, 
-			base_image, 
-			apt_packages, 
-			launch_type, 
-			platform_type, 
-			execs, 
-			entrypoint, 
-			cmd, 
+			app_id,
+			date_created,
+			date_updated,
+			base_image,
+			apt_packages,
+			launch_type,
+			platform_type,
+			execs,
+			entrypoint,
+			cmd,
 			locked
 		)
 		VALUES($1, NOW(), NOW(), $2, $3, $4, $5, $6, $7, $8, false)
-		ON CONFLICT (appid)
-		DO UPDATE SET 
-			date_updated = NOW(), 
+		ON CONFLICT (app_id)
+		DO UPDATE SET
+			date_updated = NOW(),
 			base_image = $2,
-			apt_packages = $3, 
-			launch_type = $4, 
-			platform_type = $5, 
-			execs = $6, 
-			entrypoint = $7, 
+			apt_packages = $3,
+			launch_type = $4,
+			platform_type = $5,
+			execs = $6,
+			entrypoint = $7,
 			cmd = $8
 		RETURNING *;
 	`

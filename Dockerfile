@@ -32,7 +32,7 @@ COPY --from=build /boiler /usr/local/bin
 FROM scratch AS mist
 COPY --from=build /mist /mist
 
-FROM node:20.11.1-alpine3.19 AS remix
+FROM node:20.11.1-slim AS remix
 WORKDIR /src/github.com/frantjc/sindri
 COPY package.json yarn.lock ./
 RUN yarn
@@ -41,7 +41,13 @@ COPY public/ public/
 COPY *.js *.ts tsconfig.json ./
 RUN yarn build
 
-FROM node:20.11.1-alpine3.19 AS stoker
+FROM node:20.11.1-slim AS stoker
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        lib32gcc-s1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 ENV NODE_ENV production
 COPY --from=build /stoker /usr/local/bin/stoker
 COPY server.js package.json /app/

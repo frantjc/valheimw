@@ -45,6 +45,8 @@ services:
       - --path=/api/v1
       - node
       - /app/server.js
+    volumes:
+      - ./cache:/root/.cache
     ports:
       - 5050:5050
     depends_on:

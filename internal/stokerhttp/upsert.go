@@ -1,75 +1,87 @@
 package stokerhttp
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/frantjc/sindri/steamapp/postgres"
 	"github.com/go-chi/chi"
 	"github.com/go-logr/logr"
+	"github.com/lib/pq"
 )
 
-func (h *handler) UpsertSteamapp(w http.ResponseWriter, r *http.Request) {
-	logger := logr.FromContextOrDiscard(r.Context())
+// @Summary	Create or update the details of a specific Steamapp ID
+// @Accept		application/json
+// @Produce	json
+// @Param		steamappID	path		int				true	"Steamapp ID"
+// @Param		request		body		SteamappSpec	true	"Steamapp detail"
+// @Success	200			{object}	Steamapp
+// @Success	400			{object}	Steamapp
+// @Success	415			{object}	Steamapp
+// @Failure	500			{object}	Error
+// @Router		/steamapps/{steamappID} [post]
+// @Router		/steamapps/{steamappID} [put]
+func (h *handler) upsertSteamapp(w http.ResponseWriter, r *http.Request) error {
+	var (
+		steamappID = chi.URLParam(r, steamappIDParam)
+		log        = logr.FromContextOrDiscard(r.Context()).WithValues("steamappID", steamappID)
+	)
+	r = r.WithContext(logr.NewContext(r.Context(), log))
 
-	appID, err := strconv.Atoi(chi.URLParam(r, "appID"))
+	appID, err := strconv.Atoi(chi.URLParam(r, steamappIDParam))
 	if err != nil {
-		logger.Error(err, "failed to convert appID to integer", "appID", appID)
-		http.Error(w, "URL param 'appID' must be an integer", http.StatusBadRequest)
-		return
+		return newHTTPStatusCodeError(err, http.StatusBadRequest)
 	}
 
-	var reqBody BuildImageOptsRequest
+	var reqBody SteamappSpec
 	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
-		logger.Error(err, "faild to parse request body")
-		http.Error(w, "failed to parse rqeuest body", http.StatusBadRequest)
-		return
+		return newHTTPStatusCodeError(err, http.StatusBadRequest)
 	}
 
-	row, err := h.Database.UpsertBuildImageOpts(r.Context(), appID, RowFrom(appID, &reqBody))
+	row, err := h.Database.UpsertBuildImageOpts(r.Context(), appID, rowFrom(appID, &reqBody))
 	if err != nil {
-		logger.Error(err, "faild to upsert appID")
-		http.Error(w, fmt.Sprintf("failed to upsert appID: %d", appID), http.StatusInternalServerError)
-		return
+		return err
 	}
 
-	var response bytes.Buffer
-	if err := json.NewEncoder(&response).Encode(ResponseFrom(row)); err != nil {
-		logger.Error(err, "faild to encode response")
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
+	metadata, err := getSteamappMetadata(r.Context(), row)
+	if err != nil {
+		return err
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	_, _ = w.Write(response.Bytes())
+	return respondJSON(w, r, &Steamapp{
+		SteamappMetadata: *metadata,
+		SteamappSpec:     reqBody,
+	})
 }
 
-type BuildImageOptsRequest struct {
-	BaseImageRef string   `json:"base_image"`
-	AptPkgs      []string `json:"apt_packages"`
-	LaunchType   string   `json:"launch_type"`
-	PlatformType string   `json:"platform_type"`
-	Execs        []string `json:"execs"`
-	Entrypoint   []string `json:"entrypoint"`
-	Cmd          []string `json:"cmd"`
-}
-
-func RowFrom(appID int, r *BuildImageOptsRequest) postgres.BuildImageOptsRow {
-	return postgres.BuildImageOptsRow{
+func rowFrom(appID int, d *SteamappSpec) *postgres.BuildImageOptsRow {
+	r := &postgres.BuildImageOptsRow{
 		AppID:        appID,
-		DateCreated:  time.Time{},
-		DateUpdated:  time.Time{},
-		BaseImageRef: r.BaseImageRef,
-		AptPkgs:      r.AptPkgs,
-		LaunchType:   r.LaunchType,
-		PlatformType: r.PlatformType,
-		Execs:        r.Execs,
-		Entrypoint:   r.Entrypoint,
-		Cmd:          r.Cmd,
-		Locked:       false,
+		BaseImageRef: d.BaseImageRef,
+		AptPkgs:      d.AptPkgs,
+		LaunchType:   d.LaunchType,
+		PlatformType: d.PlatformType,
+		Execs:        d.Execs,
+		Entrypoint:   d.Entrypoint,
+		Cmd:          d.Cmd,
 	}
+
+	if r.AptPkgs == nil {
+		r.AptPkgs = pq.StringArray{}
+	}
+
+	if r.Execs == nil {
+		r.Execs = pq.StringArray{}
+	}
+
+	if r.Entrypoint == nil {
+		r.Entrypoint = pq.StringArray{}
+	}
+
+	if r.Cmd == nil {
+		r.Cmd = pq.StringArray{}
+	}
+
+	return r
 }
