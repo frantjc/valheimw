@@ -91,7 +91,7 @@ const steamappIDParam = "steamappID"
 // @Summary	Get the details for a specific Steamapp ID
 // @Produce	json
 // @Param		steamappID	path		int	true	"Steamapp ID"
-// @Success	200			{object}	SteamappSpec
+// @Success	200			{object}	Steamapp
 // @Failure	400			{object}	Error
 // @Failure	415			{object}	Error
 // @Failure	500			{object}	Error

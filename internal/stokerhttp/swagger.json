@@ -54,7 +54,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/SteamappSpec"
+                            "$ref": "#/definitions/Steamapp"
                         }
                     },
                     "400": {
@@ -113,13 +113,13 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/Steamapp"
+                            "$ref": "#/definitions/Error"
                         }
                     },
                     "415": {
                         "description": "Unsupported Media Type",
                         "schema": {
-                            "$ref": "#/definitions/Steamapp"
+                            "$ref": "#/definitions/Error"
                         }
                     },
                     "500": {
@@ -166,13 +166,13 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/Steamapp"
+                            "$ref": "#/definitions/Error"
                         }
                     },
                     "415": {
                         "description": "Unsupported Media Type",
                         "schema": {
-                            "$ref": "#/definitions/Steamapp"
+                            "$ref": "#/definitions/Error"
                         }
                     },
                     "500": {

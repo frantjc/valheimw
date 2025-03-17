@@ -17,8 +17,8 @@ import (
 // @Param		steamappID	path		int				true	"Steamapp ID"
 // @Param		request		body		SteamappSpec	true	"Steamapp detail"
 // @Success	200			{object}	Steamapp
-// @Success	400			{object}	Steamapp
-// @Success	415			{object}	Steamapp
+// @Failure	400			{object}	Error
+// @Failure	415			{object}	Error
 // @Failure	500			{object}	Error
 // @Router		/steamapps/{steamappID} [post]
 // @Router		/steamapps/{steamappID} [put]
