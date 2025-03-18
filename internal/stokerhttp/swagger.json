@@ -9,7 +9,21 @@
                 "produces": [
                     "application/json"
                 ],
-                "summary": "List all known Steamapps",
+                "summary": "List known Steamapps",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",

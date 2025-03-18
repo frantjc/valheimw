@@ -25,7 +25,7 @@ import (
 func (h *handler) upsertSteamapp(w http.ResponseWriter, r *http.Request) error {
 	var (
 		steamappID = chi.URLParam(r, steamappIDParam)
-		log        = logr.FromContextOrDiscard(r.Context()).WithValues("steamappID", steamappID)
+		log        = logr.FromContextOrDiscard(r.Context()).WithValues(steamappIDParam, steamappID)
 	)
 	r = r.WithContext(logr.NewContext(r.Context(), log))
 

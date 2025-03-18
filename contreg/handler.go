@@ -58,7 +58,7 @@ func NewPullHandler(puller Puller) http.Handler {
 							"method", r.Method,
 							"name", name,
 							"reference", reference,
-							"id", uuid.NewString(),
+							"request", uuid.NewString(),
 						)
 					)
 

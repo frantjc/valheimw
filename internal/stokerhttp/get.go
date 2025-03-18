@@ -99,7 +99,7 @@ const steamappIDParam = "steamappID"
 func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 	var (
 		steamappID = chi.URLParam(r, steamappIDParam)
-		log        = logr.FromContextOrDiscard(r.Context()).WithValues("steamappID", steamappID)
+		log        = logr.FromContextOrDiscard(r.Context()).WithValues(steamappIDParam, steamappID)
 	)
 	r = r.WithContext(logr.NewContext(r.Context(), log))
 
@@ -151,11 +151,13 @@ func getSteamappMetadata(ctx context.Context, row *postgres.BuildImageOptsRow) (
 	}, nil
 }
 
-// @Summary	List all known Steamapps
+// @Summary	List known Steamapps
 // @Produce	json
-// @Success	200	{array}		SteamappMetadata
-// @Failure	415	{object}	Error
-// @Failure	500	{object}	Error
+// @Param		offset	query		int	false	"Offset"
+// @Param		limit	query		int	false	"Limit"
+// @Success	200		{array}		SteamappMetadata
+// @Failure	415		{object}	Error
+// @Failure	500		{object}	Error
 // @Router		/steamapps [get]
 func (h *handler) getSteamapps(w http.ResponseWriter, r *http.Request) error {
 	var (

@@ -8,11 +8,11 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export default function Index() {
+export default function Main() {
   const [data, setData] = React.useState<Pick<Steamapps, "steamapps"> & { next?: number }>();
 
   React.useEffect(() => {
-    getSteamapps(data?.next || 0, 10)
+    getSteamapps({ offset: data?.next || 0 })
       .then(res => setData(cur => {
         return {
           continue: res.steamapps.length < res.limit ? undefined : res.offset + 1,

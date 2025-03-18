@@ -17,10 +17,10 @@ function handleError(res: Response) {
         });
       })
       .then((err) => {
-        // Errors from the API _should_ look like '{"message":"error description"}'.
+        // Errors from the API _should_ look like '{"error":"error description"}'.
         throw new Response(null, {
           status: res.status,
-          statusText: err.message || res.statusText,
+          statusText: err.error || res.statusText,
         });
       });
   }
@@ -28,13 +28,16 @@ function handleError(res: Response) {
   return res;
 }
 
-export type Steamapp = {
+export type SteamappMetadata = {
   name: string;
   icon_url: string;
   locked: boolean;
 	app_id: number;
 	date_created: Date;
 	date_updated: Date;
+}
+
+export type SteamappSpec = {
 	base_image: string;
 	apt_packages: Array<string>;
 	launch_type: string;
@@ -44,10 +47,12 @@ export type Steamapp = {
 	cmd: Array<string>;
 }
 
+export type Steamapp = SteamappMetadata & SteamappSpec;
+
 export type Steamapps = {
   offset: number;
   limit: number;
-  steamapps: Array<Pick<Steamapp, "app_id" | "date_created" | "date_updated" | "name" | "icon_url" | "locked">>;
+  steamapps: Array<SteamappMetadata>;
 }
 
 // getUrl takes a path and returns the full URL
@@ -62,31 +67,58 @@ export function getUrl(path: string) {
 
   return new URL(
     path,
-    `http://localhost:${process.env.PORT || 3000}`,
+    `http://localhost:5050`,
   ).toString();
 }
 
 export function getSteamapp(id: number): Promise<Steamapp> {
-  return fetch(getUrl(`/api/v1/steamapps/${id}`))
+  return fetch(
+    getUrl(`/api/v1/steamapps/${id}`),
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  )
     .then(handleError)
     .then((res) => {
       return res.json() as Promise<Steamapp>;
     });
 }
 
-export function getSteamapps(offset: number = 0, limit: number = 10): Promise<Steamapps> {
-  return fetch(getUrl(`/api/v1/steamapps${
-    new URLSearchParams(Object.entries({ offset, limit }).reduce(
-      (acc, [k, v]) =>
-        v && v.toString()
-          ? {
-              ...acc,
-              [k]: v.toString(),
-            }
-          : acc,
-      {},
-    ))
-  }`))
+export function getSteamapps(
+  {
+    offset = 0,
+    limit = 10
+  }: {
+    offset?: number;
+    limit?: number;
+  } = {}
+): Promise<Steamapps> {
+  return fetch(
+    getUrl(
+      `/api/v1/steamapps?${
+        new URLSearchParams(
+          Object.entries({ offset, limit })
+            .reduce(
+              (acc, [k, v]) =>
+                v && v.toString()
+                  ? {
+                      ...acc,
+                      [k]: v.toString(),
+                    }
+                  : acc,
+              {},
+            ),
+        )
+      }`,
+    ),
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  )
     .then(handleError)
     .then((res) => {
       return res.json() as Promise<Steamapps>;

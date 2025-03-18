@@ -30,7 +30,7 @@ export function loader({ params }: LoaderFunctionArgs) {
   return getSteamapp(steamappID)
 }
 
-export default function Index() {
+export default function Main() {
   const steamapp = useLoaderData<typeof loader>();
 
   return (
