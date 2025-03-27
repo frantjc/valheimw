@@ -106,14 +106,7 @@ func httpStatusCode(err error) int {
 
 const steamappIDParam = "steamappID"
 
-// @Summary	Get the details for a specific Steamapp ID
-// @Produce	json
-// @Param		steamappID	path		int	true	"Steamapp ID"
-// @Success	200			{object}	Steamapp
-// @Failure	400			{object}	Error
-// @Failure	415			{object}	Error
-// @Failure	500			{object}	Error
-// @Router		/steamapps/{steamappID} [get]
+// @Router		/steamapps/{steamappID} [get].
 func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 	var (
 		steamappID = chi.URLParam(r, steamappIDParam)
@@ -142,14 +135,7 @@ func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 	})
 }
 
-// @Summary	List known Steamapps
-// @Produce	json
-// @Param		offset	query		int	false	"Offset"
-// @Param		limit	query		int	false	"Limit"
-// @Success	200		{array}		SteamappMetadata
-// @Failure	415		{object}	Error
-// @Failure	500		{object}	Error
-// @Router		/steamapps [get]
+// @Router		/steamapps [get].
 func (h *handler) getSteamapps(w http.ResponseWriter, r *http.Request) error {
 	var (
 		_     = logr.FromContextOrDiscard(r.Context())
