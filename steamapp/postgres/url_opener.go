@@ -32,6 +32,12 @@ type BuildImageOptsRow struct {
 	Locked       bool           `db:"locked"`
 }
 
+type SteamappInfoRow struct {
+	AppID   int    `db:"app_id"`
+	Name    string `db:"name"`
+	IconURL string `db:"icon_url"`
+}
+
 func init() {
 	steamapp.RegisterDatabase(
 		new(DatabaseURLOpener),
@@ -80,6 +86,17 @@ func NewDatabase(ctx context.Context, u *url.URL) (*Database, error) {
 		return nil, err
 	}
 
+	q = `
+		CREATE TABLE IF NOT EXISTS steamappsinfo (
+			app_id INTEGER PRIMARY KEY REFERENCES steamapps(app_id) ON DELETE CASCADE,
+			name TEXT NOT NULL,
+			icon_url TEXT NOT NULL
+		);
+	`
+	if _, err = db.ExecContext(ctx, q); err != nil {
+		return nil, err
+	}
+
 	return &Database{db}, nil
 }
 
@@ -110,6 +127,7 @@ func (g *Database) GetBuildImageOpts(
 		FROM steamapps
 		WHERE app_id = $1;
 	`
+
 	var o BuildImageOptsRow
 	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -151,7 +169,29 @@ func (g *Database) SelectBuildImageOpts(
 		FROM steamapps
 		WHERE app_id = $1;
 	`
+
 	var o BuildImageOptsRow
+	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
+		return nil, err
+	}
+
+	return &o, nil
+}
+
+func (g *Database) SelectSteamappInfo(
+	ctx context.Context,
+	appID int,
+) (*SteamappInfoRow, error) {
+	q := `
+		SELECT
+			app_id,
+			name,
+			icon_url
+		FROM steamappsinfo
+		WHERE app_id = $1;
+	`
+
+	var o SteamappInfoRow
 	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
 		return nil, err
 	}
@@ -180,6 +220,7 @@ func (g *Database) ListBuildImageOpts(
 		ORDER BY date_updated
 		LIMIT $1 OFFSET $2;
 	`
+
 	var o []BuildImageOptsRow
 	if err := g.db.SelectContext(ctx, &o, q, limit, offset); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -236,6 +277,37 @@ func (g *Database) UpsertBuildImageOpts(ctx context.Context, appID int, row *Bui
 	).Scan(
 		&o.AppID, &o.DateCreated, &o.DateUpdated, &o.BaseImageRef, &o.AptPkgs,
 		&o.LaunchType, &o.PlatformType, &o.Execs, &o.Entrypoint, &o.Cmd, &o.Locked,
+	); err != nil {
+		return nil, err
+	}
+
+	return &o, nil
+}
+
+func (g *Database) UpsertSteamappInfo(ctx context.Context, appID int, row *SteamappInfoRow) (*SteamappInfoRow, error) {
+	q := `
+		INSERT INTO steamappsinfo(
+			app_id,
+			name,
+			icon_url
+		)
+		VALUES($1, $2, $3)
+		ON CONFLICT (app_id)
+		DO UPDATE SET
+			name = $2,
+			icon_url = $3
+		RETURNING *;
+	`
+
+	var o SteamappInfoRow
+	if err := g.db.QueryRowContext(
+		ctx,
+		q,
+		appID,
+		row.Name,
+		row.IconURL,
+	).Scan(
+		&o.AppID, &o.Name, &o.IconURL,
 	); err != nil {
 		return nil, err
 	}

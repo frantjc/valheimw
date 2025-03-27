@@ -20,9 +20,9 @@ import (
 
 func NewStoker() *cobra.Command {
 	var (
-		addr int
-		db   string
-		opts = &stokerhttp.Opts{
+		addr    int
+		db      string
+		opts    = &stokerhttp.Opts{
 			Swagger: true,
 		}
 		cmd = &cobra.Command{
