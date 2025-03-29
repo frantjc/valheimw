@@ -84,9 +84,23 @@ func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("select build image options: %w", err)
 	}
 
+	if specRow == nil {
+		return newHTTPStatusCodeError(
+			fmt.Errorf("spec not found for app ID: %d", parsedSteamappAppID),
+			http.StatusNotFound,
+		)
+	}
+
 	infoRow, err := h.Database.SelectSteamappInfo(r.Context(), parsedSteamappAppID)
 	if err != nil {
 		return fmt.Errorf("select steamapp info: %w", err)
+	}
+
+	if infoRow == nil {
+		return newHTTPStatusCodeError(
+			fmt.Errorf("steam info not found for app ID: %s", steamappID),
+			http.StatusNotFound,
+		)
 	}
 
 	return respondJSON(w, r, &Steamapp{
@@ -129,6 +143,13 @@ func (h *handler) getSteamapps(w http.ResponseWriter, r *http.Request) error {
 		infoRow, err := h.Database.SelectSteamappInfo(r.Context(), row.AppID)
 		if err != nil {
 			return fmt.Errorf("get steamapp info: %w", err)
+		}
+
+		if infoRow == nil {
+			return newHTTPStatusCodeError(
+				fmt.Errorf("steam info not found for app ID: %d", row.AppID),
+				http.StatusNotFound,
+			)
 		}
 
 		steamapps[i] = Steamapp{

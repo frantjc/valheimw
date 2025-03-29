@@ -172,6 +172,10 @@ func (g *Database) SelectBuildImageOpts(
 
 	var o BuildImageOptsRow
 	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
 		return nil, err
 	}
 
@@ -193,6 +197,10 @@ func (g *Database) SelectSteamappInfo(
 
 	var o SteamappInfoRow
 	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
 		return nil, err
 	}
 
