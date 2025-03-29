@@ -32,6 +32,15 @@ type BuildImageOptsRow struct {
 	Locked       bool           `db:"locked"`
 }
 
+type SteamappMetadataRow struct {
+	AppID       int       `db:"app_id"`
+	Name        string    `db:"name"`
+	IconURL     string    `db:"icon_url"`
+	DateCreated time.Time `db:"date_created"`
+	DateUpdated time.Time `db:"date_updated"`
+	Locked      bool      `db:"locked"`
+}
+
 func init() {
 	steamapp.RegisterDatabase(
 		new(DatabaseURLOpener),
@@ -80,6 +89,17 @@ func NewDatabase(ctx context.Context, u *url.URL) (*Database, error) {
 		return nil, err
 	}
 
+	q = `
+		CREATE TABLE IF NOT EXISTS steamappsinfo (
+			app_id INTEGER PRIMARY KEY REFERENCES steamapps(app_id) ON DELETE CASCADE,
+			name TEXT NOT NULL,
+			icon_url TEXT NOT NULL
+		);
+	`
+	if _, err = db.ExecContext(ctx, q); err != nil {
+		return nil, err
+	}
+
 	return &Database{db}, nil
 }
 
@@ -110,6 +130,7 @@ func (g *Database) GetBuildImageOpts(
 		FROM steamapps
 		WHERE app_id = $1;
 	`
+
 	var o BuildImageOptsRow
 	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -151,8 +172,43 @@ func (g *Database) SelectBuildImageOpts(
 		FROM steamapps
 		WHERE app_id = $1;
 	`
+
 	var o BuildImageOptsRow
 	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &o, nil
+}
+
+func (g *Database) SelectSteamappInfo(
+	ctx context.Context,
+	appID int,
+) (*SteamappMetadataRow, error) {
+	q := `
+		SELECT
+			sa.app_id,
+			sa.date_created,
+			sa.date_updated,
+			sa.locked,
+			sai.name,
+			sai.icon_url
+		FROM steamapps sa
+		INNER JOIN steamappsinfo sai
+			ON sa.app_id = sai.app_id
+		WHERE sa.app_id = $1;
+	`
+
+	var o SteamappMetadataRow
+	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
 		return nil, err
 	}
 
@@ -180,6 +236,7 @@ func (g *Database) ListBuildImageOpts(
 		ORDER BY date_updated
 		LIMIT $1 OFFSET $2;
 	`
+
 	var o []BuildImageOptsRow
 	if err := g.db.SelectContext(ctx, &o, q, limit, offset); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -236,6 +293,37 @@ func (g *Database) UpsertBuildImageOpts(ctx context.Context, appID int, row *Bui
 	).Scan(
 		&o.AppID, &o.DateCreated, &o.DateUpdated, &o.BaseImageRef, &o.AptPkgs,
 		&o.LaunchType, &o.PlatformType, &o.Execs, &o.Entrypoint, &o.Cmd, &o.Locked,
+	); err != nil {
+		return nil, err
+	}
+
+	return &o, nil
+}
+
+func (g *Database) UpsertSteamappInfo(ctx context.Context, appID int, row *SteamappMetadataRow) (*SteamappMetadataRow, error) {
+	q := `
+		INSERT INTO steamappsinfo(
+			app_id,
+			name,
+			icon_url
+		)
+		VALUES($1, $2, $3)
+		ON CONFLICT (app_id)
+		DO UPDATE SET
+			name = $2,
+			icon_url = $3
+		RETURNING *;
+	`
+
+	var o SteamappMetadataRow
+	if err := g.db.QueryRowContext(
+		ctx,
+		q,
+		appID,
+		row.Name,
+		row.IconURL,
+	).Scan(
+		&o.AppID, &o.Name, &o.IconURL,
 	); err != nil {
 		return nil, err
 	}

@@ -84,3 +84,11 @@ services:
       - 2456:2456/udp
     depends_on:
       - boiler
+  migrate:
+    image: alpine 
+    container_name: migrate
+    volumes:
+      - ./migrate:/data
+    entrypoint: ["/bin/sh", "-c", "/data/valheim.sh"]
+    depends_on:
+      - stoker

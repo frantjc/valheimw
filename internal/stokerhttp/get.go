@@ -1,48 +1,19 @@
 package stokerhttp
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
-	"time"
 
-	"github.com/frantjc/sindri/internal/appinfoutil"
-	"github.com/frantjc/sindri/steamapp/postgres"
 	"github.com/go-chi/chi"
 	"github.com/go-logr/logr"
 )
 
-type SteamappMetadata struct {
-	AppID       int       `json:"app_id"`
-	Name        string    `json:"name,omitempty"`
-	IconURL     string    `json:"icon_url,omitempty"`
-	DateCreated time.Time `json:"date_created"`
-	DateUpdated time.Time `json:"date_updated"`
-	Locked      bool      `json:"locked,omitempty"`
-}
-
-type SteamappSpec struct {
-	BaseImageRef string   `json:"base_image,omitempty"`
-	AptPkgs      []string `json:"apt_packages,omitempty"`
-	LaunchType   string   `json:"launch_type,omitempty"`
-	PlatformType string   `json:"platform_type,omitempty"`
-	Execs        []string `json:"execs,omitempty"`
-	Entrypoint   []string `json:"entrypoint,omitempty"`
-	Cmd          []string `json:"cmd,omitempty"`
-}
-
 type SteamappList struct {
-	Offset    int                `json:"offset"`
-	Limit     int                `json:"limit"`
-	Steamapps []SteamappMetadata `json:"steamapps"`
-}
-
-type Steamapp struct {
-	SteamappMetadata
-	SteamappSpec
+	Offset    int        `json:"offset"`
+	Limit     int        `json:"limit"`
+	Steamapps []Steamapp `json:"steamapps"`
 }
 
 func newHTTPStatusCodeError(err error, httpStatusCode int) error {
@@ -105,50 +76,37 @@ func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 
 	parsedSteamappAppID, err := strconv.Atoi(steamappID)
 	if err != nil {
-		return newHTTPStatusCodeError(fmt.Errorf("parse Steamapp ID: %w", err), http.StatusBadRequest)
+		return newHTTPStatusCodeError(fmt.Errorf("parse steamapp ID: %w", err), http.StatusBadRequest)
 	}
 
-	row, err := h.Database.SelectBuildImageOpts(r.Context(), parsedSteamappAppID)
+	specRow, err := h.Database.SelectBuildImageOpts(r.Context(), parsedSteamappAppID)
 	if err != nil {
 		return fmt.Errorf("select build image options: %w", err)
 	}
 
-	metadata, err := getSteamappMetadata(r.Context(), row)
+	if specRow == nil {
+		return newHTTPStatusCodeError(
+			fmt.Errorf("spec not found for app ID: %d", parsedSteamappAppID),
+			http.StatusNotFound,
+		)
+	}
+
+	infoRow, err := h.Database.SelectSteamappInfo(r.Context(), parsedSteamappAppID)
 	if err != nil {
-		return fmt.Errorf("get Steamapp metadata: %w", err)
+		return fmt.Errorf("select steamapp info: %w", err)
+	}
+
+	if infoRow == nil {
+		return newHTTPStatusCodeError(
+			fmt.Errorf("steam info not found for app ID: %s", steamappID),
+			http.StatusNotFound,
+		)
 	}
 
 	return respondJSON(w, r, &Steamapp{
-		SteamappMetadata: *metadata,
-		SteamappSpec: SteamappSpec{
-			BaseImageRef: row.BaseImageRef,
-			AptPkgs:      row.AptPkgs,
-			LaunchType:   row.LaunchType,
-			PlatformType: row.PlatformType,
-			Execs:        row.Execs,
-		},
+		SteamappSpec:     specFromRow(specRow),
+		SteamappMetadata: metaFromRow(infoRow),
 	})
-}
-
-func getSteamappMetadata(ctx context.Context, row *postgres.BuildImageOptsRow) (*SteamappMetadata, error) {
-	appInfo, err := appinfoutil.GetAppInfo(ctx, row.AppID)
-	if err != nil {
-		return nil, err
-	}
-
-	u, err := url.Parse("https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps")
-	if err != nil {
-		return nil, err
-	}
-
-	return &SteamappMetadata{
-		AppID:       row.AppID,
-		Name:        appInfo.Common.Name,
-		IconURL:     u.JoinPath(fmt.Sprint(row.AppID), fmt.Sprintf("%s.jpg", appInfo.Common.Icon)).String(),
-		DateCreated: row.DateCreated,
-		DateUpdated: row.DateUpdated,
-		Locked:      row.Locked,
-	}, nil
 }
 
 // @Summary	List known Steamapps
@@ -180,14 +138,24 @@ func (h *handler) getSteamapps(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	steamapps := make([]SteamappMetadata, len(rows))
+	steamapps := make([]Steamapp, len(rows))
 	for i, row := range rows {
-		metadata, err := getSteamappMetadata(r.Context(), &row)
+		infoRow, err := h.Database.SelectSteamappInfo(r.Context(), row.AppID)
 		if err != nil {
-			return fmt.Errorf("get Steamapp metadata: %w", err)
+			return fmt.Errorf("get steamapp info: %w", err)
 		}
 
-		steamapps[i] = *metadata
+		if infoRow == nil {
+			return newHTTPStatusCodeError(
+				fmt.Errorf("steam info not found for app ID: %d", row.AppID),
+				http.StatusNotFound,
+			)
+		}
+
+		steamapps[i] = Steamapp{
+			SteamappSpec:     specFromRow(&row),
+			SteamappMetadata: metaFromRow(infoRow),
+		}
 	}
 
 	return respondJSON(w, r, &SteamappList{
