@@ -104,8 +104,8 @@ func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return respondJSON(w, r, &Steamapp{
-		SteamappSpec: specFromRow(specRow),
-		SteamappInfo: infoFromRow(infoRow),
+		SteamappSpec:     specFromRow(specRow),
+		SteamappMetadata: metaFromRow(infoRow),
 	})
 }
 
@@ -153,8 +153,8 @@ func (h *handler) getSteamapps(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		steamapps[i] = Steamapp{
-			SteamappSpec: specFromRow(&row),
-			SteamappInfo: infoFromRow(infoRow),
+			SteamappSpec:     specFromRow(&row),
+			SteamappMetadata: metaFromRow(infoRow),
 		}
 	}
 

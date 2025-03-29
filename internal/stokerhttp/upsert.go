@@ -53,18 +53,18 @@ func (h *handler) upsertSteamapp(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("get steam app info: %w", err)
 	}
 
-	infoRow, err := h.Database.UpsertSteamappInfo(r.Context(), parsedSteamappAppID, rowFromInfo(info))
+	infoRow, err := h.Database.UpsertSteamappInfo(r.Context(), parsedSteamappAppID, rowFromMeta(info))
 	if err != nil {
 		return fmt.Errorf("upsert steam app info: %w", err)
 	}
 
 	return respondJSON(w, r, &Steamapp{
-		SteamappInfo: infoFromRow(infoRow),
+		SteamappMetadata: metaFromRow(infoRow),
 		SteamappSpec: specFromRow(specRow),
 	})
 }
 
-func getSteamappInfo(ctx context.Context, row *postgres.BuildImageOptsRow) (*SteamappInfo, error) {
+func getSteamappInfo(ctx context.Context, row *postgres.BuildImageOptsRow) (*SteamappMetadata, error) {
 	appInfo, err := appinfoutil.GetAppInfo(ctx, row.AppID)
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func getSteamappInfo(ctx context.Context, row *postgres.BuildImageOptsRow) (*Ste
 		return nil, err
 	}
 
-	return &SteamappInfo{
+	return &SteamappMetadata{
 		Name:    appInfo.Common.Name,
 		IconURL: u.JoinPath(fmt.Sprint(row.AppID), fmt.Sprintf("%s.jpg", appInfo.Common.Icon)).String(),
 	}, nil
@@ -112,8 +112,8 @@ func rowFromSpec(appID int, d *SteamappSpec) *postgres.BuildImageOptsRow {
 	return r
 }
 
-func rowFromInfo(d *SteamappInfo) *postgres.SteamappInfoRow {
-	r := &postgres.SteamappInfoRow{
+func rowFromMeta(d *SteamappMetadata) *postgres.SteamappMetadataRow {
+	r := &postgres.SteamappMetadataRow{
 		Name:    d.Name,
 		IconURL: d.IconURL,
 	}

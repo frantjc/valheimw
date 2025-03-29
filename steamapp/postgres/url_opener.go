@@ -32,10 +32,13 @@ type BuildImageOptsRow struct {
 	Locked       bool           `db:"locked"`
 }
 
-type SteamappInfoRow struct {
-	AppID   int    `db:"app_id"`
-	Name    string `db:"name"`
-	IconURL string `db:"icon_url"`
+type SteamappMetadataRow struct {
+	AppID       int       `db:"app_id"`
+	Name        string    `db:"name"`
+	IconURL     string    `db:"icon_url"`
+	DateCreated time.Time `db:"date_created"`
+	DateUpdated time.Time `db:"date_updated"`
+	Locked      bool      `db:"locked"`
 }
 
 func init() {
@@ -185,17 +188,22 @@ func (g *Database) SelectBuildImageOpts(
 func (g *Database) SelectSteamappInfo(
 	ctx context.Context,
 	appID int,
-) (*SteamappInfoRow, error) {
+) (*SteamappMetadataRow, error) {
 	q := `
 		SELECT
-			app_id,
-			name,
-			icon_url
-		FROM steamappsinfo
-		WHERE app_id = $1;
+			sa.app_id,
+			sa.date_created,
+			sa.date_updated,
+			sa.locked,
+			sai.name,
+			sai.icon_url
+		FROM steamapps sa
+		INNER JOIN steamappsinfo sai
+			ON sa.app_id = sai.app_id
+		WHERE sa.app_id = $1;
 	`
 
-	var o SteamappInfoRow
+	var o SteamappMetadataRow
 	if err := g.db.GetContext(ctx, &o, q, appID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -292,7 +300,7 @@ func (g *Database) UpsertBuildImageOpts(ctx context.Context, appID int, row *Bui
 	return &o, nil
 }
 
-func (g *Database) UpsertSteamappInfo(ctx context.Context, appID int, row *SteamappInfoRow) (*SteamappInfoRow, error) {
+func (g *Database) UpsertSteamappInfo(ctx context.Context, appID int, row *SteamappMetadataRow) (*SteamappMetadataRow, error) {
 	q := `
 		INSERT INTO steamappsinfo(
 			app_id,
@@ -307,7 +315,7 @@ func (g *Database) UpsertSteamappInfo(ctx context.Context, appID int, row *Steam
 		RETURNING *;
 	`
 
-	var o SteamappInfoRow
+	var o SteamappMetadataRow
 	if err := g.db.QueryRowContext(
 		ctx,
 		q,
