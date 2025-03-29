@@ -15,7 +15,17 @@ import (
 	"github.com/lib/pq"
 )
 
-// @Router		/steamapps/{steamappID} [put].
+// @Summary	Create or update the details of a specific Steamapp ID
+// @Accept		application/json
+// @Produce	json
+// @Param		steamappID	path		int				true	"Steamapp ID"
+// @Param		request		body		SteamappSpec	true	"Steamapp detail"
+// @Success	200			{object}	Steamapp
+// @Failure	400			{object}	Error
+// @Failure	415			{object}	Error
+// @Failure	500			{object}	Error
+// @Router		/steamapps/{steamappID} [post]
+// @Router		/steamapps/{steamappID} [put]
 func (h *handler) upsertSteamapp(w http.ResponseWriter, r *http.Request) error {
 	var (
 		steamappID = chi.URLParam(r, steamappIDParam)

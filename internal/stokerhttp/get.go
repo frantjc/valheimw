@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
-	"github.com/frantjc/sindri/steamapp/postgres"
 	"github.com/go-chi/chi"
 	"github.com/go-logr/logr"
 )
@@ -16,51 +14,6 @@ type SteamappList struct {
 	Offset    int        `json:"offset"`
 	Limit     int        `json:"limit"`
 	Steamapps []Steamapp `json:"steamapps"`
-}
-
-type Steamapp struct {
-	SteamappSpec
-	SteamappInfo
-}
-
-type SteamappSpec struct {
-	BaseImageRef string    `json:"base_image,omitempty"`
-	AptPkgs      []string  `json:"apt_packages,omitempty"`
-	LaunchType   string    `json:"launch_type,omitempty"`
-	PlatformType string    `json:"platform_type,omitempty"`
-	Execs        []string  `json:"execs,omitempty"`
-	Entrypoint   []string  `json:"entrypoint,omitempty"`
-	Cmd          []string  `json:"cmd,omitempty"`
-	DateCreated  time.Time `json:"date_created"`
-	DateUpdated  time.Time `json:"date_updated"`
-	Locked       bool      `json:"locked"`
-}
-
-func specFromRow(row *postgres.BuildImageOptsRow) SteamappSpec {
-	return SteamappSpec{
-		BaseImageRef: row.BaseImageRef,
-		AptPkgs:      row.AptPkgs,
-		LaunchType:   row.LaunchType,
-		PlatformType: row.PlatformType,
-		Execs:        row.Execs,
-		Entrypoint:   row.Entrypoint,
-		Cmd:          row.Cmd,
-		DateCreated:  row.DateCreated,
-		DateUpdated:  row.DateUpdated,
-		Locked:       row.Locked,
-	}
-}
-
-type SteamappInfo struct {
-	Name    string `json:"name,omitempty"`
-	IconURL string `json:"icon_url,omitempty"`
-}
-
-func infoFromRow(row *postgres.SteamappInfoRow) SteamappInfo {
-	return SteamappInfo{
-		Name:    row.Name,
-		IconURL: row.IconURL,
-	}
 }
 
 func newHTTPStatusCodeError(err error, httpStatusCode int) error {
@@ -106,7 +59,14 @@ func httpStatusCode(err error) int {
 
 const steamappIDParam = "steamappID"
 
-// @Router		/steamapps/{steamappID} [get].
+// @Summary	Get the details for a specific Steamapp ID
+// @Produce	json
+// @Param		steamappID	path		int	true	"Steamapp ID"
+// @Success	200			{object}	Steamapp
+// @Failure	400			{object}	Error
+// @Failure	415			{object}	Error
+// @Failure	500			{object}	Error
+// @Router		/steamapps/{steamappID} [get]
 func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 	var (
 		steamappID = chi.URLParam(r, steamappIDParam)
@@ -135,7 +95,14 @@ func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 	})
 }
 
-// @Router		/steamapps [get].
+// @Summary	List known Steamapps
+// @Produce	json
+// @Param		offset	query		int	false	"Offset"
+// @Param		limit	query		int	false	"Limit"
+// @Success	200		{array}		SteamappMetadata
+// @Failure	415		{object}	Error
+// @Failure	500		{object}	Error
+// @Router		/steamapps [get]
 func (h *handler) getSteamapps(w http.ResponseWriter, r *http.Request) error {
 	var (
 		_     = logr.FromContextOrDiscard(r.Context())
