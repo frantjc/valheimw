@@ -52,5 +52,3 @@ func metaFromRow(row *postgres.SteamappMetadataRow) SteamappMetadata {
 		Locked:      row.Locked,
 	}
 }
-
-// spec/status
