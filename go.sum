@@ -95,8 +95,8 @@ github.com/containerd/console v1.0.4 h1:F2g4+oChYvBTsASRTz8NP6iIAi97J3TtSAsLbIFn
 github.com/containerd/console v1.0.4/go.mod h1:YynlIjWYF8myEu6sdkwKIvGQq+cOckRm6So2avqoYAk=
 github.com/containerd/containerd/api v1.8.0 h1:hVTNJKR8fMc/2Tiw60ZRijntNMd1U+JVMyTRdsD2bS0=
 github.com/containerd/containerd/api v1.8.0/go.mod h1:dFv4lt6S20wTu/hMcP4350RL87qPWLVa/OHOwmmdnYc=
-github.com/containerd/containerd/v2 v2.0.3 h1:zBKgwgZsuu+LPCMzCLgA4sC4MiZzZ59ZT31XkmiISQM=
-github.com/containerd/containerd/v2 v2.0.3/go.mod h1:5j9QUUaV/cy9ZeAx4S+8n9ffpf+iYnEj4jiExgcbuLY=
+github.com/containerd/containerd/v2 v2.0.4 h1:+r7yJMwhTfMm3CDyiBjMBQO8a9CTBxL2Bg/JtqtIwB8=
+github.com/containerd/containerd/v2 v2.0.4/go.mod h1:5j9QUUaV/cy9ZeAx4S+8n9ffpf+iYnEj4jiExgcbuLY=
 github.com/containerd/continuity v0.4.5 h1:ZRoN1sXq9u7V6QoHMcVWGhOwDFqZ4B9i5H6un1Wh0x4=
 github.com/containerd/continuity v0.4.5/go.mod h1:/lNJvtJKUQStBzpVQ1+rasXO1LAWtUQssk28EZvJ3nE=
 github.com/containerd/errdefs v1.0.0 h1:tg5yIfIlQIrxYtu9ajqY42W3lpS19XqdxRQeEwYG8PI=
@@ -264,8 +264,8 @@ github.com/mitchellh/go-homedir v1.1.0 h1:lukF9ziXFxDFPkA1vsr5zpc1XuPDn/wFntq5mG
 github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
 github.com/mmatczuk/anyflag v0.0.0-20240709090339-eb9e24cd1b44 h1:Ds9W8Yj5ti4kQXITpCozfNNibS1fUA8+aK2T5th0vXE=
 github.com/mmatczuk/anyflag v0.0.0-20240709090339-eb9e24cd1b44/go.mod h1:PT22bA6vWBzPL8tAeK2XCMvWOQ4e19yY3MJIgnTZRaE=
-github.com/moby/buildkit v0.20.1 h1:sT0ZXhhNo5rVbMcYfgttma3TdUHfO5JjFA0UAL8p9fY=
-github.com/moby/buildkit v0.20.1/go.mod h1:Rq9nB/fJImdk6QeM0niKtOHJqwKeYMrK847hTTDVuA4=
+github.com/moby/buildkit v0.20.2 h1:qIeR47eQ1tzI1rwz0on3Xx2enRw/1CKjFhoONVcTlMA=
+github.com/moby/buildkit v0.20.2/go.mod h1:DhaF82FjwOElTftl0JUAJpH/SUIUx4UvcFncLeOtlDI=
 github.com/moby/docker-image-spec v1.3.1 h1:jMKff3w6PgbfSa69GfNg+zN/XLhfXJGnEx3Nl2EsFP0=
 github.com/moby/docker-image-spec v1.3.1/go.mod h1:eKmb5VW8vQEh/BAr2yvVNvuiJuY6UIocYsFu/DxxRpo=
 github.com/moby/locker v1.0.1 h1:fOXqR41zeveg4fFODix+1Ch4mj/gT0NE1XJbp/epuBg=
