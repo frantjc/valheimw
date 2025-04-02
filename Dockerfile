@@ -1,6 +1,6 @@
 ARG tool=valheimw
 
-FROM golang:1.23 AS build
+FROM golang:1.24 AS build
 WORKDIR $GOPATH/github.com/frantjc/sindri
 COPY go.mod go.sum ./
 RUN go mod download
