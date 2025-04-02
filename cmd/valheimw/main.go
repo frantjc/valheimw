@@ -15,7 +15,7 @@ import (
 func main() {
 	var (
 		ctx, stop = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-		cmd       = command.AddCommon(command.NewValheimw(), SemVer())
+		cmd       = command.SetCommon(command.NewValheimw(), SemVer())
 	)
 
 	err := xerrors.Ignore(cmd.ExecuteContext(ctx), context.Canceled)

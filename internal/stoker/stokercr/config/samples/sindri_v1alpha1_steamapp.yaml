@@ -1,0 +1,8 @@
+---
+apiVersion: sindri.frantj.cc/v1alpha1
+kind: Steamapp
+metadata:
+  name: 896660-public
+  namespace: default
+spec:
+  appID: 896660

@@ -28,16 +28,15 @@ function handleError(res: Response) {
   return res;
 }
 
-export type SteamappMetadata = {
+export type SteamappSummary = {
+	app_id: number;
   name: string;
   icon_url: string;
-  locked: boolean;
-	app_id: number;
 	date_created: Date;
-	date_updated: Date;
+  locked: boolean;
 }
 
-export type SteamappSpec = {
+export type SteamappDetail = {
 	base_image: string;
 	apt_packages: Array<string>;
 	launch_type: string;
@@ -47,12 +46,11 @@ export type SteamappSpec = {
 	cmd: Array<string>;
 }
 
-export type Steamapp = SteamappMetadata & SteamappSpec;
+export type Steamapp = SteamappSummary & SteamappDetail;
 
-export type Steamapps = {
-  offset: number;
-  limit: number;
-  steamapps: Array<SteamappMetadata>;
+export type SteamappList = {
+  continue?: string;
+  steamapps: Array<SteamappSummary>;
 }
 
 // getUrl takes a path and returns the full URL
@@ -71,9 +69,9 @@ export function getUrl(path: string) {
   ).toString();
 }
 
-export function getSteamapp(id: number): Promise<Steamapp> {
+export function getSteamapp(id: number, branch?: string): Promise<Steamapp> {
   return fetch(
-    getUrl(`/api/v1/steamapps/${id}`),
+    getUrl(`/api/v1/steamapps/${id}`.concat(branch ? `/branch=${branch}` : "")),
     {
       headers: {
         "Content-Type": "application/json",
@@ -88,18 +86,18 @@ export function getSteamapp(id: number): Promise<Steamapp> {
 
 export function getSteamapps(
   {
-    offset = 0,
-    limit = 10
+    continue: cont,
+    limit = 10,
   }: {
-    offset?: number;
+    continue?: string;
     limit?: number;
   } = {}
-): Promise<Steamapps> {
+): Promise<SteamappList> {
   return fetch(
     getUrl(
       `/api/v1/steamapps?${
         new URLSearchParams(
-          Object.entries({ offset, limit })
+          Object.entries({ continue: cont, limit })
             .reduce(
               (acc, [k, v]) =>
                 v && v.toString()
@@ -121,6 +119,6 @@ export function getSteamapps(
   )
     .then(handleError)
     .then((res) => {
-      return res.json() as Promise<Steamapps>;
+      return res.json() as Promise<SteamappList>;
     });
 }

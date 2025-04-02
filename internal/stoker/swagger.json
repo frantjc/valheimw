@@ -12,15 +12,9 @@
                 "summary": "List known Steamapps",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "Offset",
-                        "name": "offset",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit",
-                        "name": "limit",
+                        "type": "string",
+                        "description": "Continue token",
+                        "name": "continue",
                         "in": "query"
                     }
                 ],
@@ -28,10 +22,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/SteamappMetadata"
-                            }
+                            "type": "Object"
                         }
                     },
                     "415": {
@@ -49,7 +40,7 @@
                 }
             }
         },
-        "/steamapps/{steamappID}": {
+        "/steamapps/{appID}": {
             "get": {
                 "produces": [
                     "application/json"
@@ -59,9 +50,15 @@
                     {
                         "type": "integer",
                         "description": "Steamapp ID",
-                        "name": "steamappID",
+                        "name": "appID",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Steamapp branch password",
+                        "name": "betapassword",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -103,9 +100,15 @@
                     {
                         "type": "integer",
                         "description": "Steamapp ID",
-                        "name": "steamappID",
+                        "name": "appID",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Steamapp branch password",
+                        "name": "betapassword",
+                        "in": "query"
                     },
                     {
                         "description": "Steamapp detail",
@@ -113,7 +116,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/SteamappSpec"
+                            "$ref": "#/definitions/SteamappDetail"
                         }
                     }
                 ],
@@ -156,9 +159,15 @@
                     {
                         "type": "integer",
                         "description": "Steamapp ID",
-                        "name": "steamappID",
+                        "name": "appID",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Steamapp branch password",
+                        "name": "betapassword",
+                        "in": "query"
                     },
                     {
                         "description": "Steamapp detail",
@@ -166,7 +175,192 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/SteamappSpec"
+                            "$ref": "#/definitions/SteamappDetail"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/Steamapp"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/Error"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/steamapps/{appID}/{branch}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get the details for a specific Steamapp ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Steamapp ID",
+                        "name": "appID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Steamapp branch (default public)",
+                        "name": "branch",
+                        "in": "path"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Steamapp branch password",
+                        "name": "betapassword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/Steamapp"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/Error"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/Error"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Create or update the details of a specific Steamapp ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Steamapp ID",
+                        "name": "appID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Steamapp branch (default public)",
+                        "name": "branch",
+                        "in": "path"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Steamapp branch password",
+                        "name": "betapassword",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Steamapp detail",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SteamappDetail"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/Steamapp"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/Error"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Create or update the details of a specific Steamapp ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Steamapp ID",
+                        "name": "appID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Steamapp branch (default public)",
+                        "name": "branch",
+                        "in": "path"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Steamapp branch password",
+                        "name": "betapassword",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Steamapp detail",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SteamappDetail"
                         }
                     }
                 ],
@@ -232,9 +426,6 @@
                 "date_created": {
                     "type": "string"
                 },
-                "date_updated": {
-                    "type": "string"
-                },
                 "entrypoint": {
                     "type": "array",
                     "items": {
@@ -264,30 +455,7 @@
                 }
             }
         },
-        "SteamappMetadata": {
-            "type": "object",
-            "properties": {
-                "app_id": {
-                    "type": "integer"
-                },
-                "date_created": {
-                    "type": "string"
-                },
-                "date_updated": {
-                    "type": "string"
-                },
-                "icon_url": {
-                    "type": "string"
-                },
-                "locked": {
-                    "type": "boolean"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "SteamappSpec": {
+        "SteamappDetail": {
             "type": "object",
             "properties": {
                 "apt_packages": {

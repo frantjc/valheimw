@@ -7,9 +7,10 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func AddCommon(cmd *cobra.Command, version string) *cobra.Command {
+func SetCommon(cmd *cobra.Command, version string) *cobra.Command {
 	var verbosity int
 	cmd.PersistentFlags().CountVarP(&verbosity, "verbose", "V", fmt.Sprintf("Verbosity for %s.", cmd.Name()))
 	cmd.PersistentPreRun = func(cmd *cobra.Command, _ []string) {
@@ -20,6 +21,7 @@ func AddCommon(cmd *cobra.Command, version string) *cobra.Command {
 			slogr = logr.FromSlogHandler(slog.Handler())
 		)
 
+		ctrl.SetLogger(slogr)
 		cmd.SetContext(logr.NewContext(cmd.Context(), slogr))
 	}
 

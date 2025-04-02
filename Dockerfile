@@ -6,8 +6,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 ARG tool=valheimw
-ENV CGO_ENABLED 0
-RUN go build -o /$tool ./cmd/$tool
+RUN CGO_ENABLED=0 go build -o /$tool ./cmd/$tool
 
 FROM debian:stable-slim AS valheimw
 RUN apt-get update -y \
@@ -30,6 +29,7 @@ ENTRYPOINT ["/usr/local/bin/boiler"]
 COPY --from=build /boiler /usr/local/bin
 
 FROM scratch AS mist
+ENTRYPOINT ["/mist"]
 COPY --from=build /mist /mist
 
 FROM node:20.11.1-slim AS remix
@@ -49,11 +49,11 @@ RUN apt-get update -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 ENV NODE_ENV production
-COPY --from=build /stoker /usr/local/bin/stoker
+ENTRYPOINT ["/usr/local/bin/stoker"]
 COPY server.js package.json /app/
+COPY --from=build /stoker /usr/local/bin/stoker
 COPY --from=remix /src/github.com/frantjc/sindri/build /app/build/
 COPY --from=remix /src/github.com/frantjc/sindri/node_modules /app/node_modules/
 COPY --from=remix /src/github.com/frantjc/sindri/public /app/public/
-ENTRYPOINT ["stoker"]
 
 FROM $tool

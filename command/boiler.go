@@ -63,7 +63,6 @@ func NewBoiler() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				defer registry.Database.Close()
 
 				eg.Go(func() error {
 					<-ctx.Done()

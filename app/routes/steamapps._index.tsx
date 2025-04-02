@@ -1,6 +1,6 @@
 import type { MetaFunction } from "@remix-run/node";
 import React from "react";
-import { getSteamapps, Steamapps } from "~/client";
+import { getSteamapps, SteamappList } from "~/client";
 
 export const meta: MetaFunction = () => {
   return [
@@ -9,17 +9,17 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Main() {
-  const [data, setData] = React.useState<Pick<Steamapps, "steamapps"> & { next?: number }>();
+  const [data, setData] = React.useState<SteamappList>();
 
   React.useEffect(() => {
-    getSteamapps({ offset: data?.next || 0 })
+    getSteamapps({ continue: data?.continue })
       .then(res => setData(cur => {
         return {
-          continue: res.steamapps.length < res.limit ? undefined : res.offset + 1,
+          continue: res.continue,
           steamapps: cur?.steamapps.concat(res.steamapps) || res.steamapps,
         }
       }));
-  }, [setData, data?.next])
+  }, [setData, data?.continue])
 
   return (
     <main>

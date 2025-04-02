@@ -34,8 +34,8 @@ func (r *PullRegistry) HeadManifest(ctx context.Context, name string, reference 
 	appID, err := strconv.Atoi(name)
 	if err != nil {
 		return err
-	} else if appID <= 0 {
-		return fmt.Errorf("invalid Steam app ID: %d", appID)
+	} else if err := ValidateAppID(appID); err != nil {
+		return err
 	}
 
 	if err := digest.Digest(reference).Validate(); err == nil {
@@ -59,13 +59,16 @@ func (r *PullRegistry) GetManifest(ctx context.Context, name string, reference s
 	appID, err := strconv.Atoi(name)
 	if err != nil {
 		return nil, err
-	} else if appID <= 0 {
-		return nil, fmt.Errorf("invalid Steam app ID: %d", appID)
+	} else if err := ValidateAppID(appID); err != nil {
+		return nil, err
 	}
 
 	if reference == "latest" {
+		// Special handling for mapping the default image tag to the default Steamapp branch name.
 		reference = DefaultBranchName
 	} else if err = digest.Digest(reference).Validate(); err == nil {
+		// If the reference is a digest instead of a Steamapp branch name, it necessarily
+		// must have been generated previously to be retrievable.
 		rc, err := r.Bucket.NewReader(ctx, filepath.Join(name, "manifests", reference), nil)
 		if err != nil {
 			return nil, err
@@ -81,6 +84,9 @@ func (r *PullRegistry) GetManifest(ctx context.Context, name string, reference s
 		return manifest, nil
 	}
 
+	// At this point, the caller must be asking for a Steamapp branch name, so
+	// we have to build it. Check the database to see if we have a known special
+	// handling for it.
 	opts, err := r.Database.GetBuildImageOpts(ctx, appID, reference)
 	if err != nil {
 		return nil, err
@@ -98,7 +104,7 @@ func (r *PullRegistry) GetManifest(ctx context.Context, name string, reference s
 	}()
 	defer wc.Close()
 
-	if err := r.ImageBuilder.BuildImage(ctx, appID, opts, &BuildImageOpts{Output: wc}); err != nil {
+	if err := r.ImageBuilder.BuildImage(ctx, appID, opts, &BuildImageOpts{Output: wc, Beta: reference}); err != nil {
 		return nil, err
 	}
 
@@ -250,8 +256,8 @@ func (r *PullRegistry) GetBlob(ctx context.Context, name string, digest string) 
 	appID, err := strconv.Atoi(name)
 	if err != nil {
 		return nil, err
-	} else if appID <= 0 {
-		return nil, fmt.Errorf("invalid Steam app ID: %d", appID)
+	} else if err := ValidateAppID(appID); err != nil {
+		return nil, err
 	}
 
 	hash, err := v1.NewHash(digest)

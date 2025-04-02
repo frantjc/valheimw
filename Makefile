@@ -8,10 +8,23 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 GO ?= go
-GIT ?= git
+
+.PHONY: manifests
+manifests: internal/stoker/stokercr/config/crd
+
+.PHONY: internal/stoker/stokercr/config/crd
+internal/stoker/stokercr/config/crd: controller-gen
+	@$(CONTROLLER_GEN) crd webhook paths="./..." output:crd:artifacts:config=$@
+
+.PHONY: config
+config: manifests
+
+.PHONY: generate
+generate: controller-gen
+	@$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: fmt vet test
-fmt generate test:
+fmt vet test:
 	@$(GO) $@ ./...
 
 .PHONY: download vendor verify
@@ -26,22 +39,32 @@ lint: golangci-lint fmt
 .PHONY: gen
 gen: generate
 
-.PHONY: internal/stokerhttp
-internal/stokerhttp: swag
-	@$(SWAG) fmt --dir $@
-	@$(SWAG) init --dir $@ --output $@ --outputTypes json --parseInternal
-	@sed -i 's/stokerhttp\.//g' $@/swagger.json
-	@echo >> $@/swagger.json
+.PHONY: internal/stoker/swagger.json
+internal/stoker/swagger.json: swag
+	@$(SWAG) fmt -g api.go --dir internal/stoker
+	@$(SWAG) init -g api.go --dir internal/stoker --output internal/stoker --outputTypes json --parseInternal
+	@sed -i 's/stoker\.//g' $@
+	@echo >> $@
+
+.PHONY: swagger
+swagger: internal/stoker/swagger.json
 
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	@mkdir -p $(LOCALBIN)
 
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
 SWAG ?= $(LOCALBIN)/swag
 
+CONTROLLER_TOOLS_VERSION ?= v0.17.1
 GOLANGCI_LINT_VERSION ?= v1.64.5
 SWAG_VERSION ?= v1.16.4
+
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN)
+$(CONTROLLER_GEN): $(LOCALBIN)
+	@$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT)

@@ -14,6 +14,7 @@ type GettableBuildImageOpts struct {
 
 	AptPkgs []string
 
+	BetaPassword string
 	LaunchType   string
 	PlatformType steamcmd.PlatformType
 
@@ -32,6 +33,9 @@ func (o *GettableBuildImageOpts) Apply(opts *BuildImageOpts) {
 	}
 	if len(o.AptPkgs) > 0 {
 		opts.AptPkgs = o.AptPkgs
+	}
+	if o.BetaPassword != "" {
+		opts.BetaPassword = o.BetaPassword
 	}
 	if o.LaunchType != "" {
 		opts.LaunchType = o.LaunchType
@@ -52,7 +56,6 @@ func (o *GettableBuildImageOpts) Apply(opts *BuildImageOpts) {
 
 type Database interface {
 	GetBuildImageOpts(context.Context, int, string) (*GettableBuildImageOpts, error)
-	Close() error
 }
 
 type DatabaseURLOpener interface {

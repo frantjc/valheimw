@@ -1,10 +1,10 @@
 # Valheim
 
-Sindri boasts special support for Valheim among other Steam app servers due to its origins.
+Sindri boasts special support for Valheim among other Steamapp servers due to its origins.
 
 ## `valheimw`
 
-This special supports comes in the form of `valheimw`, a **Valheim** server **wrapper**. Instead of being a Steam app server that Sindri can help build into a container image, `valheimw` is a pre-built tool specifically for Valheim servers, modded or otherwise. If mods are specified, it uses [BepInEx](https://valheim.thunderstore.io/p/denikson/BepInExPack_Valheim) to load them.
+This special supports comes in the form of `valheimw`, a **Valheim** server **wrapper**. Instead of being a Steamapp server that Sindri can help build into a container image, `valheimw` is a pre-built tool specifically for Valheim servers, modded or otherwise. If mods are specified, it uses [BepInEx](https://valheim.thunderstore.io/p/denikson/BepInExPack_Valheim) to load them.
 
 It provides additional features beyond that in an HTTP server that it runs alongside the Valheim server, including:
 

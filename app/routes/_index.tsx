@@ -1,6 +1,6 @@
 import type { MetaFunction } from "@remix-run/node";
 import React from "react";
-import { getSteamapps, SteamappMetadata } from "~/client";
+import { getSteamapps, SteamappSummary } from "~/client";
 import { Command } from "~/components";
 
 export const meta: MetaFunction = () => {
@@ -10,7 +10,7 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Main() {
-  const [steamapps, setSteamapps] = React.useState<Array<SteamappMetadata>>();
+  const [steamapps, setSteamapps] = React.useState<Array<SteamappSummary>>();
   const [index, setIndex] = React.useState(0);
 
   React.useEffect(() => {

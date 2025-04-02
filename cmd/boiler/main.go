@@ -9,7 +9,6 @@ import (
 
 	"github.com/frantjc/sindri/command"
 	_ "github.com/frantjc/sindri/steamapp/dummy"
-	_ "github.com/frantjc/sindri/steamapp/postgres"
 	xerrors "github.com/frantjc/x/errors"
 	xos "github.com/frantjc/x/os"
 	_ "github.com/moby/buildkit/client/connhelper/dockercontainer"
@@ -24,7 +23,7 @@ import (
 func main() {
 	var (
 		ctx, stop = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-		cmd       = command.AddCommon(command.NewBoiler(), SemVer())
+		cmd       = command.SetCommon(command.NewBoiler(), SemVer())
 	)
 
 	err := xerrors.Ignore(cmd.ExecuteContext(ctx), context.Canceled)

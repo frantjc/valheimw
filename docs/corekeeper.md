@@ -29,9 +29,9 @@ services:
       - boiler
 ```
 
-> The Core Keeper server is one of a few Steam apps that is included in the hardcoded database, so it works out of the box.
+> The Core Keeper server is one of a few Steamapps that is included in the hardcoded database, so it works out of the box.
 
-> "1963720" refers to the Steam app ID of the Core Keeper server.
+> "1963720" refers to the Steamapp ID of the Core Keeper server.
 
 This `docker-compose.yml` runs the Core Keeper server. To use it, place it in a directory and run the following command there:
 

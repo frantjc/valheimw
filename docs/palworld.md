@@ -29,9 +29,9 @@ services:
       - boiler
 ```
 
-> The Palworld server is one of a few Steam apps that is included in the hardcoded database, so it works out of the box.
+> The Palworld server is one of a few Steamapps that is included in the hardcoded database, so it works out of the box.
 
-> "2394010" refers to the Steam app ID of the Palworld server.
+> "2394010" refers to the Steamapp ID of the Palworld server.
 
 To run the Palworld server this way, run the following commands in the directory that the above files are placed in.
 

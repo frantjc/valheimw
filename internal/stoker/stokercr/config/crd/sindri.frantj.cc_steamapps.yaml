@@ -1,0 +1,107 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.1
+  name: steamapps.sindri.frantj.cc
+spec:
+  group: sindri.frantj.cc
+  names:
+    kind: Steamapp
+    listKind: SteamappList
+    plural: steamapps
+    singular: steamapp
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Steamapp is the Schema for the steamapps API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: SteamappSpec defines the desired state of Steamapp.
+            properties:
+              appID:
+                minimum: 10
+                multipleOf: 10
+                type: integer
+              betaPassword:
+                type: string
+              branch:
+                default: public
+                type: string
+              imageOpts:
+                properties:
+                  aptPackages:
+                    items:
+                      type: string
+                    type: array
+                  baseImage:
+                    default: docker.io/library/debian:stable-slim
+                    type: string
+                  cmd:
+                    items:
+                      type: string
+                    type: array
+                  entrypoint:
+                    items:
+                      type: string
+                    type: array
+                  execs:
+                    items:
+                      type: string
+                    type: array
+                  launchType:
+                    default: server
+                    type: string
+                  platformType:
+                    default: linux
+                    enum:
+                    - linux
+                    - windows
+                    - macos
+                    type: string
+                type: object
+            required:
+            - appID
+            type: object
+          status:
+            description: SteamappStatus defines the observed state of Steamapp.
+            properties:
+              icon:
+                type: string
+              name:
+                type: string
+              phase:
+                default: Pending
+                enum:
+                - Pending
+                - Ready
+                - Failed
+                type: string
+            required:
+            - phase
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -40,11 +40,11 @@ var _ steamapp.Database = &Database{}
 func (g *Database) GetBuildImageOpts(
 	_ context.Context,
 	appID int,
-	_ string,
+	branch string,
 ) (*steamapp.GettableBuildImageOpts, error) {
 	switch appID {
 	case valheim.SteamappID:
-		return &steamapp.GettableBuildImageOpts{
+		opts := &steamapp.GettableBuildImageOpts{
 			AptPkgs: []string{
 				"ca-certificates",
 			},
@@ -61,7 +61,13 @@ func (g *Database) GetBuildImageOpts(
 				),
 			},
 			Entrypoint: []string{filepath.Join(g.Dir, "valheim_server.x86_64")},
-		}, nil
+		}
+
+		if branch != "" && branch != steamapp.DefaultBranchName {
+			opts.BetaPassword = "yesimadebackups"
+		}
+
+		return opts, nil
 	case 1963720:
 		// Core Keeper server.
 		return &steamapp.GettableBuildImageOpts{
@@ -93,8 +99,4 @@ func (g *Database) GetBuildImageOpts(
 
 	// Assume it works out of the box.
 	return &steamapp.GettableBuildImageOpts{}, nil
-}
-
-func (g *Database) Close() error {
-	return nil
 }
