@@ -256,7 +256,7 @@ func NewStoker() *cobra.Command {
 				}
 
 				eg.Go(func() error {
-					log.Info("listening...", "addr", l.Addr().String())
+					log.Info("listening...", "addr", l.Addr().String(), "path", opts.Path)
 
 					return srv.Serve(l)
 				})

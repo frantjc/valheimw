@@ -77,6 +77,16 @@ dockers:
       - ghcr.io/frantjc/stoker:{{ .Major }}.{{ .Minor }}
       - ghcr.io/frantjc/stoker:{{ .Major }}
       - ghcr.io/frantjc/stoker:latest
+    extra_files:
+      - app/
+      - public/
+      - package.json
+      - postcss.config.js
+      - server.js
+      - tailwind.config.ts
+      - tsconfig.json
+      - vite.config.ts
+      - yarn.lock
   - dockerfile: goreleaser.valheimw.Dockerfile
     image_templates:
       - ghcr.io/frantjc/valheimw:{{ .RawVersion }}

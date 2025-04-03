@@ -31,14 +31,14 @@ func NewScheme() (*runtime.Scheme, error) {
 	return scheme, schemeBuilder.AddToScheme(scheme)
 }
 
-type DatabaseURLOpener struct{}
+type databaseURLOpener struct{}
 
 const (
 	DefaultNamespace = "sindri-system"
 )
 
 // OpenDatabase implements steamapp.DatabaseURLOpener.
-func (o *DatabaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamapp.Database, error) {
+func (o *databaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamapp.Database, error) {
 	namespace := u.Query().Get("namespace")
 	if namespace == "" {
 		namespace = DefaultNamespace
@@ -70,7 +70,10 @@ func (o *DatabaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamap
 const Scheme = "stokercr"
 
 func init() {
-	steamapp.RegisterDatabase(&DatabaseURLOpener{}, Scheme)
+	steamapp.RegisterDatabase(
+		new(databaseURLOpener),
+		Scheme,
+	)
 }
 
 type Database struct {

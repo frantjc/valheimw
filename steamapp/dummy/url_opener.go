@@ -16,14 +16,14 @@ const (
 
 func init() {
 	steamapp.RegisterDatabase(
-		new(DatabaseURLOpener),
+		new(databaseURLOpener),
 		Scheme,
 	)
 }
 
-type DatabaseURLOpener struct{}
+type databaseURLOpener struct{}
 
-func (d *DatabaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamapp.Database, error) {
+func (d *databaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamapp.Database, error) {
 	if u.Scheme != Scheme {
 		return nil, fmt.Errorf("invalid scheme %s, expected %s", u.Scheme, Scheme)
 	}

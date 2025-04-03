@@ -15,12 +15,15 @@ import (
 const Scheme = "stoker"
 
 func init() {
-	steamapp.RegisterDatabase(&DatabaseURLOpener{}, Scheme, "https", "http")
+	steamapp.RegisterDatabase(
+		new(databaseURLOpener),
+		Scheme, "https", "http",
+	)
 }
 
-type DatabaseURLOpener struct{}
+type databaseURLOpener struct{}
 
-func (d *DatabaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamapp.Database, error) {
+func (d *databaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamapp.Database, error) {
 	if !xslice.Includes([]string{Scheme, "https", "http"}, u.Scheme) {
 		return nil, fmt.Errorf("invalid scheme %s, expected %s", u.Scheme, Scheme)
 	}

@@ -29,7 +29,7 @@ type APIHandlerOpts struct {
 	SwaggerOpts []func(*spec.Swagger)
 }
 
-type Opt interface {
+type APIHandlerOpt interface {
 	Apply(*APIHandlerOpts)
 }
 
@@ -55,7 +55,7 @@ func (o *APIHandlerOpts) Apply(opts *APIHandlerOpts) {
 	}
 }
 
-func newOpts(opts ...Opt) *APIHandlerOpts {
+func newAPIHandlerOpts(opts ...APIHandlerOpt) *APIHandlerOpts {
 	o := &APIHandlerOpts{Fallback: http.NotFoundHandler()}
 
 	for _, opt := range opts {
@@ -136,9 +136,9 @@ var (
 	swaggerJSON []byte
 )
 
-func NewAPIHandler(database Database, opts ...Opt) http.Handler {
+func NewAPIHandler(database Database, opts ...APIHandlerOpt) http.Handler {
 	var (
-		o = newOpts(opts...)
+		o = newAPIHandlerOpts(opts...)
 		h = &handler{Database: database}
 		r = chi.NewRouter()
 	)
