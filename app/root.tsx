@@ -28,10 +28,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <header className="w-full bg-gray-800 p-4">
-          <nav className="flex justify-between items-center">
-            <a href="/" className="text-2xl font-bold">Sindri</a>
-            <ul className="flex space-x-4">
+        <header className="fixed inset-x-0 top-0 z-10 border-b border-black/5 dark:border-white/10 bg-white dark:bg-gray-950">
+          <nav className="flex h-14 items-center justify-between gap-8 px-4 sm:px-6">
+            <a className="text-2xl font-bold" aria-label="Home" href="/">Sindri</a>
+            <ul className="flex items-center gap-6 max-md:hidden">
               <li>
                 <a href="https://github.com/frantjc/sindri" target="_blank" rel="noopener noreferrer" className="text-white hover:text-gray-400">
                   <FaGithub className="h-6 w-6" />

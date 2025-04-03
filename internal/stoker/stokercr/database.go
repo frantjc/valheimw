@@ -304,17 +304,18 @@ func (d *Database) List(ctx context.Context, opts ...stoker.ListOpt) ([]stoker.S
 		return nil, "", err
 	}
 
-	return xslice.Map(steamapps.Items, func(steamapp v1alpha1.Steamapp, _ int) stoker.SteamappSummary {
+	return xslice.Map(steamapps.Items, func(sa v1alpha1.Steamapp, _ int) stoker.SteamappSummary {
 		locked := false
-		if steamapp.Labels != nil {
-			locked, _ = strconv.ParseBool(steamapp.Labels[LabelLocked])
+		if sa.Labels != nil {
+			locked, _ = strconv.ParseBool(sa.Labels[LabelLocked])
 		}
 
 		return stoker.SteamappSummary{
-			AppID:   steamapp.Spec.AppID,
-			Name:    steamapp.Status.Name,
-			IconURL: steamapp.Status.IconURL,
-			Created: steamapp.CreationTimestamp.Time,
+			AppID:   sa.Spec.AppID,
+			Name:    sa.Status.Name,
+			Branch: sa.Spec.Branch,
+			IconURL: sa.Status.IconURL,
+			Created: sa.CreationTimestamp.Time,
 			Locked:  locked,
 		}
 	}), steamapps.Continue, nil

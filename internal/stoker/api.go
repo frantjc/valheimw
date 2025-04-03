@@ -405,6 +405,7 @@ type SteamappDetail struct {
 type SteamappSummary struct {
 	AppID   int       `json:"app_id,omitempty"`
 	Name    string    `json:"name,omitempty"`
+	Branch string `json:"branch,omitempty"`
 	IconURL string    `json:"icon_url,omitempty"`
 	Created time.Time `json:"date_created,omitempty"`
 	Locked  bool      `json:"locked,omitempty"`
