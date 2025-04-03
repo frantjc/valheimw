@@ -1,3 +1,3 @@
 FROM scratch
-COPY mist /mist
 ENTRYPOINT ["/mist"]
+COPY mist /mist
