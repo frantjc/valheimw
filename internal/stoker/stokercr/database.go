@@ -38,7 +38,7 @@ const (
 )
 
 // OpenDatabase implements steamapp.DatabaseURLOpener.
-func (o *DatabaseURLOpener) OpenDatabase(ctx context.Context, u *url.URL) (steamapp.Database, error) {
+func (o *DatabaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamapp.Database, error) {
 	namespace := u.Query().Get("namespace")
 	if namespace == "" {
 		namespace = DefaultNamespace
@@ -112,7 +112,7 @@ const (
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *Database) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (d *Database) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var (
 		log = log.FromContext(ctx)
 		sa  = &v1alpha1.Steamapp{}
@@ -120,7 +120,7 @@ func (r *Database) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result
 
 	log.Info("reconciling")
 
-	if err := r.Client.Get(ctx, req.NamespacedName, sa); err != nil {
+	if err := d.Client.Get(ctx, req.NamespacedName, sa); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -138,7 +138,7 @@ func (r *Database) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result
 		if validated, _ := strconv.ParseBool(sa.Labels[LabelValidated]); !validated {
 			sa.Labels[LabelValidated] = fmt.Sprint(true)
 
-			if err := r.Client.Update(ctx, sa); err != nil {
+			if err := d.Client.Update(ctx, sa); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -146,7 +146,7 @@ func (r *Database) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result
 		if validated, _ := strconv.ParseBool(sa.Labels[LabelValidated]); validated {
 			delete(sa.Labels, LabelValidated)
 
-			if err := r.Client.Update(ctx, sa); err != nil {
+			if err := d.Client.Update(ctx, sa); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -173,7 +173,7 @@ func (d *Database) SetupWithManager(mgr ctrl.Manager) error {
 	// 	Complete()
 }
 
-func (w *Database) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (d *Database) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	_, ok := obj.(*v1alpha1.Steamapp)
 	if !ok {
 		return nil, fmt.Errorf("expected a Steamapp object but got %T", obj)
@@ -182,7 +182,7 @@ func (w *Database) ValidateCreate(ctx context.Context, obj runtime.Object) (admi
 	return nil, nil
 }
 
-func (w *Database) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (d *Database) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	nsa, ok := newObj.(*v1alpha1.Steamapp)
 	if !ok {
 		return nil, fmt.Errorf("expected a Steamapp object but got %T", newObj)
@@ -210,7 +210,7 @@ func (w *Database) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Ob
 	return nil, nil
 }
 
-func (w *Database) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (d *Database) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	_, ok := obj.(*v1alpha1.Steamapp)
 	if !ok {
 		return nil, fmt.Errorf("expected a Steamapp object but got %T", obj)

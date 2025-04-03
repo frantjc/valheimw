@@ -122,7 +122,7 @@ func NewStoker() *cobra.Command {
 					})
 				} else if !secureWebhook {
 					webhookTLSOpts = append(webhookTLSOpts, func(config *tls.Config) {
-						config.GetCertificate = func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
+						config.GetCertificate = func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
 							return nil, nil
 						}
 					})

@@ -52,11 +52,16 @@ func (c *Client) GetBuildImageOpts(ctx context.Context, appID int, branch string
 		branch = steamapp.DefaultBranchName
 	}
 
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.URL.JoinPath("/steamapps", fmt.Sprint(appID), branch).String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
 	if c.HTTPClient == nil {
 		c.HTTPClient = http.DefaultClient
 	}
 
-	res, err := c.HTTPClient.Get(c.URL.JoinPath("/steamapps", fmt.Sprint(appID), branch).String())
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -1,27 +1,40 @@
-run:
-  timeout: 5m
+version: "2"
 linters:
   enable:
-    - dupl
     - copyloopvar
-    - gosec
+    - dupl
     - gocritic
+    - godot
+    - gosec
     - importas
-    - gosimple
-    - staticcheck
-    - unused
+    - misspell
     - nakedret
     - nolintlint
     - prealloc
     - revive
-    - unconvert
-    # test
-    - usetesting
     - testpackage
     - thelper
-    # auto-fix
-    - godot
+    - unconvert
+    - usetesting
+    - whitespace
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
     - gofmt
     - goimports
-    - misspell
-    - whitespace
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

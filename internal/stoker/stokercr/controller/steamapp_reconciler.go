@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// SteamappReconciler reconciles a Steamapp object
+// SteamappReconciler reconciles a Steamapp object.
 type SteamappReconciler struct {
 	client.Client
 	record.EventRecorder
@@ -59,7 +59,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	appInfo, err := appinfoutil.GetAppInfo(ctx, sa.Spec.AppID)
 	if err != nil {
-		r.EventRecorder.Eventf(sa, corev1.EventTypeWarning, "AppInfoPrintFailed", "Could not get app info: %v", err)
+		r.Eventf(sa, corev1.EventTypeWarning, "AppInfoPrintFailed", "Could not get app info: %v", err)
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
@@ -78,12 +78,12 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	if appInfo.Depots.Branches[sa.Spec.Branch].PwdRequired && sa.Spec.BetaPassword == "" {
-		r.EventRecorder.Eventf(sa, corev1.EventTypeWarning, "BetaPwdMissing", "Branch %s requires a password", sa.Spec.Branch)
+		r.Eventf(sa, corev1.EventTypeWarning, "BetaPwdMissing", "Branch %s requires a password", sa.Spec.Branch)
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
-	if err := r.ImageBuilder.BuildImage(ctx, sa.Spec.AppID, &steamapp.GettableBuildImageOpts{
+	if err := r.BuildImage(ctx, sa.Spec.AppID, &steamapp.GettableBuildImageOpts{
 		BaseImageRef: sa.Spec.ImageOpts.BaseImageRef,
 		AptPkgs:      sa.Spec.ImageOpts.AptPkgs,
 		BetaPassword: sa.Spec.BetaPassword,
@@ -93,7 +93,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Entrypoint:   sa.Spec.ImageOpts.Entrypoint,
 		Cmd:          sa.Spec.ImageOpts.Cmd,
 	}); err != nil {
-		r.EventRecorder.Eventf(sa, corev1.EventTypeWarning, "DidNotBuild", "Image did not build: %v", err)
+		r.Eventf(sa, corev1.EventTypeWarning, "DidNotBuild", "Image did not build: %v", err)
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
@@ -127,11 +127,7 @@ func (r *SteamappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// 	Complete()
 }
 
-func (w *SteamappReconciler) Default(ctx context.Context, obj runtime.Object) error {
-	log := log.FromContext(ctx)
-
-	log.Info("defaulting", "object", obj)
-
+func (r *SteamappReconciler) Default(_ context.Context, obj runtime.Object) error {
 	sa, ok := obj.(*v1alpha1.Steamapp)
 	if !ok {
 		return fmt.Errorf("expected a Steamapp object but got %T", obj)
@@ -160,7 +156,7 @@ func (w *SteamappReconciler) Default(ctx context.Context, obj runtime.Object) er
 	return nil
 }
 
-func (w *SteamappReconciler) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (r *SteamappReconciler) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	sa, ok := obj.(*v1alpha1.Steamapp)
 	if !ok {
 		return nil, fmt.Errorf("expected a Steamapp object but got %T", obj)
@@ -180,7 +176,7 @@ func (w *SteamappReconciler) ValidateCreate(ctx context.Context, obj runtime.Obj
 	return nil, nil
 }
 
-func (w *SteamappReconciler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (r *SteamappReconciler) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	_, ok := oldObj.(*v1alpha1.Steamapp)
 	if !ok {
 		return nil, fmt.Errorf("expected a Steamapp object but got %T", oldObj)
@@ -205,7 +201,7 @@ func (w *SteamappReconciler) ValidateUpdate(ctx context.Context, oldObj, newObj 
 	return nil, nil
 }
 
-func (w *SteamappReconciler) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (r *SteamappReconciler) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	_, ok := obj.(*v1alpha1.Steamapp)
 	if !ok {
 		return nil, fmt.Errorf("expected a Steamapp object but got %T", obj)

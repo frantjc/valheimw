@@ -321,17 +321,7 @@ const (
 	branchParam = "branch"
 )
 
-// @Summary	Get the details for a specific Steamapp ID
-// @Produce	json
-// @Param		appID			path		int		true	"Steamapp ID"
-// @Param		branch			path		string	false	"Steamapp branch (default public)"
-// @Param		betapassword	query		string	false	"Steamapp branch password"
-// @Success	200				{object}	Steamapp
-// @Failure	400				{object}	Error
-// @Failure	415				{object}	Error
-// @Failure	500				{object}	Error
-// @Router		/steamapps/{appID} [get]
-// @Router		/steamapps/{appID}/{branch} [get]
+// @Router		/steamapps/{appID}/{branch} [get].
 func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 	var (
 		steamappID = chi.URLParam(r, appIDParam)
@@ -354,13 +344,7 @@ func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 	return respondJSON(w, r, steamapp)
 }
 
-// @Summary	List known Steamapps
-// @Produce	json
-// @Param		continue	query		string	false	"Continue token"
-// @Success	200			{Object}	SteamappList
-// @Failure	415			{object}	Error
-// @Failure	500			{object}	Error
-// @Router		/steamapps [get]
+// @Router		/steamapps [get].
 func (h *handler) getSteamapps(w http.ResponseWriter, r *http.Request) error {
 	var (
 		_        = logr.FromContextOrDiscard(r.Context())
@@ -404,21 +388,7 @@ type SteamappSummary struct {
 	Locked  bool      `json:"locked,omitempty"`
 }
 
-// @Summary	Create or update the details of a specific Steamapp ID
-// @Accept		application/json
-// @Produce	json
-// @Param		appID			path		int				true	"Steamapp ID"
-// @Param		branch			path		string			false	"Steamapp branch (default public)"
-// @Param		betapassword	query		string			false	"Steamapp branch password"
-// @Param		request			body		SteamappDetail	true	"Steamapp detail"
-// @Success	200				{object}	Steamapp
-// @Failure	400				{object}	Error
-// @Failure	415				{object}	Error
-// @Failure	500				{object}	Error
-// @Router		/steamapps/{appID} [post]
-// @Router		/steamapps/{appID}/{branch} [post]
-// @Router		/steamapps/{appID} [put]
-// @Router		/steamapps/{appID}/{branch} [put]
+// @Router		/steamapps/{appID}/{branch} [put].
 func (h *handler) upsertSteamapp(w http.ResponseWriter, r *http.Request) error {
 	var (
 		steamappID = chi.URLParam(r, appIDParam)
