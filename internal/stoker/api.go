@@ -153,18 +153,24 @@ func NewAPIHandler(database Database, opts ...APIHandlerOpt) http.Handler {
 		})
 	})
 
-	p := path.Join("/", o.Path)
+	var (
+		s = &spec.Swagger{}
+		p = path.Join("/", o.Path)
+	)
+
+	if err := json.Unmarshal(swaggerJSON, s); err != nil {
+		panic(err)
+	}
+
+	s.BasePath = p
+
+	for _, opt := range o.SwaggerOpts {
+		opt(s)
+	}
+
 	r.Route(p, func(r chi.Router) {
 		if o.Swagger {
 			r.Get("/", http.RedirectHandler(path.Join(p, "/index.html"), http.StatusMovedPermanently).ServeHTTP)
-
-			s := &spec.Swagger{}
-
-			if err := json.Unmarshal(swaggerJSON, s); err != nil {
-				panic(err)
-			}
-
-			s.BasePath = p
 
 			r.Get("/doc.json", func(w http.ResponseWriter, r *http.Request) {
 				_ = respondJSON(w, r, s)
@@ -450,7 +456,7 @@ func (h *handler) upsertSteamapp(w http.ResponseWriter, r *http.Request) error {
 		Branch:       chi.URLParam(r, branchParam),
 		BetaPassword: r.URL.Query().Get("betapassword"),
 	}); err != nil {
-		return fmt.Errorf("upsert build image options: %w", err)
+		return fmt.Errorf("upsert Steamapp: %w", err)
 	}
 
 	w.WriteHeader(http.StatusAccepted)
