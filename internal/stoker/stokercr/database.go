@@ -287,7 +287,7 @@ func newListOpts(opts ...stoker.ListOpt) *stoker.ListOpts {
 }
 
 // List implements stoker.Database.
-func (d *Database) List(ctx context.Context, opts ...stoker.ListOpt) (*stoker.SteamappList, error) {
+func (d *Database) List(ctx context.Context, opts ...stoker.ListOpt) ([]stoker.SteamappSummary, string, error) {
 	var (
 		steamapps = &v1alpha1.SteamappList{}
 		o         = newListOpts(opts...)
@@ -301,26 +301,23 @@ func (d *Database) List(ctx context.Context, opts ...stoker.ListOpt) (*stoker.St
 			LabelValidated: fmt.Sprint(true),
 		}),
 	}); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return &stoker.SteamappList{
-		Continue: steamapps.Continue,
-		Steamapps: xslice.Map(steamapps.Items, func(steamapp v1alpha1.Steamapp, _ int) stoker.SteamappSummary {
-			locked := false
-			if steamapp.Labels != nil {
-				locked, _ = strconv.ParseBool(steamapp.Labels[LabelLocked])
-			}
+	return xslice.Map(steamapps.Items, func(steamapp v1alpha1.Steamapp, _ int) stoker.SteamappSummary {
+		locked := false
+		if steamapp.Labels != nil {
+			locked, _ = strconv.ParseBool(steamapp.Labels[LabelLocked])
+		}
 
-			return stoker.SteamappSummary{
-				AppID:   steamapp.Spec.AppID,
-				Name:    steamapp.Status.Name,
-				IconURL: steamapp.Status.IconURL,
-				Created: steamapp.CreationTimestamp.Time,
-				Locked:  locked,
-			}
-		}),
-	}, nil
+		return stoker.SteamappSummary{
+			AppID:   steamapp.Spec.AppID,
+			Name:    steamapp.Status.Name,
+			IconURL: steamapp.Status.IconURL,
+			Created: steamapp.CreationTimestamp.Time,
+			Locked:  locked,
+		}
+	}), steamapps.Continue, nil
 }
 
 func newUpsertOpts(opts ...stoker.UpsertOpt) *stoker.UpsertOpts {

@@ -118,7 +118,12 @@ export function getSteamapps(
     },
   )
     .then(handleError)
-    .then((res) => {
-      return res.json() as Promise<SteamappList>;
+    .then(async (res) => {
+      return res.json().then((steamapps) => {
+        return {
+          continue: res.headers.get("X-Continue-Token") || undefined,
+          steamapps,
+        }
+      });
     });
 }
