@@ -4,7 +4,6 @@ linters:
     - copyloopvar
     - dupl
     - gocritic
-    - godot
     - gosec
     - importas
     - misspell
