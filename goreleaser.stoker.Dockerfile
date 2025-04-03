@@ -21,7 +21,6 @@ ENV NODE_ENV production
 ENTRYPOINT ["/usr/local/bin/stoker"]
 COPY stoker /usr/local/bin/
 COPY server.js package.json /app/
-COPY --from=build /stoker /usr/local/bin/stoker
 COPY --from=remix /src/github.com/frantjc/sindri/build /app/build/
 COPY --from=remix /src/github.com/frantjc/sindri/node_modules /app/node_modules/
 COPY --from=remix /src/github.com/frantjc/sindri/public /app/public/
