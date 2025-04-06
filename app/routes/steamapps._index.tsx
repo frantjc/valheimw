@@ -8,7 +8,7 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export default function Main() {
+export default function Index() {
   const [data, setData] = React.useState<SteamappList>();
 
   React.useEffect(() => {
@@ -22,8 +22,8 @@ export default function Main() {
   }, [setData, data?.continue])
 
   return (
-    <main>
+    <div>
       {JSON.stringify(data?.steamapps || [])}
-    </main>
+    </div>
   );
 }

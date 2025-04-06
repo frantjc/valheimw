@@ -45,7 +45,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </ul>
           </nav>
         </header>
-        {children}
+        <main className="isolate">
+          {children}
+        </main>
         <ScrollRestoration />
         <Scripts />
       </body>
