@@ -92,6 +92,25 @@ func (d *Database) GetBuildImageOpts(ctx context.Context, appID int, branch stri
 		return nil, err
 	}
 
+	switch sa.Status.Phase {
+	case v1alpha1.PhaseFailed:
+		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has failed validation", sa.Name), http.StatusPreconditionFailed)
+	case v1alpha1.PhasePending:
+		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
+	}
+
+	if sa.Labels != nil {
+		if v, ok := sa.Labels[LabelValidated]; ok {
+			if validated, _ := strconv.ParseBool(v); !validated {
+				return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s failed validation", sa.Name), http.StatusPreconditionFailed)
+			}
+		} else {
+			return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
+		}
+	} else {
+		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
+	}
+
 	return &steamapp.GettableBuildImageOpts{
 		BaseImageRef: sa.Spec.ImageOpts.BaseImageRef,
 		AptPkgs:      sa.Spec.ImageOpts.AptPkgs,
@@ -249,6 +268,13 @@ func (d *Database) Get(ctx context.Context, steamappID int, opts ...stoker.GetOp
 
 	if err := d.Client.Get(ctx, client.ObjectKey{Namespace: d.Namespace, Name: fmt.Sprintf("%d-%s", steamappID, sanitizeBranchName(o.Branch))}, sa); err != nil {
 		return nil, err
+	}
+
+	switch sa.Status.Phase {
+	case v1alpha1.PhaseFailed:
+		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has failed validation", sa.Name), http.StatusPreconditionFailed)
+	case v1alpha1.PhasePending:
+		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
 	}
 
 	locked := false
