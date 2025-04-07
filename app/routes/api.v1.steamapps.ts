@@ -1,7 +1,6 @@
 export function loader() {
   return new Response(
-    JSON.stringify({
-      steamapps: [
+    JSON.stringify([
         {
           app_id: 896660,
           name: "Valheim Dedicated Server",
@@ -17,8 +16,7 @@ export function loader() {
           date_created: new Date(),
           locked: false
         }
-      ],
-    }),
+    ]),
     {
       headers: {
         "Content-Type": "application/json",

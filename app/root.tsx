@@ -1,9 +1,11 @@
 import {
+  isRouteErrorResponse,
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useRouteError,
 } from "@remix-run/react";
 import type { LinksFunction } from "@remix-run/node";
 import { FaGithub } from 'react-icons/fa';
@@ -55,6 +57,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function Main() {
+export default function Index() {
   return <Outlet />;
+}
+
+export function ErrorBoundary() {
+  const err = useRouteError();
+
+  return (
+    <Layout>
+      {
+        isRouteErrorResponse(err)
+          ? err.statusText
+          : err instanceof Error
+            ? err.message
+            : "Unknown error"
+      }
+    </Layout>
+  );
 }
