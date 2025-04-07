@@ -49,7 +49,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </ul>
               </nav>
             </header>
-            <main className="min-h-dvh container mx-auto px-2">
+            <main className="min-h-dvh container mx-auto px-2 tracking-wider">
               {children}
             </main>
           </div>
