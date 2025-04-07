@@ -55,6 +55,10 @@ type SteamappStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="AppID",type=string,JSONPath=`.spec.appID`
+// +kubebuilder:printcolumn:name="Branch",type=string,JSONPath=`.spec.branch`
+// +kubebuilder:printcolumn:name="Name",type=string,JSONPath=`.status.name`
+// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 
 // Steamapp is the Schema for the steamapps API.
 type Steamapp struct {
