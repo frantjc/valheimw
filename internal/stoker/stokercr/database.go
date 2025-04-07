@@ -17,11 +17,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -39,12 +41,19 @@ const (
 
 // OpenDatabase implements steamapp.DatabaseURLOpener.
 func (o *databaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamapp.Database, error) {
+	cfgFlags := genericclioptions.NewConfigFlags(true)
+
 	namespace := u.Query().Get("namespace")
-	if namespace == "" {
-		namespace = DefaultNamespace
+	if namespace != "" {
+		cfgFlags.Namespace = &namespace
 	}
 
-	cfg, err := ctrl.GetConfig()
+	context := u.Query().Get("context")
+	if context != "" {
+		cfgFlags.Context = &context
+	}
+
+	restCfg, err := cfgFlags.ToRESTConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +63,7 @@ func (o *databaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamap
 		return nil, err
 	}
 
-	cli, err := client.New(cfg, client.Options{
+	cli, err := client.New(restCfg, client.Options{
 		Scheme: scheme,
 	})
 	if err != nil {
@@ -128,8 +137,9 @@ func (d *Database) GetBuildImageOpts(ctx context.Context, appID int, branch stri
 // +kubebuilder:rbac:groups=sindri.frantj.cc,resources=steamapps/finalizers,verbs=update
 
 const (
-	LabelValidated = "sindri.frantj.cc/validated"
-	LabelLocked    = "sindri.frantj.cc/locked"
+	AnnotationApproved = "sindri.frantj.cc/approved"
+	LabelValidated     = "sindri.frantj.cc/validated"
+	AnnotationLocked   = "sindri.frantj.cc/locked"
 )
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -150,33 +160,33 @@ func (d *Database) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result
 		return ctrl.Result{}, err
 	}
 
-	// if sa.Labels != nil {
-	// 	sa.Labels = map[string]string{}
-	// }
+	if sa.Labels == nil {
+		sa.Labels = map[string]string{}
+	}
 
-	// delete(sa.Labels, LabelValidated)
+	delete(sa.Labels, LabelValidated)
 
-	// if err := d.Client.Update(ctx, sa); err != nil {
-	// 	return ctrl.Result{}, err
-	// }
+	if err := d.Client.Update(ctx, sa); err != nil {
+		return ctrl.Result{}, err
+	}
 
-	// if sa.Status.Phase == v1alpha1.PhaseReady {
-	// 	if validated, _ := strconv.ParseBool(sa.Labels[LabelValidated]); !validated {
-	// 		sa.Labels[LabelValidated] = fmt.Sprint(true)
+	if sa.Status.Phase == v1alpha1.PhaseReady {
+		if validated, _ := strconv.ParseBool(sa.Labels[LabelValidated]); !validated {
+			sa.Labels[LabelValidated] = fmt.Sprint(true)
 
-	// 		if err := d.Client.Update(ctx, sa); err != nil {
-	// 			return ctrl.Result{}, err
-	// 		}
-	// 	}
-	// } else {
-	// 	if validated, _ := strconv.ParseBool(sa.Labels[LabelValidated]); validated {
-	// 		delete(sa.Labels, LabelValidated)
+			if err := d.Client.Update(ctx, sa); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else {
+		if validated, _ := strconv.ParseBool(sa.Labels[LabelValidated]); validated {
+			delete(sa.Labels, LabelValidated)
 
-	// 		if err := d.Client.Update(ctx, sa); err != nil {
-	// 			return ctrl.Result{}, err
-	// 		}
-	// 	}
-	// }
+			if err := d.Client.Update(ctx, sa); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -188,6 +198,13 @@ func (d *Database) SetupWithManager(mgr ctrl.Manager) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		Named("stoker").
 		For(&v1alpha1.Steamapp{}).
+		WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			if annotations := obj.GetAnnotations(); annotations != nil {
+				approved, _ := strconv.ParseBool(annotations[AnnotationApproved])
+				return approved
+			}
+			return false
+		})).
 		Complete(d); err != nil {
 		return err
 	}
@@ -219,8 +236,8 @@ func (d *Database) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Obje
 		return nil, fmt.Errorf("expected a Steamapp object but got %T", oldObj)
 	}
 
-	if osa.Labels != nil {
-		if locked, _ := strconv.ParseBool(osa.Labels[LabelLocked]); locked {
+	if osa.Annotations != nil {
+		if locked, _ := strconv.ParseBool(osa.Annotations[AnnotationLocked]); locked {
 			return nil, fmt.Errorf("cannot update locked Steamapp")
 		}
 	}
@@ -270,14 +287,11 @@ func (d *Database) Get(ctx context.Context, steamappID int, opts ...stoker.GetOp
 		return nil, err
 	}
 
-	switch sa.Status.Phase {
-	case v1alpha1.PhaseFailed:
-		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has failed validation", sa.Name), http.StatusPreconditionFailed)
-	case v1alpha1.PhasePending:
-		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
+	locked := false
+	if sa.Annotations != nil {
+		locked, _ = strconv.ParseBool(sa.Annotations[AnnotationLocked])
 	}
 
-	locked := false
 	if sa.Labels != nil {
 		if v, ok := sa.Labels[LabelValidated]; ok {
 			if validated, _ := strconv.ParseBool(v); !validated {
@@ -287,7 +301,6 @@ func (d *Database) Get(ctx context.Context, steamappID int, opts ...stoker.GetOp
 			return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
 		}
 
-		locked, _ = strconv.ParseBool(sa.Labels[LabelLocked])
 	} else {
 		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
 	}
@@ -336,8 +349,8 @@ func (d *Database) List(ctx context.Context, opts ...stoker.ListOpt) ([]stoker.S
 
 	return xslice.Map(steamapps.Items, func(sa v1alpha1.Steamapp, _ int) stoker.SteamappSummary {
 		locked := false
-		if sa.Labels != nil {
-			locked, _ = strconv.ParseBool(sa.Labels[LabelLocked])
+		if sa.Annotations != nil {
+			locked, _ = strconv.ParseBool(sa.Annotations[AnnotationLocked])
 		}
 
 		return stoker.SteamappSummary{

@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strconv"
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/internal/appinfoutil"
+	"github.com/frantjc/sindri/internal/stoker/stokercr"
 	"github.com/frantjc/sindri/internal/stoker/stokercr/api/v1alpha1"
 	"github.com/frantjc/sindri/steamapp"
 	xslice "github.com/frantjc/x/slice"
@@ -115,6 +117,13 @@ func (r *SteamappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		Named("boiler").
 		For(&v1alpha1.Steamapp{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			if annotations := obj.GetAnnotations(); annotations != nil {
+				approved, _ := strconv.ParseBool(annotations[stokercr.AnnotationApproved])
+				return approved
+			}
+			return false
+		})).
 		Complete(r); err != nil {
 		return err
 	}

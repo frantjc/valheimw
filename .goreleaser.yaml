@@ -12,6 +12,19 @@ builds:
     hooks:
       post:
         - upx {{ .Path }}
+  - main: ./cmd/kubectl_approve-steamapp
+    id: kubectl_approve-steamapp
+    binary: kubectl_approve-steamapp
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+    hooks:
+      post:
+        - upx {{ .Path }}
   - main: ./cmd/mist
     id: mist
     binary: mist
