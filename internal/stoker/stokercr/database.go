@@ -92,6 +92,25 @@ func (d *Database) GetBuildImageOpts(ctx context.Context, appID int, branch stri
 		return nil, err
 	}
 
+	switch sa.Status.Phase {
+	case v1alpha1.PhaseFailed:
+		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has failed validation", sa.Name), http.StatusPreconditionFailed)
+	case v1alpha1.PhasePending:
+		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
+	}
+
+	if sa.Labels != nil {
+		if v, ok := sa.Labels[LabelValidated]; ok {
+			if validated, _ := strconv.ParseBool(v); !validated {
+				return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s failed validation", sa.Name), http.StatusPreconditionFailed)
+			}
+		} else {
+			return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
+		}
+	} else {
+		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
+	}
+
 	return &steamapp.GettableBuildImageOpts{
 		BaseImageRef: sa.Spec.ImageOpts.BaseImageRef,
 		AptPkgs:      sa.Spec.ImageOpts.AptPkgs,
@@ -131,29 +150,33 @@ func (d *Database) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result
 		return ctrl.Result{}, err
 	}
 
-	if sa.Labels == nil {
-		sa.Labels = map[string]string{}
-	}
+	// if sa.Labels != nil {
+	// 	sa.Labels = map[string]string{}
+	// }
 
-	delete(sa.Labels, LabelValidated)
+	// delete(sa.Labels, LabelValidated)
 
-	if sa.Status.Phase == v1alpha1.PhaseReady {
-		if validated, _ := strconv.ParseBool(sa.Labels[LabelValidated]); !validated {
-			sa.Labels[LabelValidated] = fmt.Sprint(true)
+	// if err := d.Client.Update(ctx, sa); err != nil {
+	// 	return ctrl.Result{}, err
+	// }
 
-			if err := d.Client.Update(ctx, sa); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-	} else {
-		if validated, _ := strconv.ParseBool(sa.Labels[LabelValidated]); validated {
-			delete(sa.Labels, LabelValidated)
+	// if sa.Status.Phase == v1alpha1.PhaseReady {
+	// 	if validated, _ := strconv.ParseBool(sa.Labels[LabelValidated]); !validated {
+	// 		sa.Labels[LabelValidated] = fmt.Sprint(true)
 
-			if err := d.Client.Update(ctx, sa); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-	}
+	// 		if err := d.Client.Update(ctx, sa); err != nil {
+	// 			return ctrl.Result{}, err
+	// 		}
+	// 	}
+	// } else {
+	// 	if validated, _ := strconv.ParseBool(sa.Labels[LabelValidated]); validated {
+	// 		delete(sa.Labels, LabelValidated)
+
+	// 		if err := d.Client.Update(ctx, sa); err != nil {
+	// 			return ctrl.Result{}, err
+	// 		}
+	// 	}
+	// }
 
 	return ctrl.Result{}, nil
 }
@@ -247,6 +270,13 @@ func (d *Database) Get(ctx context.Context, steamappID int, opts ...stoker.GetOp
 		return nil, err
 	}
 
+	switch sa.Status.Phase {
+	case v1alpha1.PhaseFailed:
+		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has failed validation", sa.Name), http.StatusPreconditionFailed)
+	case v1alpha1.PhasePending:
+		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
+	}
+
 	locked := false
 	if sa.Labels != nil {
 		if v, ok := sa.Labels[LabelValidated]; ok {
@@ -304,17 +334,18 @@ func (d *Database) List(ctx context.Context, opts ...stoker.ListOpt) ([]stoker.S
 		return nil, "", err
 	}
 
-	return xslice.Map(steamapps.Items, func(steamapp v1alpha1.Steamapp, _ int) stoker.SteamappSummary {
+	return xslice.Map(steamapps.Items, func(sa v1alpha1.Steamapp, _ int) stoker.SteamappSummary {
 		locked := false
-		if steamapp.Labels != nil {
-			locked, _ = strconv.ParseBool(steamapp.Labels[LabelLocked])
+		if sa.Labels != nil {
+			locked, _ = strconv.ParseBool(sa.Labels[LabelLocked])
 		}
 
 		return stoker.SteamappSummary{
-			AppID:   steamapp.Spec.AppID,
-			Name:    steamapp.Status.Name,
-			IconURL: steamapp.Status.IconURL,
-			Created: steamapp.CreationTimestamp.Time,
+			AppID:   sa.Spec.AppID,
+			Name:    sa.Status.Name,
+			Branch:  sa.Spec.Branch,
+			IconURL: sa.Status.IconURL,
+			Created: sa.CreationTimestamp.Time,
 			Locked:  locked,
 		}
 	}), steamapps.Continue, nil

@@ -31,6 +31,7 @@ function handleError(res: Response) {
 export type SteamappSummary = {
 	app_id: number;
   name: string;
+  branch?: string;
   icon_url: string;
 	date_created: Date;
   locked: boolean;
