@@ -30,26 +30,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <header className="fixed inset-x-0 top-0 z-10 border-b border-black/5 dark:border-white/10 bg-white dark:bg-gray-950">
-          <nav className="flex h-14 items-center justify-between gap-8 px-4 sm:px-6">
-            <a className="text-2xl font-bold" aria-label="Home" href="/">Sindri</a>
-            <ul className="flex items-center gap-6 max-md:hidden">
-              <li>
-                <a href="https://github.com/frantjc/sindri" target="_blank" rel="noopener noreferrer" className="text-white hover:text-gray-400">
-                  <FaGithub className="h-6 w-6" />
-                </a>
-              </li>
-              <li>
-                <a href="/api/v1" target="_blank" rel="noopener noreferrer" className="text-white hover:text-gray-400">
-                  <TbApi className="h-6 w-6" />
-                </a>
-              </li>
-            </ul>
-          </nav>
-        </header>
-        <main className="isolate">
-          {children}
-        </main>
+        <div className="isolate">
+          <div className="max-w-screen overflow-x-hidden">
+            <header className="border-b">
+              <nav className="flex h-14 items-center justify-between px-4">
+                <a className="text-2xl font-bold" aria-label="Home" href="/">Sindri</a>
+                <ul className="flex items-center gap-6">
+                  <li>
+                    <a href="https://github.com/frantjc/sindri" target="_blank" rel="noopener noreferrer" className="text-white hover:text-gray-400">
+                      <FaGithub className="h-6 w-6" />
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/api/v1" target="_blank" rel="noopener noreferrer" className="text-white hover:text-gray-400">
+                      <TbApi className="h-6 w-6" />
+                    </a>
+                  </li>
+                </ul>
+              </nav>
+            </header>
+            <main className="min-h-dvh container mx-auto px-2">
+              {children}
+            </main>
+          </div>
+        </div>
         <ScrollRestoration />
         <Scripts />
       </body>

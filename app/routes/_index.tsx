@@ -41,10 +41,31 @@ export default function Index() {
   };
 
   return (
-    <div className="grid grid-cols-1">
-      <div className="flex items-end h-24">
-        <p>Run the...</p>
+    <div className="grid grid-cols-1 gap-4">
+      <div className="h-24 flex items-end">
+        <p className="text-3xl">Run the...</p>
       </div>
+      {steamapp ? (
+        <>
+          <div className="flex">
+            <p className="text-xl">{steamapp.name}</p>
+          </div>
+          <pre
+            className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border"
+          >
+            <code className="font-mono">
+              <span className="pr-2">$</span>
+              {command}
+            </code>
+            <button
+              onClick={handleCopy}
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold p-2 rounded flex items-center"
+            >
+              {copied ? <BsClipboardCheck className="h-5 w-4" /> : <BsClipboard className="h-4 w-6" />}
+            </button>
+          </pre>
+        </>
+      ) : (<></>)}
     </div>
   );
 }
