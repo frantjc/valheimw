@@ -1,4 +1,8 @@
 export function loader() {
+  if (process.env.NODE_ENV === "production") {
+    return new Response(null, { status: 404 });
+  }
+
   return new Response(
     JSON.stringify([
         {

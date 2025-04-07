@@ -23,13 +23,13 @@ export function useSteamapps(limit: number = 10): [Array<SteamappSummary>, Error
                     setLoading(false);
                 });
         }
-    }, [setLoading, setSteamapps, setContinue, setInit, cont, limit]);
+    }, [setLoading, setSteamapps, setContinue, setInit, cont, limit, init]);
 
     React.useEffect(() => {
         if (!init) {
             more();
         }
-    }, [init, more])
+    }, [init, more]);
 
     return [steamapps, err, more, loading]
 }
