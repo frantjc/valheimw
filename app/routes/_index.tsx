@@ -66,7 +66,7 @@ export default function Index() {
   const steamapp = steamapps && steamapps.length > 0 && steamapps[index];
   const tag = steamapp && steamapp.branch || defaultBranch;
   const branch = tag === defaultTag ? defaultBranch : tag;
-  const command = steamapp && `docker run sindri.frantjc.cc/${steamapp.app_id.toString()}:${tag}`
+  const command = steamapp && `docker run sindri.frantj.cc/${steamapp.app_id.toString()}:${tag}`
 
   const [copied, setCopied] = React.useState(false);
 

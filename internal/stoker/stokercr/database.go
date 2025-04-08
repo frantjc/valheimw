@@ -49,6 +49,10 @@ func (o *databaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamap
 		cfgFlags.Namespace = &namespace
 	}
 
+	if namespace == "" {
+		namespace = DefaultNamespace
+	}
+
 	context := u.Query().Get("context")
 	if context != "" {
 		cfgFlags.Context = &context
