@@ -109,6 +109,7 @@ spec:
                 - Pending
                 - Ready
                 - Failed
+                - Paused
                 type: string
             required:
             - phase

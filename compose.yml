@@ -19,6 +19,7 @@ services:
     image: moby/buildkit
     privileged: true
     command:
+      - --debug
       - --addr
       - tcp://0.0.0.0:1234
   stoker:
@@ -41,10 +42,10 @@ services:
     depends_on:
       - buildkitd
   migrate:
-    image: alpine 
+    image: alpine
     volumes:
       - ./hack:/hack
-    entrypoint: /hack/migrate.sh
+    entrypoint: /hack/migrate.sh http://stoker:5050
     depends_on:
       - stoker
   boiler:

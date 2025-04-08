@@ -19,6 +19,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -85,6 +86,22 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
+	awaitingApproval := true
+
+	if sa.Annotations != nil {
+		if approved, _ := strconv.ParseBool(sa.Annotations[stokercr.AnnotationApproved]); approved {
+			awaitingApproval = false
+		}
+	}
+
+	if awaitingApproval {
+		r.Event(sa, corev1.EventTypeNormal, "AwaitingApproval", "Steamapp requires approval to build")
+		sa.Status.Phase = v1alpha1.PhasePaused
+		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
+	}
+
+	r.Eventf(sa, corev1.EventTypeWarning, "Building", "Attempting image build with approval: %s", sa.Annotations[stokercr.AnnotationApproved])
+
 	if err := r.BuildImage(ctx, sa.Spec.AppID, &steamapp.GettableBuildImageOpts{
 		BaseImageRef: sa.Spec.ImageOpts.BaseImageRef,
 		AptPkgs:      sa.Spec.ImageOpts.AptPkgs,
@@ -95,16 +112,13 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Entrypoint:   sa.Spec.ImageOpts.Entrypoint,
 		Cmd:          sa.Spec.ImageOpts.Cmd,
 	}); err != nil {
-		r.Eventf(sa, corev1.EventTypeWarning, "DidNotBuild", "Image did not build: %v", err)
+		r.Eventf(sa, corev1.EventTypeWarning, "DidNotBuild", "Image did not build successfully: %v", err)
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
+	r.Event(sa, corev1.EventTypeWarning, "Built", "Image successfully built")
 	sa.Status.Phase = v1alpha1.PhaseReady
-
-	if err := r.Client.Status().Update(ctx, sa); err != nil {
-		return ctrl.Result{}, err
-	}
 
 	return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 }
@@ -116,13 +130,27 @@ func (r *SteamappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	if err := ctrl.NewControllerManagedBy(mgr).
 		Named("boiler").
-		For(&v1alpha1.Steamapp{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-			if annotations := obj.GetAnnotations(); annotations != nil {
-				approved, _ := strconv.ParseBool(annotations[stokercr.AnnotationApproved])
-				return approved
-			}
-			return false
+		For(&v1alpha1.Steamapp{}, builder.WithPredicates(predicate.Funcs{
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				if annotations := e.ObjectNew.GetAnnotations(); annotations != nil {
+					if approved, _ := strconv.ParseBool(annotations[stokercr.AnnotationApproved]); approved {
+						if sa, ok := e.ObjectNew.(*v1alpha1.Steamapp); ok {
+							return e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration() || sa.Status.Phase == v1alpha1.PhasePaused
+						}
+					}
+				}
+
+				return false
+			},
+			CreateFunc: func(_ event.CreateEvent) bool {
+				return true
+			},
+			DeleteFunc: func(_ event.DeleteEvent) bool {
+				return false
+			},
+			GenericFunc: func(_ event.GenericEvent) bool {
+				return false
+			},
 		})).
 		Complete(r); err != nil {
 		return err

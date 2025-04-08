@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-wget http://stoker:5050/api/v1/steamapps/896660 \
+wget $1/api/v1/steamapps/896660 \
     --header="Content-Type: application/json" \
     --post-data='{
       "apt_packages": [
@@ -14,7 +14,7 @@ wget http://stoker:5050/api/v1/steamapps/896660 \
       "entrypoint": ["/home/steam/valheim_server.x86_64"]
     }' -O-
 
-wget http://stoker:5050/api/v1/steamapps/896660/public-test?betapassword=yesimadebackups \
+wget $1/api/v1/steamapps/896660/public-test?betapassword=yesimadebackups \
     --header="Content-Type: application/json" \
     --post-data='{
       "apt_packages": [
@@ -30,7 +30,7 @@ wget http://stoker:5050/api/v1/steamapps/896660/public-test?betapassword=yesimad
       ]
     }' -O-
 
-wget http://stoker:5050/api/v1/steamapps/1963720 \
+wget $1/api/v1/steamapps/1963720 \
     --header="Content-Type: application/json" \
     --post-data='{
       "apt_packages": [
@@ -50,7 +50,7 @@ wget http://stoker:5050/api/v1/steamapps/1963720 \
       ]
     }' -O-
 
-wget http://stoker:5050/api/v1/steamapps/2394010 \
+wget $1/api/v1/steamapps/2394010 \
     --header="Content-Type: application/json" \
     --post-data='{
       "apt_packages": [

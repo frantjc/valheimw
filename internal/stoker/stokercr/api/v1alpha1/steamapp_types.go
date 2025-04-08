@@ -40,12 +40,13 @@ const (
 	PhasePending = "Pending"
 	PhaseReady   = "Ready"
 	PhaseFailed  = "Failed"
+	PhasePaused  = "Paused"
 )
 
 // SteamappStatus defines the observed state of Steamapp.
 type SteamappStatus struct {
 	// +kubebuilder:default=Pending
-	// +kubebuilder:validation:Enum=Pending;Ready;Failed
+	// +kubebuilder:validation:Enum=Pending;Ready;Failed;Paused
 	Phase string `json:"phase"`
 	// +kubebuilder:validation:Optional
 	Name string `json:"name,omitempty"`
