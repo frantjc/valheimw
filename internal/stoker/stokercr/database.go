@@ -300,7 +300,6 @@ func (d *Database) Get(ctx context.Context, steamappID int, opts ...stoker.GetOp
 		} else {
 			return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
 		}
-
 	} else {
 		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
 	}
