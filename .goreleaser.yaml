@@ -22,9 +22,10 @@ builds:
       - darwin
     goarch:
       - amd64
-    hooks:
-      post:
-        - upx {{ .Path }}
+    # TODO: Not supported on macOS.
+    # hooks:
+    #   post:
+    #     - upx {{ .Path }}
   - main: ./cmd/mist
     id: mist
     binary: mist
