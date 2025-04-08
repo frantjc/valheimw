@@ -12,9 +12,9 @@ builds:
     hooks:
       post:
         - upx {{ .Path }}
-  - main: ./cmd/kubectl_approve-steamapp
-    id: kubectl_approve-steamapp
-    binary: kubectl_approve-steamapp
+  - main: ./cmd/kubectl-approve_steamapp
+    id: kubectl-approve_steamapp
+    binary: kubectl-approve_steamapp
     env:
       - CGO_ENABLED=0
     goos:
