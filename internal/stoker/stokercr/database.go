@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/frantjc/go-steamcmd"
+	"github.com/frantjc/sindri/internal/httputil"
 	"github.com/frantjc/sindri/internal/stoker"
 	"github.com/frantjc/sindri/internal/stoker/stokercr/api/v1alpha1"
 	"github.com/frantjc/sindri/steamapp"
@@ -105,21 +106,21 @@ func (d *Database) GetBuildImageOpts(ctx context.Context, appID int, branch stri
 
 	switch sa.Status.Phase {
 	case v1alpha1.PhaseFailed:
-		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has failed validation", sa.Name), http.StatusPreconditionFailed)
+		return nil, httputil.NewHTTPStatusCodeError(fmt.Errorf("%s has failed validation", sa.Name), http.StatusPreconditionFailed)
 	case v1alpha1.PhasePending:
-		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
+		return nil, httputil.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
 	}
 
 	if sa.Labels != nil {
 		if v, ok := sa.Labels[LabelValidated]; ok {
 			if validated, _ := strconv.ParseBool(v); !validated {
-				return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s failed validation", sa.Name), http.StatusPreconditionFailed)
+				return nil, httputil.NewHTTPStatusCodeError(fmt.Errorf("%s failed validation", sa.Name), http.StatusPreconditionFailed)
 			}
 		} else {
-			return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
+			return nil, httputil.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
 		}
 	} else {
-		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
+		return nil, httputil.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
 	}
 
 	return &steamapp.GettableBuildImageOpts{
@@ -289,13 +290,13 @@ func (d *Database) Get(ctx context.Context, steamappID int, opts ...stoker.GetOp
 	if sa.Labels != nil {
 		if v, ok := sa.Labels[LabelValidated]; ok {
 			if validated, _ := strconv.ParseBool(v); !validated {
-				return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s failed validation", sa.Name), http.StatusPreconditionFailed)
+				return nil, httputil.NewHTTPStatusCodeError(fmt.Errorf("%s failed validation", sa.Name), http.StatusPreconditionFailed)
 			}
 		} else {
-			return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
+			return nil, httputil.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
 		}
 	} else {
-		return nil, stoker.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
+		return nil, httputil.NewHTTPStatusCodeError(fmt.Errorf("%s has not finished validation", sa.Name), http.StatusPreconditionRequired)
 	}
 
 	return &stoker.Steamapp{

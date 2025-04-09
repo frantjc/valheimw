@@ -1,8 +1,10 @@
 package steamapp
 
 import (
+	"archive/tar"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -11,9 +13,9 @@ import (
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/internal/appinfoutil"
-	xio "github.com/frantjc/x/io"
 	xslice "github.com/frantjc/x/slice"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/client/llb"
@@ -21,6 +23,7 @@ import (
 	"github.com/moby/buildkit/util/progress/progressui"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type BuildImageOpts struct {
@@ -39,9 +42,6 @@ type BuildImageOpts struct {
 	User       string
 	Entrypoint []string
 	Cmd        []string
-
-	Output     io.WriteCloser
-	ExportType string
 }
 
 func (o *BuildImageOpts) Apply(opts *BuildImageOpts) {
@@ -84,12 +84,6 @@ func (o *BuildImageOpts) Apply(opts *BuildImageOpts) {
 	if len(o.Cmd) > 0 {
 		opts.Cmd = o.Cmd
 	}
-	if o.Output != nil {
-		opts.Output = o.Output
-	}
-	if o.ExportType != "" {
-		opts.ExportType = o.ExportType
-	}
 }
 
 type BuildImageOpt interface {
@@ -106,7 +100,6 @@ const (
 	DefaultLaunchType       = "server"
 	DefaultBaseImageRef     = "docker.io/library/debian:stable-slim"
 	DefaultSteamcmdImageRef = "docker.io/steamcmd/steamcmd:latest"
-	DefaultExportType       = client.ExporterDocker
 )
 
 func getImageConfig(ctx context.Context, appID int, opts *BuildImageOpts) (*specs.ImageConfig, int, error) {
@@ -206,10 +199,7 @@ func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts
 
 	if len(opts.AptPkgs) > 0 {
 		state = state.
-			Run(llb.Shlex("apt-get update -y")).
-			Run(llb.Shlexf("apt-get install -y --no-install-recommends %s", strings.Join(opts.AptPkgs, " "))).
-			Run(llb.Shlex("rm -rf /var/lib/apt/lists/*")).
-			Run(llb.Shlex("apt-get clean")).
+			Run(shlexf("apt-get update -y && apt-get install -y --no-install-recommends %s && rm -rf /var/lib/apt/lists/* && apt-get clean", strings.Join(opts.AptPkgs, " "))).
 			Root()
 	}
 
@@ -219,13 +209,11 @@ func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts
 		// This creates /home/steam, which the `steamcmd app_update` command
 		// below needs to exist when using [DefaultDir].
 		state = state.
-			Run(llb.Shlexf("groupadd --system %s", opts.User)).
-			Run(llb.Shlexf("useradd --system --gid %s --shell /bin/bash --create-home %s", opts.User, opts.User)).
+			Run(shlexf("groupadd --system %s && useradd --system --gid %s --shell /bin/bash --create-home %s", opts.User, opts.User, opts.User)).
 			Root()
 
 		steamcmdState = steamcmdState.
-			Run(llb.Shlexf("groupadd --system %s", opts.User)).
-			Run(llb.Shlexf("useradd --system --gid %s --shell /bin/bash --create-home %s", opts.User, opts.User)).
+			Run(shlexf("groupadd --system %s && useradd --system --gid %s --shell /bin/bash --create-home %s", opts.User, opts.User, opts.User)).
 			User(opts.User)
 	}
 
@@ -233,8 +221,7 @@ func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts
 		// `echo`ing the buildid here is to workaround
 		// buildkit cacheing the steamcmd app_update command
 		// when there has been a new build pushed to the branch.
-		Run(llb.Shlexf("echo %d", buildID)).
-		Run(llb.Shlexf("steamcmd %s", strings.Join(arg, " "))).
+		Run(shlexf("echo %d && steamcmd %s", buildID, strings.Join(arg, " "))).
 		AddMount("/mnt", state).
 		Dir(opts.Dir)
 
@@ -251,7 +238,7 @@ func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts
 	return state.Marshal(ctx, llb.LinuxAmd64)
 }
 
-func getSolveOpt(ctx context.Context, appID int, opts *BuildImageOpts) (*client.SolveOpt, int, error) {
+func getSolveOpt(ctx context.Context, appID int, exportType string, output io.WriteCloser, opts *BuildImageOpts) (*client.SolveOpt, int, error) {
 	icfg, buildID, err := getImageConfig(ctx, appID, opts)
 	if err != nil {
 		return nil, 0, err
@@ -271,40 +258,95 @@ func getSolveOpt(ctx context.Context, appID int, opts *BuildImageOpts) (*client.
 	return &client.SolveOpt{
 		Exports: []client.ExportEntry{
 			{
-				Type: opts.ExportType,
+				Type: exportType,
 				Attrs: map[string]string{
 					exptypes.ExporterImageConfigKey: string(ib),
 				},
 				Output: func(_ map[string]string) (io.WriteCloser, error) {
-					return opts.Output, nil
+					return output, nil
 				},
 			},
 		},
 	}, buildID, nil
 }
 
-func (a *ImageBuilder) BuildImage(ctx context.Context, appID int, opts ...BuildImageOpt) error {
+func newBuildImageOpts(opts ...BuildImageOpt) *BuildImageOpts {
 	o := &BuildImageOpts{
 		BaseImageRef:     DefaultBaseImageRef,
 		SteamcmdImageRef: DefaultSteamcmdImageRef,
-		Output: xio.WriterCloser{
-			Writer: io.Discard,
-			Closer: xio.CloserFunc(func() error {
-				return nil
-			}),
-		},
-		Dir:          DefaultDir,
-		LaunchType:   DefaultLaunchType,
-		PlatformType: steamcmd.PlatformTypeLinux,
-		User:         DefaultUser,
-		ExportType:   DefaultExportType,
+		Dir:              DefaultDir,
+		LaunchType:       DefaultLaunchType,
+		PlatformType:     steamcmd.PlatformTypeLinux,
+		User:             DefaultUser,
 	}
 
 	for _, opt := range opts {
 		opt.Apply(o)
 	}
 
-	solvOpt, buildID, err := getSolveOpt(ctx, appID, o)
+	return o
+}
+
+var (
+	errManifestFound = errors.New("manifest found")
+)
+
+func shlexf(format string, a ...any) llb.RunOption {
+	if strings.Contains(format, " && ") {
+		return llb.Shlex("sh -c '" + fmt.Sprintf(format, a...) + "'")
+	}
+
+	return llb.Shlexf(format, a...)
+}
+
+func getImageManifest(ctx context.Context, appID int, a *ImageBuilder, opts ...BuildImageOpt) (*v1.Manifest, error) {
+	var (
+		_        = log.FromContext(ctx)
+		pr, pw   = io.Pipe()
+		manifest = &v1.Manifest{}
+	)
+	defer pr.Close()
+
+	eg, ctx := errgroup.WithContext(ctx)
+
+	eg.Go(func() error {
+		return a.BuildImage(ctx, appID, pw, opts...)
+	})
+
+	eg.Go(func() error {
+		tr := tar.NewReader(pr)
+
+		for {
+			if _, err := tr.Next(); errors.Is(err, io.EOF) {
+				break
+			} else if err != nil {
+				return err
+			}
+
+			if err := json.NewDecoder(tr).Decode(manifest); err == nil {
+				return errManifestFound
+			}
+		}
+
+		return fmt.Errorf("manifest not found")
+	})
+
+	if err := eg.Wait(); errors.Is(err, errManifestFound) {
+		return manifest, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	return nil, fmt.Errorf("manifest not found")
+}
+
+func (a *ImageBuilder) BuildImage(ctx context.Context, appID int, output io.WriteCloser, opts ...BuildImageOpt) error {
+	var (
+		_ = log.FromContext(ctx)
+		o = newBuildImageOpts(opts...)
+	)
+
+	solvOpt, buildID, err := getSolveOpt(ctx, appID, client.ExporterDocker, output, o)
 	if err != nil {
 		return err
 	}
@@ -318,11 +360,21 @@ func (a *ImageBuilder) BuildImage(ctx context.Context, appID int, opts ...BuildI
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
-		if _, err = a.Solve(ctx, def, *solvOpt, solvStatusC); err != nil {
+		errC := make(chan error, 1)
+
+		// Solve doesn't seem to return when context is cancelled,
+		// so we have to wait on the context ourselves.
+		go func() {
+			_, err := a.Solve(ctx, def, *solvOpt, solvStatusC)
+			errC <- err
+		}()
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case err := <-errC:
 			return err
 		}
-
-		return nil
 	})
 
 	eg.Go(func() error {

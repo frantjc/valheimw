@@ -4,13 +4,13 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"path"
 	"strconv"
 	"time"
 
+	"github.com/frantjc/sindri/internal/httputil"
 	"github.com/frantjc/sindri/steamapp"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -19,7 +19,6 @@ import (
 	"github.com/google/uuid"
 	swagger "github.com/swaggo/http-swagger/v2"
 	"github.com/timewasted/go-accept-headers"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type APIHandlerOpts struct {
@@ -228,11 +227,11 @@ func handleErr(handler func(w http.ResponseWriter, r *http.Request) error) http.
 			if nErr := negotiate(w, r, "application/json"); nErr != nil {
 				log.Error(err, "negotiating JSON error response")
 
-				http.Error(w, err.Error(), httpStatusCode(err))
+				http.Error(w, err.Error(), httputil.HTTPStatusCode(err))
 				return
 			}
 
-			w.WriteHeader(httpStatusCode(err))
+			w.WriteHeader(httputil.HTTPStatusCode(err))
 			_ = respondJSON(w, r, &Error{Message: err.Error()})
 		}
 	}
@@ -241,7 +240,7 @@ func handleErr(handler func(w http.ResponseWriter, r *http.Request) error) http.
 func negotiate(w http.ResponseWriter, r *http.Request, contentType string) error {
 	if _, err := accept.Negotiate(r.Header.Get("Accept"), contentType); err != nil {
 		w.Header().Set("Accept", contentType)
-		return NewHTTPStatusCodeError(err, http.StatusUnsupportedMediaType)
+		return httputil.NewHTTPStatusCodeError(err, http.StatusUnsupportedMediaType)
 	}
 
 	w.Header().Set("Vary", "Accept")
@@ -273,51 +272,6 @@ func respondJSON(w http.ResponseWriter, r *http.Request, a any) error {
 	return enc.Encode(a)
 }
 
-func NewHTTPStatusCodeError(err error, httpStatusCode int) error {
-	if err == nil {
-		return nil
-	}
-
-	if 600 >= httpStatusCode || httpStatusCode < 100 {
-		httpStatusCode = 500
-	}
-
-	return &httpStatusCodeError{
-		err:            err,
-		httpStatusCode: httpStatusCode,
-	}
-}
-
-type httpStatusCodeError struct {
-	err            error
-	httpStatusCode int
-}
-
-func (e *httpStatusCodeError) Error() string {
-	if e.err == nil {
-		return ""
-	}
-
-	return e.err.Error()
-}
-
-func (e *httpStatusCodeError) Unwrap() error {
-	return e.err
-}
-
-func httpStatusCode(err error) int {
-	hscerr := &httpStatusCodeError{}
-	if errors.As(err, &hscerr) {
-		return hscerr.httpStatusCode
-	}
-
-	if apiStatus, ok := err.(apierrors.APIStatus); ok || errors.As(err, &apiStatus) {
-		return int(apiStatus.Status().Code)
-	}
-
-	return http.StatusInternalServerError
-}
-
 const (
 	appIDParam  = "appID"
 	branchParam = "branch"
@@ -342,7 +296,7 @@ func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 
 	parsedSteamappAppID, err := strconv.Atoi(steamappID)
 	if err != nil {
-		return NewHTTPStatusCodeError(fmt.Errorf("parse Steamapp ID: %w", err), http.StatusBadRequest)
+		return httputil.NewHTTPStatusCodeError(fmt.Errorf("parse Steamapp ID: %w", err), http.StatusBadRequest)
 	}
 
 	steamapp, err := h.Database.Get(r.Context(), parsedSteamappAppID, &GetOpts{
@@ -435,16 +389,16 @@ func (h *handler) upsertSteamapp(w http.ResponseWriter, r *http.Request) error {
 
 	parsedSteamappAppID, err := strconv.Atoi(steamappID)
 	if err != nil {
-		return NewHTTPStatusCodeError(err, http.StatusBadRequest)
+		return httputil.NewHTTPStatusCodeError(err, http.StatusBadRequest)
 	}
 
 	if err := steamapp.ValidateAppID(parsedSteamappAppID); err != nil {
-		return NewHTTPStatusCodeError(err, http.StatusBadRequest)
+		return httputil.NewHTTPStatusCodeError(err, http.StatusBadRequest)
 	}
 
 	steamappDetail := &SteamappDetail{}
 	if err := json.NewDecoder(r.Body).Decode(steamappDetail); err != nil {
-		return NewHTTPStatusCodeError(err, http.StatusBadRequest)
+		return httputil.NewHTTPStatusCodeError(err, http.StatusBadRequest)
 	}
 
 	if err := h.Database.Upsert(r.Context(), parsedSteamappAppID, steamappDetail, &UpsertOpts{

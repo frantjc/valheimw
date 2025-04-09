@@ -87,8 +87,28 @@ func (r *PullRegistry) GetManifest(ctx context.Context, name string, reference s
 	// At this point, the caller must be asking for a Steamapp branch name, so
 	// we have to build it. Check the database to see if we have a known special
 	// handling for it.
-	opts, err := r.Database.GetBuildImageOpts(ctx, appID, reference)
+	o, err := r.Database.GetBuildImageOpts(ctx, appID, reference)
 	if err != nil {
+		return nil, err
+	}
+
+	opts := []BuildImageOpt{o, &BuildImageOpts{Beta: reference}}
+
+	// Do a quick initial check on just the manifest. If it's cached already,
+	// then so are its blobs, and we can just return the manifest now.
+	manifest, err := getImageManifest(ctx, appID, r.ImageBuilder, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	dig, err := imgutil.GetManifestDigest(manifest)
+	if err != nil {
+		return nil, err
+	}
+
+	if ok, err := r.Bucket.Exists(ctx, filepath.Join(name, "manifests", dig.String())); ok {
+		return manifest, nil
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -104,7 +124,7 @@ func (r *PullRegistry) GetManifest(ctx context.Context, name string, reference s
 	}()
 	defer wc.Close()
 
-	if err := r.ImageBuilder.BuildImage(ctx, appID, opts, &BuildImageOpts{Output: wc, Beta: reference}); err != nil {
+	if err := r.ImageBuilder.BuildImage(ctx, appID, wc, opts...); err != nil {
 		return nil, err
 	}
 
@@ -115,7 +135,7 @@ func (r *PullRegistry) GetManifest(ctx context.Context, name string, reference s
 		return nil, err
 	}
 
-	manifest, err := image.Manifest()
+	manifest, err = image.Manifest()
 	if err != nil {
 		return nil, err
 	}

@@ -18,6 +18,8 @@ services:
   buildkitd:
     image: moby/buildkit
     privileged: true
+    ports:
+      - 1234:1234
     command:
       - --debug
       - --addr
@@ -64,7 +66,7 @@ services:
       - 5000:5000
     depends_on:
       - buildkitd
-      - stoker
+      # - stoker
   valheim:
     image: localhost:5000/896660
     command:

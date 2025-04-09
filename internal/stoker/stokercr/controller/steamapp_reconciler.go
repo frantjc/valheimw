@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"strconv"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/frantjc/sindri/internal/stoker/stokercr"
 	"github.com/frantjc/sindri/internal/stoker/stokercr/api/v1alpha1"
 	"github.com/frantjc/sindri/steamapp"
+	xio "github.com/frantjc/x/io"
 	xslice "github.com/frantjc/x/slice"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -102,7 +104,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	r.Eventf(sa, corev1.EventTypeWarning, "Building", "Attempting image build with approval: %s", sa.Annotations[stokercr.AnnotationApproved])
 
-	if err := r.BuildImage(ctx, sa.Spec.AppID, &steamapp.GettableBuildImageOpts{
+	if err := r.BuildImage(ctx, sa.Spec.AppID, xio.WriterCloser{Writer: io.Discard, Closer: xio.CloserFunc(func() error { return nil })}, &steamapp.GettableBuildImageOpts{
 		BaseImageRef: sa.Spec.ImageOpts.BaseImageRef,
 		AptPkgs:      sa.Spec.ImageOpts.AptPkgs,
 		BetaPassword: sa.Spec.BetaPassword,
