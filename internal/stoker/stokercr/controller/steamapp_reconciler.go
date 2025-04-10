@@ -102,7 +102,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
-	r.Eventf(sa, corev1.EventTypeWarning, "Building", "Attempting image build with approval: %s", sa.Annotations[stokercr.AnnotationApproved])
+	r.Eventf(sa, corev1.EventTypeNormal, "Building", "Attempting image build with approval: %s", sa.Annotations[stokercr.AnnotationApproved])
 
 	if err := r.BuildImage(ctx, sa.Spec.AppID, xio.WriterCloser{Writer: io.Discard, Closer: xio.CloserFunc(func() error { return nil })}, &steamapp.GettableBuildImageOpts{
 		BaseImageRef: sa.Spec.ImageOpts.BaseImageRef,
@@ -119,7 +119,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
-	r.Event(sa, corev1.EventTypeWarning, "Built", "Image successfully built")
+	r.Event(sa, corev1.EventTypeNormal, "Built", "Image successfully built")
 	sa.Status.Phase = v1alpha1.PhaseReady
 
 	return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
