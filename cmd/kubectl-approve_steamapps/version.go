@@ -13,7 +13,7 @@ var (
 	builtBy = ""
 )
 
-// SemVer returns the semantic version of `kubectl-approve_steamapp` as
+// SemVer returns the semantic version of `kubectl-approve_steamapps` as
 // built from GoReleaser ldflags and debug build info.
 func SemVer() string {
 	semver := version

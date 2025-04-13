@@ -13,17 +13,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func NewKubectlApproveApp() *cobra.Command {
+func NewKubectlApproveSteamapps() *cobra.Command {
 	var (
 		cfgFlags = genericclioptions.NewConfigFlags(true)
 		cmd      = &cobra.Command{
-			Use:  "kubectl-approve_steamapp",
-			Args: cobra.ExactArgs(1),
+			Use:  "kubectl-approve_steamapps",
+			Args: cobra.MinimumNArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				var (
-					ctx          = cmd.Context()
-					steamappName = args[0]
-					cliCfg       = cfgFlags.ToRawKubeConfigLoader()
+					ctx    = cmd.Context()
+					cliCfg = cfgFlags.ToRawKubeConfigLoader()
 				)
 
 				namespace, ok, err := cliCfg.Namespace()
@@ -34,16 +33,7 @@ func NewKubectlApproveApp() *cobra.Command {
 				}
 
 				var (
-					scheme   = runtime.NewScheme()
-					steamapp = &v1alpha1.Steamapp{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: namespace,
-							Name:      steamappName,
-							Annotations: map[string]string{
-								stokercr.AnnotationApproved: fmt.Sprint(true),
-							},
-						},
-					}
+					scheme = runtime.NewScheme()
 				)
 
 				if err := v1alpha1.AddToScheme(scheme); err != nil {
@@ -60,14 +50,28 @@ func NewKubectlApproveApp() *cobra.Command {
 					return err
 				}
 
-				if _, err := controllerutil.CreateOrPatch(ctx, cli, steamapp, func() error {
-					if steamapp.Annotations == nil {
-						steamapp.Annotations = map[string]string{}
+				for _, steamappName := range args {
+					var (
+						steamapp = &v1alpha1.Steamapp{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: namespace,
+								Name:      steamappName,
+								Annotations: map[string]string{
+									stokercr.AnnotationApproved: fmt.Sprint(true),
+								},
+							},
+						}
+					)
+
+					if _, err := controllerutil.CreateOrPatch(ctx, cli, steamapp, func() error {
+						if steamapp.Annotations == nil {
+							steamapp.Annotations = map[string]string{}
+						}
+						steamapp.Annotations[stokercr.AnnotationApproved] = fmt.Sprint(true)
+						return nil
+					}); err != nil {
+						return err
 					}
-					steamapp.Annotations[stokercr.AnnotationApproved] = fmt.Sprint(true)
-					return nil
-				}); err != nil {
-					return err
 				}
 
 				return nil
