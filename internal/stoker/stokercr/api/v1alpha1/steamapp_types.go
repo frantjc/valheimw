@@ -33,7 +33,7 @@ type SteamappSpec struct {
 	// +kubebuilder:validation:Optional
 	BetaPassword string `json:"betaPassword,omitempty"`
 	// +kubebuilder:validation:Optional
-	ImageOpts SteamappSpecImageOpts `json:"imageOpts,omitempty"`
+	ImageOpts SteamappSpecImageOpts `json:",inline"`
 }
 
 const (
@@ -48,6 +48,8 @@ type SteamappStatus struct {
 	// +kubebuilder:default=Pending
 	// +kubebuilder:validation:Enum=Pending;Ready;Failed;Paused
 	Phase string `json:"phase"`
+	// +kubebuilder:validation:Optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	// +kubebuilder:validation:Optional
 	Name string `json:"name,omitempty"`
 	// +kubebuilder:validation:Optional

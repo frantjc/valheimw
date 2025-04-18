@@ -16,6 +16,7 @@ import (
 	xslice "github.com/frantjc/x/slice"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -56,7 +57,14 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	if xslice.Every(sa.Status.Conditions, func(condition metav1.Condition, _ int) bool {
+		return condition.Status == metav1.ConditionTrue && condition.ObservedGeneration == sa.Generation
+	}) {
+		return ctrl.Result{}, nil
+	}
+
 	sa.Status.Phase = v1alpha1.PhasePending
+	sa.Status.Conditions = []metav1.Condition{}
 
 	if err := r.Client.Status().Update(ctx, sa); err != nil {
 		return ctrl.Result{}, err
@@ -65,10 +73,25 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	appInfo, err := appinfoutil.GetAppInfo(ctx, sa.Spec.AppID)
 	if err != nil {
 		r.Eventf(sa, corev1.EventTypeWarning, "AppInfoPrintFailed", "Could not get app info: %v", err)
+		sa.Status.Conditions = append(sa.Status.Conditions, metav1.Condition{
+			Type:               "AppInfoPrint",
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: sa.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             "AppInfoPrintFailed",
+			Message:            err.Error(),
+		})
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
+	sa.Status.Conditions = append(sa.Status.Conditions, metav1.Condition{
+		Type:               "AppInfoPrint",
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: sa.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             "AppInfoPrintSucceeded",
+	})
 	sa.Status.Name = appInfo.Common.Name
 
 	u, err := url.Parse("https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps")
@@ -84,10 +107,37 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	if appInfo.Depots.Branches[sa.Spec.Branch].PwdRequired && sa.Spec.BetaPassword == "" {
 		r.Eventf(sa, corev1.EventTypeWarning, "BetaPwdMissing", "Branch %s requires a password", sa.Spec.Branch)
+		sa.Status.Conditions = append(sa.Status.Conditions, metav1.Condition{
+			Type:               "BetaPwd",
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: sa.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             "BetaPwdInvalid",
+			Message:            fmt.Sprintf("Branch %s requires a password, but none was given", sa.Spec.Branch),
+		})
+		sa.Status.Phase = v1alpha1.PhaseFailed
+		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
+	} else if !appInfo.Depots.Branches[sa.Spec.Branch].PwdRequired && sa.Spec.BetaPassword != "" {
+		r.Eventf(sa, corev1.EventTypeWarning, "UnexpectedBetaPwd", "Branch %s does not require a password, but one was given: %s", sa.Spec.Branch, sa.Spec.BetaPassword)
+		sa.Status.Conditions = append(sa.Status.Conditions, metav1.Condition{
+			Type:               "BetaPwd",
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: sa.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             "BetaPwdInvalid",
+			Message:            fmt.Sprintf("Branch %s requires a password, but none was given", sa.Spec.Branch),
+		})
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
+	sa.Status.Conditions = append(sa.Status.Conditions, metav1.Condition{
+		Type:               "BetaPwd",
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: sa.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             "BetaPwdValid",
+	})
 	awaitingApproval := true
 
 	if sa.Annotations != nil {
@@ -98,11 +148,26 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	if awaitingApproval {
 		r.Event(sa, corev1.EventTypeNormal, "AwaitingApproval", "Steamapp requires approval to build")
+		sa.Status.Conditions = append(sa.Status.Conditions, metav1.Condition{
+			Type:               "Approved",
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: sa.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             "PendingApproval",
+			Message:            fmt.Sprintf("Approval not given via annotation %s", stokercr.AnnotationApproved),
+		})
 		sa.Status.Phase = v1alpha1.PhasePaused
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
 	r.Eventf(sa, corev1.EventTypeNormal, "Building", "Attempting image build with approval: %s", sa.Annotations[stokercr.AnnotationApproved])
+	sa.Status.Conditions = append(sa.Status.Conditions, metav1.Condition{
+		Type:               "Approved",
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: sa.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             "ApprovalReceived",
+	})
 
 	if err := r.BuildImage(ctx, sa.Spec.AppID, xio.WriterCloser{Writer: io.Discard, Closer: xio.CloserFunc(func() error { return nil })}, &steamapp.GettableBuildImageOpts{
 		BaseImageRef: sa.Spec.ImageOpts.BaseImageRef,
@@ -115,11 +180,26 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Cmd:          sa.Spec.ImageOpts.Cmd,
 	}); err != nil {
 		r.Eventf(sa, corev1.EventTypeWarning, "DidNotBuild", "Image did not build successfully: %v", err)
+		sa.Status.Conditions = append(sa.Status.Conditions, metav1.Condition{
+			Type:               "Built",
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: sa.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             "BuildFailed",
+			Message:            err.Error(),
+		})
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
 	r.Event(sa, corev1.EventTypeNormal, "Built", "Image successfully built")
+	sa.Status.Conditions = append(sa.Status.Conditions, metav1.Condition{
+		Type:               "Built",
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: sa.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             "BuildSucceeded",
+	})
 	sa.Status.Phase = v1alpha1.PhaseReady
 
 	return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
