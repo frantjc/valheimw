@@ -55,7 +55,8 @@ func NewKubectlApproveSteamapps() *cobra.Command {
 					steamapps = &v1alpha1.SteamappList{}
 				)
 
-				if all {
+				switch {
+				case all:
 					if len(args) > 0 {
 						return fmt.Errorf("args %s and --all are mutually exclusive", strings.Join(args, " "))
 					}
@@ -65,9 +66,9 @@ func NewKubectlApproveSteamapps() *cobra.Command {
 					}); err != nil {
 						return err
 					}
-				} else if len(args) == 0 {
+				case len(args) == 0:
 					return fmt.Errorf("args or --all are required")
-				} else {
+				default:
 					for _, steamappName := range args {
 						steamapps.Items = append(steamapps.Items, v1alpha1.Steamapp{
 							ObjectMeta: metav1.ObjectMeta{

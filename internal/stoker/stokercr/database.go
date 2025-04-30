@@ -124,14 +124,14 @@ func (d *Database) GetBuildImageOpts(ctx context.Context, appID int, branch stri
 	}
 
 	return &steamapp.GettableBuildImageOpts{
-		BaseImageRef: sa.Spec.SteamappSpecImageOpts.BaseImageRef,
-		AptPkgs:      sa.Spec.SteamappSpecImageOpts.AptPkgs,
+		BaseImageRef: sa.Spec.BaseImageRef,
+		AptPkgs:      sa.Spec.AptPkgs,
 		BetaPassword: sa.Spec.BetaPassword,
-		LaunchType:   sa.Spec.SteamappSpecImageOpts.LaunchType,
-		PlatformType: steamcmd.PlatformType(sa.Spec.SteamappSpecImageOpts.PlatformType),
-		Execs:        sa.Spec.SteamappSpecImageOpts.Execs,
-		Entrypoint:   sa.Spec.SteamappSpecImageOpts.Entrypoint,
-		Cmd:          sa.Spec.SteamappSpecImageOpts.Cmd,
+		LaunchType:   sa.Spec.LaunchType,
+		PlatformType: steamcmd.PlatformType(sa.Spec.PlatformType),
+		Execs:        sa.Spec.Execs,
+		Entrypoint:   sa.Spec.Entrypoint,
+		Cmd:          sa.Spec.Cmd,
 	}, nil
 }
 
