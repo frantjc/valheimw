@@ -58,7 +58,7 @@ GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
 SWAG ?= $(LOCALBIN)/swag
 
 CONTROLLER_TOOLS_VERSION ?= v0.17.1
-GOLANGCI_LINT_VERSION ?= v1.64.8
+GOLANGCI_LINT_VERSION ?= v2.1.5
 SWAG_VERSION ?= v1.16.4
 
 .PHONY: controller-gen
@@ -69,7 +69,7 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT)
 $(GOLANGCI_LINT): $(LOCALBIN)
-	@$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+	@$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
 
 .PHONY: swag
 swag: $(SWAG)
