@@ -46,8 +46,8 @@ services:
   migrate:
     image: alpine
     volumes:
-      - ./hack:/hack
-    entrypoint: /hack/migrate.sh http://stoker:5050
+      - ./hack/migrate.sh:/usr/local/bin/migrate
+    entrypoint: migrate http://stoker:5050
     depends_on:
       - stoker
   boiler:
@@ -66,7 +66,7 @@ services:
       - 5000:5000
     depends_on:
       - buildkitd
-      # - stoker
+      - stoker
   valheim:
     image: localhost:5000/896660
     command:

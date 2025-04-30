@@ -57,7 +57,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	if xslice.Every(sa.Status.Conditions, func(condition metav1.Condition, _ int) bool {
+	if len(sa.Status.Conditions) > 0 && xslice.Every(sa.Status.Conditions, func(condition metav1.Condition, _ int) bool {
 		return condition.Status == metav1.ConditionTrue && condition.ObservedGeneration == sa.Generation
 	}) {
 		return ctrl.Result{}, nil
@@ -170,14 +170,14 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	})
 
 	if err := r.BuildImage(ctx, sa.Spec.AppID, xio.WriterCloser{Writer: io.Discard, Closer: xio.CloserFunc(func() error { return nil })}, &steamapp.GettableBuildImageOpts{
-		BaseImageRef: sa.Spec.ImageOpts.BaseImageRef,
-		AptPkgs:      sa.Spec.ImageOpts.AptPkgs,
+		BaseImageRef: sa.Spec.SteamappSpecImageOpts.BaseImageRef,
+		AptPkgs:      sa.Spec.SteamappSpecImageOpts.AptPkgs,
 		BetaPassword: sa.Spec.BetaPassword,
-		LaunchType:   sa.Spec.ImageOpts.LaunchType,
-		PlatformType: steamcmd.PlatformType(sa.Spec.ImageOpts.PlatformType),
-		Execs:        sa.Spec.ImageOpts.Execs,
-		Entrypoint:   sa.Spec.ImageOpts.Entrypoint,
-		Cmd:          sa.Spec.ImageOpts.Cmd,
+		LaunchType:   sa.Spec.SteamappSpecImageOpts.LaunchType,
+		PlatformType: steamcmd.PlatformType(sa.Spec.SteamappSpecImageOpts.PlatformType),
+		Execs:        sa.Spec.SteamappSpecImageOpts.Execs,
+		Entrypoint:   sa.Spec.SteamappSpecImageOpts.Entrypoint,
+		Cmd:          sa.Spec.SteamappSpecImageOpts.Cmd,
 	}); err != nil {
 		r.Eventf(sa, corev1.EventTypeWarning, "DidNotBuild", "Image did not build successfully: %v", err)
 		sa.Status.Conditions = append(sa.Status.Conditions, metav1.Condition{
@@ -260,16 +260,16 @@ func (r *SteamappReconciler) Default(_ context.Context, obj runtime.Object) erro
 		sa.Spec.Branch = steamapp.DefaultBranchName
 	}
 
-	if sa.Spec.ImageOpts.LaunchType == "" {
-		sa.Spec.ImageOpts.LaunchType = steamapp.DefaultLaunchType
+	if sa.Spec.SteamappSpecImageOpts.LaunchType == "" {
+		sa.Spec.SteamappSpecImageOpts.LaunchType = steamapp.DefaultLaunchType
 	}
 
-	if sa.Spec.ImageOpts.PlatformType == "" {
-		sa.Spec.ImageOpts.PlatformType = steamcmd.PlatformTypeLinux.String()
+	if sa.Spec.SteamappSpecImageOpts.PlatformType == "" {
+		sa.Spec.SteamappSpecImageOpts.PlatformType = steamcmd.PlatformTypeLinux.String()
 	}
 
-	if sa.Spec.ImageOpts.BaseImageRef == "" {
-		sa.Spec.ImageOpts.BaseImageRef = steamapp.DefaultBaseImageRef
+	if sa.Spec.SteamappSpecImageOpts.BaseImageRef == "" {
+		sa.Spec.SteamappSpecImageOpts.BaseImageRef = steamapp.DefaultBaseImageRef
 	}
 
 	return nil
@@ -287,9 +287,9 @@ func (r *SteamappReconciler) ValidateCreate(_ context.Context, obj runtime.Objec
 			steamcmd.PlatformTypeWindows,
 			steamcmd.PlatformTypeMacOS,
 		},
-		steamcmd.PlatformType(sa.Spec.ImageOpts.PlatformType),
+		steamcmd.PlatformType(sa.Spec.SteamappSpecImageOpts.PlatformType),
 	) {
-		return nil, fmt.Errorf("unsupported platform type %s", sa.Spec.ImageOpts.PlatformType)
+		return nil, fmt.Errorf("unsupported platform type %s", sa.Spec.SteamappSpecImageOpts.PlatformType)
 	}
 
 	return nil, nil
@@ -312,9 +312,9 @@ func (r *SteamappReconciler) ValidateUpdate(_ context.Context, oldObj, newObj ru
 			steamcmd.PlatformTypeWindows,
 			steamcmd.PlatformTypeMacOS,
 		},
-		steamcmd.PlatformType(sa.Spec.ImageOpts.PlatformType),
+		steamcmd.PlatformType(sa.Spec.SteamappSpecImageOpts.PlatformType),
 	) {
-		return nil, fmt.Errorf("unsupported platform type %s", sa.Spec.ImageOpts.PlatformType)
+		return nil, fmt.Errorf("unsupported platform type %s", sa.Spec.SteamappSpecImageOpts.PlatformType)
 	}
 
 	return nil, nil

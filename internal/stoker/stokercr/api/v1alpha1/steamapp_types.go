@@ -33,7 +33,7 @@ type SteamappSpec struct {
 	// +kubebuilder:validation:Optional
 	BetaPassword string `json:"betaPassword,omitempty"`
 	// +kubebuilder:validation:Optional
-	ImageOpts SteamappSpecImageOpts `json:",inline"`
+	SteamappSpecImageOpts `json:",inline"`
 }
 
 const (

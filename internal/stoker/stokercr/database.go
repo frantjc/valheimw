@@ -124,14 +124,14 @@ func (d *Database) GetBuildImageOpts(ctx context.Context, appID int, branch stri
 	}
 
 	return &steamapp.GettableBuildImageOpts{
-		BaseImageRef: sa.Spec.ImageOpts.BaseImageRef,
-		AptPkgs:      sa.Spec.ImageOpts.AptPkgs,
+		BaseImageRef: sa.Spec.SteamappSpecImageOpts.BaseImageRef,
+		AptPkgs:      sa.Spec.SteamappSpecImageOpts.AptPkgs,
 		BetaPassword: sa.Spec.BetaPassword,
-		LaunchType:   sa.Spec.ImageOpts.LaunchType,
-		PlatformType: steamcmd.PlatformType(sa.Spec.ImageOpts.PlatformType),
-		Execs:        sa.Spec.ImageOpts.Execs,
-		Entrypoint:   sa.Spec.ImageOpts.Entrypoint,
-		Cmd:          sa.Spec.ImageOpts.Cmd,
+		LaunchType:   sa.Spec.SteamappSpecImageOpts.LaunchType,
+		PlatformType: steamcmd.PlatformType(sa.Spec.SteamappSpecImageOpts.PlatformType),
+		Execs:        sa.Spec.SteamappSpecImageOpts.Execs,
+		Entrypoint:   sa.Spec.SteamappSpecImageOpts.Entrypoint,
+		Cmd:          sa.Spec.SteamappSpecImageOpts.Cmd,
 	}, nil
 }
 
@@ -300,7 +300,7 @@ func (d *Database) Get(ctx context.Context, steamappID int, opts ...stoker.GetOp
 	}
 
 	return &stoker.Steamapp{
-		SteamappDetail: stoker.SteamappDetail(sa.Spec.ImageOpts),
+		SteamappDetail: stoker.SteamappDetail(sa.Spec.SteamappSpecImageOpts),
 		SteamappSummary: stoker.SteamappSummary{
 			AppID:   steamappID,
 			Name:    sa.Status.Name,
@@ -384,10 +384,10 @@ func (d *Database) Upsert(ctx context.Context, steamappID int, detail *stoker.St
 				Name:      fmt.Sprintf("%d-%s", steamappID, sanitizeBranchName(o.Branch)),
 			},
 			Spec: v1alpha1.SteamappSpec{
-				AppID:        steamappID,
-				Branch:       o.Branch,
-				BetaPassword: o.BetaPassword,
-				ImageOpts:    v1alpha1.SteamappSpecImageOpts(*detail),
+				AppID:                 steamappID,
+				Branch:                o.Branch,
+				BetaPassword:          o.BetaPassword,
+				SteamappSpecImageOpts: v1alpha1.SteamappSpecImageOpts(*detail),
 			},
 		}
 	)
@@ -396,7 +396,7 @@ func (d *Database) Upsert(ctx context.Context, steamappID int, detail *stoker.St
 		steamapp.Spec.AppID = steamappID
 		steamapp.Spec.Branch = o.Branch
 		steamapp.Spec.BetaPassword = o.BetaPassword
-		steamapp.Spec.ImageOpts = v1alpha1.SteamappSpecImageOpts(*detail)
+		steamapp.Spec.SteamappSpecImageOpts = v1alpha1.SteamappSpecImageOpts(*detail)
 		return nil
 	}); err != nil {
 		return err

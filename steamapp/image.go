@@ -176,7 +176,10 @@ func getImageConfig(ctx context.Context, appID int, opts *BuildImageOpts) (*spec
 		}
 	}
 
-	return nil, 0, fmt.Errorf("app ID %d does not support %s, only %s", appInfo.Common.GameID, opts.PlatformType, appInfo.Common.OSList)
+	return nil, 0, fmt.Errorf(
+		"app ID %d launch type %s does not support %s",
+		appInfo.Common.GameID, opts.LaunchType, opts.PlatformType,
+	)
 }
 
 func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts) (*llb.Definition, error) {
@@ -287,10 +290,6 @@ func newBuildImageOpts(opts ...BuildImageOpt) *BuildImageOpts {
 	return o
 }
 
-var (
-	errManifestFound = errors.New("manifest found")
-)
-
 func shlexf(format string, a ...any) llb.RunOption {
 	if strings.Contains(format, " && ") {
 		return llb.Shlex("sh -c '" + fmt.Sprintf(format, a...) + "'")
@@ -298,6 +297,10 @@ func shlexf(format string, a ...any) llb.RunOption {
 
 	return llb.Shlexf(format, a...)
 }
+
+var (
+	errManifestFound = errors.New("manifest found")
+)
 
 func getImageManifest(ctx context.Context, appID int, a *ImageBuilder, opts ...BuildImageOpt) (*v1.Manifest, error) {
 	var (
