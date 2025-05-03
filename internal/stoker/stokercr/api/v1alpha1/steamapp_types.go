@@ -4,6 +4,42 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type ConditionsAware interface {
+	GetGeneration() int64
+	GetConditions() []metav1.Condition
+	SetConditions(conditions []metav1.Condition)
+}
+
+func SetCondition(conditionsAware ConditionsAware, condition metav1.Condition) {
+	conditions := conditionsAware.GetConditions()
+	if conditions == nil {
+		conditions = []metav1.Condition{}
+	}
+
+	for i, c := range conditions {
+		if c.Type == condition.Type {
+			if c.Message != condition.Message || c.Reason != condition.Reason || c.Status != condition.Status {
+				condition.LastTransitionTime = metav1.Now()
+				condition.ObservedGeneration = conditionsAware.GetGeneration()
+				conditions[i] = condition
+				conditionsAware.SetConditions(conditions)
+			}
+			return
+		}
+	}
+
+	conditions = append(conditions, condition)
+	conditionsAware.SetConditions(conditions)
+}
+
+func (s *Steamapp) GetConditions() []metav1.Condition {
+	return s.Status.Conditions
+}
+
+func (s *Steamapp) SetConditions(conditions []metav1.Condition) {
+	s.Status.Conditions = conditions
+}
+
 type SteamappSpecImageOpts struct {
 	// +kubebuilder:default="docker.io/library/debian:stable-slim"
 	BaseImageRef string `json:"baseImage,omitempty"`
