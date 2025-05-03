@@ -72,7 +72,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	appInfo, err := appinfoutil.GetAppInfo(ctx, sa.Spec.AppID)
 	if err != nil {
 		r.Eventf(sa, corev1.EventTypeWarning, "AppInfoPrintFailed", "Could not get app info: %v", err)
-		v1alpha1.SetCondition(sa, metav1.Condition{
+		SetCondition(sa, metav1.Condition{
 			Type:    "AppInfoPrint",
 			Status:  metav1.ConditionFalse,
 			Reason:  "AppInfoPrintFailed",
@@ -82,7 +82,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
-	v1alpha1.SetCondition(sa, metav1.Condition{
+	SetCondition(sa, metav1.Condition{
 		Type:   "AppInfoPrint",
 		Status: metav1.ConditionTrue,
 		Reason: "AppInfoPrintSucceeded",
@@ -103,7 +103,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	branch, ok := appInfo.Depots.Branches[sa.Spec.Branch]
 	if !ok {
 		r.Eventf(sa, corev1.EventTypeWarning, "BranchMissing", "Branch %s not found", sa.Spec.Branch)
-		v1alpha1.SetCondition(sa, metav1.Condition{
+		SetCondition(sa, metav1.Condition{
 			Type:    "Branch",
 			Status:  metav1.ConditionFalse,
 			Reason:  "BranchMissing",
@@ -117,7 +117,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	if branch.PwdRequired && betaPwd == "" {
 		r.Eventf(sa, corev1.EventTypeWarning, "BetaPwdMissing", "Branch %s requires a password", sa.Spec.Branch)
-		v1alpha1.SetCondition(sa, metav1.Condition{
+		SetCondition(sa, metav1.Condition{
 			Type:    "BetaPwd",
 			Status:  metav1.ConditionFalse,
 			Reason:  "BetaPwdMissing",
@@ -127,7 +127,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	} else if !branch.PwdRequired && betaPwd != "" {
 		r.Eventf(sa, corev1.EventTypeWarning, "UnexpectedBetaPwd", "Branch %s does not require a password, refusing to use given: %s", sa.Spec.Branch, sa.Spec.BetaPassword)
-		v1alpha1.SetCondition(sa, metav1.Condition{
+		SetCondition(sa, metav1.Condition{
 			Type:    "BetaPwd",
 			Status:  metav1.ConditionFalse,
 			Reason:  "UnexpectedBetaPwd",
@@ -136,7 +136,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		betaPwd = ""
 	}
 
-	v1alpha1.SetCondition(sa, metav1.Condition{
+	SetCondition(sa, metav1.Condition{
 		Type:   "BetaPwd",
 		Status: metav1.ConditionTrue,
 		Reason: "BetaPwdValid",
@@ -151,7 +151,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	if awaitingApproval {
 		r.Event(sa, corev1.EventTypeNormal, "AwaitingApproval", "Steamapp requires approval to build")
-		v1alpha1.SetCondition(sa, metav1.Condition{
+		SetCondition(sa, metav1.Condition{
 			Type:    "Approved",
 			Status:  metav1.ConditionFalse,
 			Reason:  "PendingApproval",
@@ -162,7 +162,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	r.Eventf(sa, corev1.EventTypeNormal, "Building", "Attempting image build with approval: %s", sa.Annotations[stokercr.AnnotationApproved])
-	v1alpha1.SetCondition(sa, metav1.Condition{
+	SetCondition(sa, metav1.Condition{
 		Type:   "Approved",
 		Status: metav1.ConditionTrue,
 		Reason: "ApprovalReceived",
@@ -179,7 +179,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Cmd:          sa.Spec.Cmd,
 	}); err != nil {
 		r.Eventf(sa, corev1.EventTypeWarning, "DidNotBuild", "Image did not build successfully: %v", err)
-		v1alpha1.SetCondition(sa, metav1.Condition{
+		SetCondition(sa, metav1.Condition{
 			Type:    "Built",
 			Status:  metav1.ConditionFalse,
 			Reason:  "BuildFailed",
@@ -190,7 +190,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	r.Event(sa, corev1.EventTypeNormal, "Built", "Image successfully built")
-	v1alpha1.SetCondition(sa, metav1.Condition{
+	SetCondition(sa, metav1.Condition{
 		Type:   "Built",
 		Status: metav1.ConditionTrue,
 		Reason: "BuildSucceeded",
@@ -322,4 +322,32 @@ func (r *SteamappReconciler) ValidateDelete(_ context.Context, obj runtime.Objec
 	}
 
 	return nil, nil
+}
+
+type ConditionsAware interface {
+	GetGeneration() int64
+	GetConditions() []metav1.Condition
+	SetConditions(conditions []metav1.Condition)
+}
+
+func SetCondition(conditionsAware ConditionsAware, condition metav1.Condition) {
+	conditions := conditionsAware.GetConditions()
+	if conditions == nil {
+		conditions = []metav1.Condition{}
+	}
+
+	for i, c := range conditions {
+		if c.Type == condition.Type {
+			if c.Message != condition.Message || c.Reason != condition.Reason || c.Status != condition.Status {
+				condition.LastTransitionTime = metav1.Now()
+				condition.ObservedGeneration = conditionsAware.GetGeneration()
+				conditions[i] = condition
+				conditionsAware.SetConditions(conditions)
+			}
+			return
+		}
+	}
+
+	conditions = append(conditions, condition)
+	conditionsAware.SetConditions(conditions)
 }
