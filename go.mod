@@ -23,7 +23,7 @@ require (
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/timewasted/go-accept-headers v0.0.0-20130320203746-c78f304b1b09
 	gocloud.dev v0.41.0
-	golang.org/x/sync v0.13.0
+	golang.org/x/sync v0.14.0
 	k8s.io/api v0.33.0
 	k8s.io/apimachinery v0.33.0
 	k8s.io/cli-runtime v0.33.0
