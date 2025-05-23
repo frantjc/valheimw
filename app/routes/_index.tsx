@@ -13,7 +13,7 @@ export const meta: MetaFunction = () => {
       url = new URL(window.location.href);
     } else {
       const port = process.env.PORT || 3000;
-      const base = process.env.HT_URL || `http://localhost:${port}/`;
+      const base = process.env.URL || `http://localhost:${port}/`;
       url = location && new URL(location.pathname, base);
     }
   } catch (_) {}

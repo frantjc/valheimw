@@ -47,7 +47,7 @@ services:
     image: alpine
     volumes:
       - ./hack/migrate.sh:/usr/local/bin/migrate
-    entrypoint: migrate http://stoker:5050
+    entrypoint: migrate http://stoker:5050/api/v1
     depends_on:
       - stoker
   boiler:

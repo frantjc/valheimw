@@ -348,6 +348,8 @@ func SetCondition(conditionsAware ConditionsAware, condition metav1.Condition) {
 		}
 	}
 
+	condition.LastTransitionTime = metav1.Now()
+	condition.ObservedGeneration = conditionsAware.GetGeneration()
 	conditions = append(conditions, condition)
 	conditionsAware.SetConditions(conditions)
 }
