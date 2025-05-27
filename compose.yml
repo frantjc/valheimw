@@ -34,7 +34,6 @@ services:
       - --path=/api/v1
       - --webhook-secure=false
       - --buildkitd=tcp://buildkitd:1234
-      - --
       - node
       - /app/server.js
     volumes:

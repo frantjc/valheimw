@@ -1,10 +1,10 @@
 package command
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"runtime"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
@@ -69,23 +69,14 @@ func newSlogHandler(w io.Writer, opts *slog.HandlerOptions) slog.Handler {
 	return slog.New(slog.NewJSONHandler(w, opts)).Handler()
 }
 
-func newVersion(version string) *cobra.Command {
-	cmd := SetCommon(&cobra.Command{
-		Use: "version",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			_, err := fmt.Fprintln(cmd.OutOrStdout(), version)
-			return err
-		},
-	}, "")
-
-	return cmd
-}
-
 func SetCommon(cmd *cobra.Command, version string) *cobra.Command {
 	cmd.SilenceErrors = true
 	cmd.SilenceUsage = true
 
 	cmd.Flags().BoolP("help", "h", false, "Help for "+cmd.Name())
+	cmd.Flags().Bool("version", false, "Version for "+cmd.Name())
+	cmd.Version = version
+	cmd.SetVersionTemplate("{{ .Name }}{{ .Version }} " + runtime.Version() + "\n")
 
 	slogLeveler := new(SlogLeveler)
 	slogLeveler.AddFlags(cmd.Flags())
@@ -102,10 +93,6 @@ func SetCommon(cmd *cobra.Command, version string) *cobra.Command {
 		)
 
 		ctrl.SetLogger(slogr)
-	}
-
-	if version != "" {
-		cmd.AddCommand(newVersion(version))
 	}
 
 	return cmd
