@@ -1,9 +1,11 @@
 package logutil
 
-import "github.com/go-logr/logr"
+import (
+	"log/slog"
+)
 
 type LogWriter struct {
-	logr.Logger
+	*slog.Logger
 }
 
 func (w *LogWriter) Write(p []byte) (n int, err error) {

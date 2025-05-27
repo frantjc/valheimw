@@ -9,6 +9,10 @@ SHELL = /usr/bin/env bash -o pipefail
 
 GO ?= go
 
+.PHONY: apply
+apply: manifests
+	@kubectl apply -f internal/stoker/stokercr/config/crd
+
 .PHONY: manifests
 manifests: internal/stoker/stokercr/config/crd
 
@@ -26,10 +30,6 @@ generate: controller-gen
 .PHONY: fmt vet test
 fmt vet test:
 	@$(GO) $@ ./...
-
-.PHONY: download vendor verify
-download vendor verify:
-	@go mod $@
 
 .PHONY: lint
 lint: golangci-lint fmt

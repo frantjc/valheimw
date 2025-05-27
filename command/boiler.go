@@ -10,8 +10,8 @@ import (
 
 	"github.com/frantjc/sindri/contreg"
 	"github.com/frantjc/sindri/internal/cache"
+	"github.com/frantjc/sindri/internal/logutil"
 	"github.com/frantjc/sindri/steamapp"
-	"github.com/go-logr/logr"
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/util/appdefaults"
 	"github.com/spf13/cobra"
@@ -30,7 +30,7 @@ func NewBoiler() *cobra.Command {
 			RunE: func(cmd *cobra.Command, _ []string) error {
 				var (
 					eg, ctx  = errgroup.WithContext(cmd.Context())
-					log      = logr.FromContextOrDiscard(ctx)
+					log      = logutil.SloggerFrom(ctx)
 					registry = &steamapp.PullRegistry{
 						ImageBuilder: &steamapp.ImageBuilder{},
 					}

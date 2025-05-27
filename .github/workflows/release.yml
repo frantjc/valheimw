@@ -4,7 +4,7 @@ on:
     tags:
       # Rough semantic version regexp to only create releases
       # on complete semantic versions e.g. v1.0.0, but not v1.
-      - v[0-9]+.[0-9]+.[0-9]+
+      - v[0-9]+.[0-9]+.[0-9]+*
 permissions:
   contents: write
   packages: write

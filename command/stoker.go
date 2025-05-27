@@ -13,11 +13,11 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/frantjc/sindri/internal/logutil"
 	"github.com/frantjc/sindri/internal/stoker"
 	"github.com/frantjc/sindri/internal/stoker/stokercr"
 	"github.com/frantjc/sindri/internal/stoker/stokercr/controller"
 	"github.com/frantjc/sindri/steamapp"
-	"github.com/go-logr/logr"
 	"github.com/go-openapi/spec"
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/util/appdefaults"
@@ -87,7 +87,7 @@ func NewStoker() *cobra.Command {
 
 				var (
 					eg, ctx = errgroup.WithContext(cmd.Context())
-					log     = logr.FromContextOrDiscard(ctx)
+					log     = logutil.SloggerFrom(ctx)
 					tlsOpts []func(*tls.Config)
 				)
 

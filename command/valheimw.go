@@ -18,11 +18,11 @@ import (
 	"github.com/frantjc/go-ingress"
 	"github.com/frantjc/sindri"
 	"github.com/frantjc/sindri/internal/cache"
+	"github.com/frantjc/sindri/internal/logutil"
 	"github.com/frantjc/sindri/steamapp"
 	"github.com/frantjc/sindri/thunderstore"
 	"github.com/frantjc/sindri/valheim"
 	xtar "github.com/frantjc/x/archive/tar"
-	"github.com/go-logr/logr"
 	"github.com/mmatczuk/anyflag"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -57,7 +57,7 @@ func NewValheimw() *cobra.Command {
 
 				var (
 					ctx            = cmd.Context()
-					log            = logr.FromContextOrDiscard(ctx)
+					log            = logutil.SloggerFrom(ctx)
 					eg, installCtx = errgroup.WithContext(ctx)
 					modded         = len(mods) > 0
 				)

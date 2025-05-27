@@ -95,6 +95,10 @@ func (g *Database) GetBuildImageOpts(
 			},
 			LaunchType: "default",
 		}, nil
+	case 1690800:
+		return &steamapp.GettableBuildImageOpts{
+			LaunchType: "default",
+		}, nil
 	}
 
 	// Assume it works out of the box.
