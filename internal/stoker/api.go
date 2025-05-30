@@ -372,7 +372,7 @@ type SteamappSummary struct {
 // @Param		branch			path		string			false	"Steamapp branch (default public)"
 // @Param		betapassword	query		string			false	"Steamapp branch password"
 // @Param		request			body		SteamappDetail	true	"Steamapp detail"
-// @Success	200				{object}	Steamapp
+// @Success	202				{object}	Steamapp
 // @Failure	400				{object}	Error
 // @Failure	415				{object}	Error
 // @Failure	500				{object}	Error
