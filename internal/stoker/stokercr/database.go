@@ -332,16 +332,16 @@ func (d *Database) List(ctx context.Context, opts ...stoker.ListOpt) ([]stoker.S
 		o         = newListOpts(opts...)
 	)
 
-    if err := d.APIReader.List(ctx, steamapps, &client.ListOptions{
-        Namespace: d.Namespace,
-        Continue:  o.Continue,
-        Limit:     o.Limit,
-        LabelSelector: labels.SelectorFromSet(labels.Set{
-            LabelValidated: fmt.Sprint(true),
-        }),
-    }); err != nil {
-        return nil, "", err
-    }
+	if err := d.APIReader.List(ctx, steamapps, &client.ListOptions{
+		Namespace: d.Namespace,
+		Continue:  o.Continue,
+		Limit:     o.Limit,
+		LabelSelector: labels.SelectorFromSet(labels.Set{
+			LabelValidated: fmt.Sprint(true),
+		}),
+	}); err != nil {
+		return nil, "", err
+	}
 
 	return xslice.Map(steamapps.Items, func(sa v1alpha1.Steamapp, _ int) stoker.SteamappSummary {
 		locked := false
