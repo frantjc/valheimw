@@ -18,7 +18,13 @@ Now you can the backend services against your cluster:
 docker compose up --build stoker boiler migrate
 ```
 
-The migrate service just initializes the cluster with some well-known Steamapps
+The migrate service just initializes the cluster with some well-known Steamapps, so only needs ran once.
+
+After its first run, you'll need to approve the Steamapps, otherwise they Stoker won't return them. This manual step is here to avoid running arbitrary code without validation during the build process.
+
+```sh
+go run ./cmd/kubectl-approve-steamapps --all
+```
 
 If you're developing the frontend, you can bring it up with hot-reloading, too:
 
