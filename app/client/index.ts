@@ -72,7 +72,7 @@ export function getUrl(path: string) {
 
 export function getSteamapp(id: number, branch?: string): Promise<Steamapp> {
   return fetch(
-    getUrl(`/api/v1/steamapps/${id}`.concat(branch ? `/branch=${branch}` : "")),
+    getUrl(`/api/v1/steamapps/${id}`.concat(branch ? `/${branch}` : "")),
     {
       headers: {
         "Content-Type": "application/json",

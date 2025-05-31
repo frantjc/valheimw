@@ -30,9 +30,10 @@ try {
   app.all("/api/*", proxy(stokerUrl.toString(), {
     proxyReqOptDecorator: (proxyReqOpts) => {
       proxyReqOpts.headers["Host"] = stokerUrl.hostname;
+      return proxyReqOpts;
     },
   }))
-} catch (_) {}
+} catch (_) { /**/ }
 
 // handle asset requests
 if (viteDevServer) {
