@@ -54,8 +54,9 @@ export default function Index() {
   async function handleModal(summary: SteamappSummary) {
     setModalOpen(true);
 
-    const steamapp = await getSteamapp(summary.app_id, summary.branch);
-    setSelectedSteamapp(steamapp);
+    getSteamapp(summary.app_id, summary.branch).then(setSelectedSteamapp).catch((err) => {
+      alert(`Error: ${err}.`);
+    });
   }
 
   React.useEffect(() => {
