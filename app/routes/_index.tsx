@@ -1,6 +1,8 @@
 import type { MetaFunction } from "@remix-run/node";
 import React from "react";
 import { BsClipboard, BsClipboardCheck } from "react-icons/bs";
+import { getSteamapp, Steamapp, SteamappSummary } from "~/client";
+import { CodeModal } from "~/components/code_modal";
 import { useSteamapps } from "~/hooks";
 
 export const meta: MetaFunction = () => {
@@ -16,7 +18,7 @@ export const meta: MetaFunction = () => {
       const base = process.env.URL || `http://localhost:${port}/`;
       url = location && new URL(location.pathname, base);
     }
-  } catch (_) {}
+  } catch (_) { /**/ }
 
   return [
     { charSet: "utf-8" },
@@ -45,6 +47,17 @@ const defaultBranch = "public";
 export default function Index() {
   const [steamapps, err, hasMore, more, loading] = useSteamapps();
   const [index, setIndex] = React.useState(0);
+
+  const [selectedSteamapp, setSelectedSteamapp] = React.useState<Steamapp | null>(null);
+  const [modalOpen, setModalOpen] = React.useState(false);
+
+  async function handleModal(summary: SteamappSummary) {
+    setModalOpen(true);
+
+    getSteamapp(summary.app_id, summary.branch).then(setSelectedSteamapp).catch((err) => {
+      alert(`Error: ${err}.`);
+    });
+  }
 
   React.useEffect(() => {
     if (steamapps.length && steamapps.length > 1) {
@@ -94,7 +107,7 @@ export default function Index() {
                   </a>
                   {tag !== defaultTag && (
                     <span>
-                      's {branch} branch
+                      &#39;s {branch} branch
                     </span>
                   )}
               </p>
@@ -126,11 +139,11 @@ export default function Index() {
       <p className="pb-4">
         Steamapps commonly do not work out of the box, missing dependencies, specifying an invalid entrypoint or just generally not being container-friendly.
         Sindri attemps to fix this by crowd-sourcing configurations to apply to the images before returning them. To contribute such a configuration,
-        check out Sindri's <a className="font-bold hover:underline" href="/api/v1" target="_blank" rel="noopener noreferrer">API</a>.
+        check out Sindri&#39;s <a className="font-bold hover:underline" href="/api/v1" target="_blank" rel="noopener noreferrer">API</a>.
       </p>
       <p className="pb-4">
         Image references are of the form <code className="font-mono bg-black rounded text-white p-1">sindri.frantj.cc/{"<steamapp-id>:<steamapp-branch>"}</code>.
-        If you do not know your Steamapp's ID, find it on <a className="font-bold hover:underline" href="https://steamdb.info/" target="_blank" rel="noopener noreferrer">SteamDB</a>.
+        If you do not know your Steamapp&#39;s ID, find it on <a className="font-bold hover:underline" href="https://steamdb.info/" target="_blank" rel="noopener noreferrer">SteamDB</a>.
         There is a special case for the default tag, <code className="font-mono bg-black rounded text-white p-1">:{defaultTag}</code>, which gets mapped to the default Steamapp branch, {defaultBranch}.
         Supported Steamapps can be found below.
       </p>
@@ -142,6 +155,7 @@ export default function Index() {
                 <th className="border-gray-500" />
                 <th className="border-gray-500 font-bold">Steamapp</th>
                 <th className="border-gray-500 font-bold">Image</th>
+                <th className="border-gray-500 font-bold">Definition</th>
               </tr>
             </thead>
             <tbody>
@@ -161,11 +175,28 @@ export default function Index() {
                     <td className="border-gray-500">
                       <code className="font-mono">sindri.frantj.cc/{steamapp.app_id}{steamapp.branch ? `:${steamapp.branch}` : `:${defaultTag}`}</code>
                     </td>
+                    <td className="border-gray-500">
+                      <button
+                      onClick={() => handleModal(steamapp)}
+                      className="bg-blue-400 hover:bg-blue-600 text-white font-bold p-2 rounded flex items-center"
+                    >
+                      View
+                    </button>
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+          <CodeModal
+            open={modalOpen}
+            onClose={() => {
+              setModalOpen(false)
+              setSelectedSteamapp(null);
+            }}
+            steamapp={selectedSteamapp}
+            lines={16}
+          />
           {hasMore && (
             <div className="flex justify-center items-center py-4">
               {loading ? (
