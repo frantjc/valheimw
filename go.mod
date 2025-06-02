@@ -11,7 +11,7 @@ require (
 	github.com/frantjc/go-steamcmd v0.0.0-20250310173726-82d7a360675a
 	github.com/frantjc/x v0.0.0-20250313024319-704d6c833b5b
 	github.com/go-chi/chi v4.1.2+incompatible
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/go-openapi/spec v0.21.0
 	github.com/google/go-containerregistry v0.20.5
 	github.com/google/uuid v1.6.0
