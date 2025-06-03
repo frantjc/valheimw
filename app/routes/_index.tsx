@@ -1,9 +1,9 @@
-import type { MetaFunction } from "@remix-run/node";
+import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 import React from "react";
 import { BsClipboard, BsClipboardCheck } from "react-icons/bs";
-import { getSteamapp, Steamapp, SteamappSummary } from "~/client";
+import { getSteamapp, getSteamapps, Steamapp, SteamappSummary } from "~/client";
 import { CodeModal } from "~/components/code_modal";
-import { useSteamapps } from "~/hooks";
 
 export const meta: MetaFunction = () => {
   const title = "Sindri";
@@ -41,34 +41,98 @@ export const meta: MetaFunction = () => {
   ];
 };
 
+export function loader(args: LoaderFunctionArgs) {
+  return {
+    host: args.request.headers.get("Host") || `localhost:${process.env.PORT ? process.env.PORT : "3000"}`,
+  };
+}
+
 const defaultTag = "latest";
 const defaultBranch = "public";
 
 export default function Index() {
-  const [steamapps, err, hasMore, more, loading] = useSteamapps();
-  const [index, setIndex] = React.useState(0);
+  const { host } = useLoaderData<typeof loader>();
 
-  const [selectedSteamapp, setSelectedSteamapp] = React.useState<Steamapp | null>(null);
-  const [modalOpen, setModalOpen] = React.useState(false);
+  const [steamapps, setSteamapps] = React.useState<Array<SteamappSummary | Steamapp>>([]);
+  const [cont, setContinue] = React.useState<string>();
+  const [loading, setLoading] = React.useState(true);
+  const [err, setErr] = React.useState<Error>();
 
-  async function handleModal(summary: SteamappSummary) {
-    setModalOpen(true);
+  const more = React.useCallback((token?: string) => {
+    setLoading(true);
 
-    getSteamapp(summary.app_id, summary.branch).then(setSelectedSteamapp).catch((err) => {
-      alert(`Error: ${err}.`);
-    });
-  }
+    return getSteamapps({ continue: token })
+      .then(res => {
+        setSteamapps(s => [
+          ...s,
+          ...res.steamapps.filter(app => !s.some(existing => existing.app_id === app.app_id && existing.branch === app.branch))
+        ]);
+        setContinue(res.continue);
+      })
+      .catch((err) => {
+        if (err instanceof Error) {
+          setErr(err);
+        } else if (err instanceof Response) {
+          setErr(new Error(`${err.status}: ${err.statusText}`));
+        } else {
+          setErr(new Error(err));
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [setLoading, setSteamapps, setContinue]);
+
+  React.useEffect(() => {
+    more();
+  }, [more]);
+
+  const [prefetchIndex, setPrefetchIndex] = React.useState(0);
+
+  const [dockerRunIndex, setDockerRunIndex] = React.useState(0);
 
   React.useEffect(() => {
     if (steamapps.length && steamapps.length > 1) {
       const timeout = setInterval(
-        () => setIndex(i => (i+1)%steamapps.length),
+        () => setPrefetchIndex(i => (i+1)%steamapps.length),
         2000,
       );
 
       return () => clearTimeout(timeout);
     }
-  }, [steamapps, setIndex]);
+  }, [steamapps, setPrefetchIndex]);
+
+  const getSteamappDetails = React.useCallback((index: number) => {
+    const steamapp = steamapps[index];
+
+    if (steamapp && !(steamapp as Steamapp).base_image) {
+      return getSteamapp(steamapp.app_id, steamapp.branch)
+        .then(s => {
+          setSteamapps(ss => {
+            const newSteamapps = [...ss];
+            newSteamapps[index] = s;
+            return newSteamapps;
+          });
+
+          return s;
+        });
+    }
+
+    return Promise.resolve(steamapp as Steamapp);
+  }, [steamapps, setSteamapps]);
+
+  React.useEffect(() => {
+    if (steamapps.length > prefetchIndex && prefetchIndex >= 0) {
+      getSteamappDetails(prefetchIndex)
+        .then(() => {
+          setDockerRunIndex(prefetchIndex);
+        })
+        .catch(() => { /**/ });
+    }
+
+  }, [prefetchIndex, getSteamappDetails, setDockerRunIndex, steamapps]);
+
+  const [selectedSteamapp, setSelectedSteamapp] = React.useState<number>(-1);
 
   React.useEffect(() => {
     if (err) {
@@ -76,10 +140,10 @@ export default function Index() {
     }
   }, [err]);
 
-  const steamapp = steamapps && steamapps.length > 0 && steamapps[index];
+  const steamapp = steamapps && steamapps.length > 0 && steamapps[dockerRunIndex];
   const tag = steamapp && steamapp.branch || defaultBranch;
   const branch = tag === defaultTag ? defaultBranch : tag;
-  const command = steamapp && `docker run sindri.frantj.cc/${steamapp.app_id.toString()}:${tag}`
+  const command = steamapp && `docker run ${host}/${steamapp.app_id.toString()}:${tag}`
 
   const [copied, setCopied] = React.useState(false);
 
@@ -87,7 +151,7 @@ export default function Index() {
     if (command) {
       navigator.clipboard.writeText(command);
       setCopied(true);
-      const timeout = setTimeout(() => setCopied(false), 1331);
+      const timeout = setTimeout(() => setCopied(false), 2000);
       return () => clearTimeout(timeout);
     }
   };
@@ -142,7 +206,7 @@ export default function Index() {
         check out Sindri&#39;s <a className="font-bold hover:underline" href="/api/v1" target="_blank" rel="noopener noreferrer">API</a>.
       </p>
       <p className="pb-4">
-        Image references are of the form <code className="font-mono bg-black rounded text-white p-1">sindri.frantj.cc/{"<steamapp-id>:<steamapp-branch>"}</code>.
+        Image references are of the form <code className="font-mono bg-black rounded text-white p-1">{host}/{"<steamapp-id>:<steamapp-branch>"}</code>.
         If you do not know your Steamapp&#39;s ID, find it on <a className="font-bold hover:underline" href="https://steamdb.info/" target="_blank" rel="noopener noreferrer">SteamDB</a>.
         There is a special case for the default tag, <code className="font-mono bg-black rounded text-white p-1">:{defaultTag}</code>, which gets mapped to the default Steamapp branch, {defaultBranch}.
         Supported Steamapps can be found below.
@@ -159,9 +223,9 @@ export default function Index() {
               </tr>
             </thead>
             <tbody>
-              {steamapps.map((steamapp, key) => {
+              {steamapps.map((steamapp, i) => {
                 return (
-                  <tr key={key} className="border-t border-gray-500">
+                  <tr key={i} className="border-t border-gray-500">
                     <td className="p-2 border-gray-500 flex justify-center items-center">
                       <img
                         src={steamapp.icon_url}
@@ -173,15 +237,19 @@ export default function Index() {
                       <a className="font-bold hover:underline" href={`https://steamdb.info/app/${steamapp.app_id}/`} target="_blank" rel="noopener noreferrer">{steamapp.name}</a>{steamapp.branch && steamapp.branch !== defaultBranch ? `'s ${steamapp.branch} branch` : ""}
                     </td>
                     <td className="border-gray-500">
-                      <code className="font-mono">sindri.frantj.cc/{steamapp.app_id}{steamapp.branch ? `:${steamapp.branch}` : `:${defaultTag}`}</code>
+                      <code className="font-mono">{host}/{steamapp.app_id}{steamapp.branch ? `:${steamapp.branch}` : `:${defaultTag}`}</code>
                     </td>
                     <td className="border-gray-500">
                       <button
-                      onClick={() => handleModal(steamapp)}
-                      className="bg-blue-400 hover:bg-blue-600 text-white font-bold p-2 rounded flex items-center"
-                    >
-                      View
-                    </button>
+                        onClick={() =>
+                          getSteamappDetails(i)
+                            .then(() => setSelectedSteamapp(i))
+                            .catch(setErr)
+                        }
+                        className="bg-blue-400 hover:bg-blue-600 text-white font-bold p-2 rounded flex items-center"
+                      >
+                        View
+                      </button>
                     </td>
                   </tr>
                 );
@@ -189,21 +257,18 @@ export default function Index() {
             </tbody>
           </table>
           <CodeModal
-            open={modalOpen}
-            onClose={() => {
-              setModalOpen(false)
-              setSelectedSteamapp(null);
-            }}
-            steamapp={selectedSteamapp}
+            open={steamapps.length > selectedSteamapp && selectedSteamapp >= 0}
+            onClose={() => setSelectedSteamapp(-1)}
+            steamapp={steamapps[selectedSteamapp] as Steamapp}
             lines={16}
           />
-          {hasMore && (
+          {!!cont && (
             <div className="flex justify-center items-center py-4">
               {loading ? (
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500" />
               ) : (
                 <button
-                  onClick={more}
+                  onClick={() => more(cont)}
                   className="bg-blue-400 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
                 >
                   Load More

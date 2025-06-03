@@ -306,6 +306,7 @@ func (d *Database) Get(ctx context.Context, steamappID int, opts ...stoker.GetOp
 		SteamappSummary: stoker.SteamappSummary{
 			AppID:   steamappID,
 			Name:    sa.Status.Name,
+			Branch:  sa.Spec.Branch,
 			IconURL: sa.Status.IconURL,
 			Created: sa.CreationTimestamp.Time,
 			Locked:  locked,

@@ -16,6 +16,12 @@
                         "description": "Continue token",
                         "name": "continue",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of Steamapps to return (default 10)",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -118,8 +124,8 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "202": {
+                        "description": "Accepted",
                         "schema": {
                             "$ref": "#/definitions/Steamapp"
                         }
@@ -177,8 +183,8 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "202": {
+                        "description": "Accepted",
                         "schema": {
                             "$ref": "#/definitions/Steamapp"
                         }
@@ -291,8 +297,8 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "202": {
+                        "description": "Accepted",
                         "schema": {
                             "$ref": "#/definitions/Steamapp"
                         }
@@ -356,8 +362,8 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "202": {
+                        "description": "Accepted",
                         "schema": {
                             "$ref": "#/definitions/Steamapp"
                         }
@@ -406,6 +412,9 @@
                     }
                 },
                 "base_image": {
+                    "type": "string"
+                },
+                "branch": {
                     "type": "string"
                 },
                 "cmd": {
@@ -489,6 +498,9 @@
             "properties": {
                 "app_id": {
                     "type": "integer"
+                },
+                "branch": {
+                    "type": "string"
                 },
                 "date_created": {
                     "type": "string"

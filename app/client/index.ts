@@ -75,7 +75,7 @@ export function getSteamapp(id: number, branch?: string): Promise<Steamapp> {
     getUrl(`/api/v1/steamapps/${id}`.concat(branch ? `/${branch}` : "")),
     {
       headers: {
-        "Content-Type": "application/json",
+        "Accept": "application/json",
       },
     },
   )
@@ -114,7 +114,7 @@ export function getSteamapps(
     ),
     {
       headers: {
-        "Content-Type": "application/json",
+        "Accept": "application/json",
       },
     },
   )

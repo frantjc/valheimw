@@ -312,6 +312,7 @@ func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 // @Summary	List known Steamapps
 // @Produce	json
 // @Param		continue	query		string	false	"Continue token"
+// @Param		limit		query		int		false	"Maximum number of Steamapps to return (default 10)"
 // @Success	200			{array}		SteamappSummary
 // @Failure	415			{object}	Error
 // @Failure	500			{object}	Error

@@ -5,11 +5,11 @@ import { Steamapp } from "~/client";
 type CodeModalProps = {
   open: boolean;
   onClose: () => void;
-  steamapp?: Steamapp | null;
+  steamapp?: Steamapp;
   lines?: number;
 }
 
-export const CodeModal: React.FC<CodeModalProps> = ({ open, onClose, steamapp = null, lines = 16 }) => {
+export function CodeModal({ open, onClose, lines = 16 }: CodeModalProps) {
   const [copied, setCopied] = React.useState(false);
 
   const codeLines: string[] = []
@@ -18,12 +18,12 @@ export const CodeModal: React.FC<CodeModalProps> = ({ open, onClose, steamapp = 
   const handleCopy = () => {
     navigator.clipboard.writeText(codeLines.join("\n"));
     setCopied(true);
-    setTimeout(() => setCopied(false), 1200);
+    const timeout = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timeout);
   };
 
   if (!open) return null;
 
-  console.log(steamapp)
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
       <div className="bg-white rounded shadow-lg min-w-[400px] max-w-[90vw]">
@@ -65,4 +65,4 @@ export const CodeModal: React.FC<CodeModalProps> = ({ open, onClose, steamapp = 
       </div>
     </div>
   );
-};
+}
