@@ -59,8 +59,6 @@ export default function Index() {
   const [err, setErr] = React.useState<Error>();
 
   const more = React.useCallback((token?: string) => {
-    setLoading(true);
-
     return getSteamapps({ continue: token })
       .then(res => {
         setSteamapps(s => [
@@ -77,19 +75,16 @@ export default function Index() {
         } else {
           setErr(new Error(err));
         }
-      })
-      .finally(() => {
-        setLoading(false);
       });
-  }, [setLoading, setSteamapps, setContinue]);
+  }, [setSteamapps, setContinue]);
 
   React.useEffect(() => {
+    // Loading doesn't stop until after the first Steamapp (details included) is successfully prefetched.
+    setLoading(true);
     more();
-  }, [more]);
+  }, [more, setLoading]);
 
   const [prefetchIndex, setPrefetchIndex] = React.useState(0);
-
-  const [dockerRunIndex, setDockerRunIndex] = React.useState(0);
 
   React.useEffect(() => {
     if (steamapps.length && steamapps.length > 1) {
@@ -113,13 +108,16 @@ export default function Index() {
             newSteamapps[index] = s;
             return newSteamapps;
           });
+          setLoading(false);
 
           return s;
         });
     }
 
     return Promise.resolve(steamapp as Steamapp);
-  }, [steamapps, setSteamapps]);
+  }, [steamapps, setSteamapps, setLoading]);
+
+  const [dockerRunIndex, setDockerRunIndex] = React.useState(0);
 
   React.useEffect(() => {
     if (steamapps.length > prefetchIndex && prefetchIndex >= 0) {
@@ -158,38 +156,39 @@ export default function Index() {
 
   return (
     <div className="grid grid-cols-1 gap-4 pb-8">
-      {loading ? (
+      {loading && (
         <div className="flex h-24 pt-8 justify-center items-center">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500" />
         </div>
-      ) : !!steamapp && (
-            <>
-            <p className="text-3xl pt-8">Run the...</p>
-              <p className="text-xl">
-                  <a className="font-bold hover:underline" href={`https://steamdb.info/app/${steamapp.app_id}/`} target="_blank" rel="noopener noreferrer">
-                    {steamapp.name}
-                  </a>
-                  {tag !== defaultTag && (
-                    <span>
-                      &#39;s {branch} branch
-                    </span>
-                  )}
-              </p>
-              <pre
-                className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border border-gray-500"
-              >
-                <code className="font-mono text-white">
-                  <span className="pr-2 text-gray-500">$</span>
-                  {command}
-                </code>
-                <button
-                  onClick={handleCopy}
-                  className="bg-blue-400 hover:bg-blue-600 text-white font-bold p-2 rounded flex items-center"
-                >
-                  {copied ? <BsClipboardCheck className="h-4 w-8" /> : <BsClipboard className="h-4 w-8" />}
-                </button>
-              </pre>
-            </>
+      )}
+      {!!steamapp && (
+        <>
+          <p className="text-3xl pt-8">Run the...</p>
+          <p className="text-xl">
+              <a className="font-bold hover:underline" href={`https://steamdb.info/app/${steamapp.app_id}/`} target="_blank" rel="noopener noreferrer">
+                {steamapp.name}
+              </a>
+              {tag !== defaultTag && (
+                <span>
+                  &#39;s {branch} branch
+                </span>
+              )}
+          </p>
+          <pre
+            className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border border-gray-500"
+          >
+            <code className="font-mono text-white">
+              <span className="pr-2 text-gray-500">$</span>
+              {command}
+            </code>
+            <button
+              onClick={handleCopy}
+              className="bg-blue-400 hover:bg-blue-600 text-white font-bold p-2 rounded flex items-center"
+            >
+              {copied ? <BsClipboardCheck className="h-4 w-8" /> : <BsClipboard className="h-4 w-8" />}
+            </button>
+          </pre>
+        </>
       )}
       <p className="py-4">
         Sindri is a read-only container registry for images with Steamapps installed on them.
