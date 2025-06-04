@@ -1,4 +1,4 @@
-package command
+package logutil
 
 import (
 	"fmt"
@@ -8,17 +8,17 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-type Bool[T any] struct {
+type genericBool[T any] struct {
 	Value *T
 	IfSet T
 }
 
 var (
-	_ pflag.Value = new(Bool[any])
+	_ pflag.Value = new(genericBool[any])
 )
 
 // Set implements pflag.Value.
-func (b *Bool[T]) Set(s string) error {
+func (b *genericBool[T]) Set(s string) error {
 	v, err := strconv.ParseBool(s)
 	if v {
 		*b.Value = b.IfSet
@@ -27,42 +27,42 @@ func (b *Bool[T]) Set(s string) error {
 }
 
 // String implements pflag.Value.
-func (b *Bool[T]) String() string {
+func (b *genericBool[T]) String() string {
 	return fmt.Sprint(b.Value)
 }
 
 // Type implements pflag.Value.
-func (b *Bool[T]) Type() string {
+func (b *genericBool[T]) Type() string {
 	return "bool"
 }
 
 // Type implements pflag.boolFlag.
-func (b *Bool[T]) IsBoolFlag() bool {
+func (b *genericBool[T]) IsBoolFlag() bool {
 	return true
 }
 
-type Count[T constraints.Integer] struct {
+type incrementalCount[T constraints.Integer] struct {
 	Value     *T
 	Increment T
 }
 
 var (
-	_ pflag.Value = new(Count[int])
+	_ pflag.Value = new(incrementalCount[int])
 )
 
 // Set implements pflag.Value.
-func (c *Count[T]) Set(s string) error {
+func (c *incrementalCount[T]) Set(s string) error {
 	v, err := strconv.ParseInt(s, 0, 0)
 	*c.Value += (T(v) * c.Increment)
 	return err
 }
 
 // String implements pflag.Value.
-func (c *Count[T]) String() string {
+func (c *incrementalCount[T]) String() string {
 	return strconv.Itoa(int(*c.Value))
 }
 
 // Type implements pflag.Value.
-func (c *Count[T]) Type() string {
+func (c *incrementalCount[T]) Type() string {
 	return "count"
 }
