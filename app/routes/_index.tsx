@@ -2,7 +2,7 @@ import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import React from "react";
 import { BsClipboard, BsClipboardCheck } from "react-icons/bs";
-import { getSteamapp, getSteamapps, Steamapp, SteamappSummary } from "~/client";
+import { getSteamappLocal, getSteamappsLocal, Steamapp, SteamappSummary } from "~/client";
 import { CodeModal } from "~/components/code_modal";
 
 export const meta: MetaFunction = () => {
@@ -59,7 +59,7 @@ export default function Index() {
   const [err, setErr] = React.useState<Error>();
 
   const more = React.useCallback((token?: string) => {
-    return getSteamapps({ continue: token })
+    return getSteamappsLocal({ continue: token })
       .then(res => {
         setSteamapps(s => [
           ...s,
@@ -101,7 +101,7 @@ export default function Index() {
     const steamapp = steamapps[index];
 
     if (steamapp && !(steamapp as Steamapp).base_image) {
-      return getSteamapp(steamapp.app_id, steamapp.branch)
+      return getSteamappLocal(steamapp.app_id, steamapp.branch)
         .then(s => {
           setSteamapps(ss => {
             const newSteamapps = [...ss];

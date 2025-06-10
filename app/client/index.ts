@@ -128,3 +128,50 @@ export function getSteamapps(
       });
     });
 }
+
+export function getSteamappsLocal(
+  {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    continue: _cont,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    limit: _limit = 10,
+  }: {
+    continue?: string;
+    limit?: number;
+  } = {}
+): Promise<SteamappList> {
+  return Promise.resolve({
+    continue: undefined,
+    steamapps: [
+      {
+        app_id: 896660,
+        name: "Valheim",
+        branch: "public",
+        icon_url: "https://placehold.co/64x64",
+        date_created: new Date("2024-01-01T00:00:00.000Z"),
+        locked: false,
+      },
+    ],
+  });
+}
+
+export function getSteamappLocal(_id: number, branch?: string): Promise<Steamapp> {
+    return Promise.resolve({
+      app_id: 896660,
+      name: "Valheim",
+      branch: branch || "public",
+      icon_url: "https://placehold.co/64x64",
+      date_created: new Date("2024-01-01T00:00:00.000Z"),
+      locked: false,
+      base_image: "debian:stable-slim",
+      apt_packages: ["ca-certificates"],
+      launch_type: "server",
+      platform_type: "linux",
+      execs: [
+        "rm -r /home/steam/docker /home/steam/docker_start_server.sh /home/steam/start_server_xterm.sh /home/steam/start_server.sh",
+        "ln -s /home/steam/linux64/steamclient.so /usr/lib/x86_64-linux-gnu/steamclient.so"
+      ],
+      entrypoint: ["/home/steam/valheim_server.x86_64"],
+      cmd: [],
+    });
+}
