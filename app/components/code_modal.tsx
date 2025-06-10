@@ -83,7 +83,21 @@ function generateContainerDefinition(steamapp: Steamapp | undefined): string {
     "    @sSteamCmdForcePlatformType linux \\",
     "    +app_update " + steamapp.app_id + " \\",
     "    +quit",
-
+    "",
+    "FROM " + steamapp.base_image,
+    steamapp.apt_packages && steamapp.apt_packages.length
+      ? `RUN apt-get update -y && apt-get install -y --no-install-recommends ${steamapp.apt_packages.join(" ")} && rm -rf /var/lib/apt/lists/* && apt-get clean`
+      : "",
+    "RUN groupadd --system steam \\",
+    "  && useradd --system --gid steam --shell /bin/bash --create-home steam",
+    "USER steam",
+    "COPY --from=steamcmd /mnt /home/steam",
+    steamapp.execs && steamapp.execs.length
+      ? `RUN ${steamapp.execs.join(" && ")}`
+      : ""
+    // TODO entrypoint/cmd
+    // TODO branch
+    // TODO launch/platform type?
   ]
 
   return lines.join("\n");
