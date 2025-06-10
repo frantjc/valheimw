@@ -9,10 +9,11 @@ type CodeModalProps = {
   lines?: number;
 }
 
-export function CodeModal({ open, onClose, lines = 16 }: CodeModalProps) {
+export function CodeModal({ steamapp, open, onClose, lines = 16 }: CodeModalProps) {
   const [copied, setCopied] = React.useState(false);
 
-  const codeLines: string[] = []
+  const defn = generateContainerDefinition(steamapp);
+  const codeLines: string[] = defn.split("\n");
   while (codeLines.length < lines) codeLines.push("");
 
   const handleCopy = () => {
@@ -24,9 +25,11 @@ export function CodeModal({ open, onClose, lines = 16 }: CodeModalProps) {
 
   if (!open) return null;
 
+  console.log(steamapp);
+
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-      <div className="bg-white rounded shadow-lg min-w-[400px] max-w-[90vw]">
+      <div className="bg-white rounded shadow-lg min-w-[750px] max-w-[90vw]">
         <div className="flex justify-between items-center px-4 py-2 border-b border-gray-200">
           <span className="font-bold text-lg">Code View</span>
           <button
@@ -65,4 +68,23 @@ export function CodeModal({ open, onClose, lines = 16 }: CodeModalProps) {
       </div>
     </div>
   );
+}
+
+function generateContainerDefinition(steamapp: Steamapp | undefined): string {
+  if (!steamapp) return "";
+
+  const lines = [
+    "FROM steamcmd/steamcmd AS steamcmd",
+    "RUN groupadd --system steam \\",
+    "  && useradd --system --gid steam --shell /bin/bash --create-home steam \\",
+    "  && steamcmd \\",
+    "    +force_install_dir /mnt \\",
+    "    +login anonymous \\",
+    "    @sSteamCmdForcePlatformType linux \\",
+    "    +app_update " + steamapp.app_id + " \\",
+    "    +quit",
+
+  ]
+
+  return lines.join("\n");
 }
