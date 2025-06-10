@@ -80,7 +80,7 @@ function generateContainerDefinition(steamapp: Steamapp | undefined): string {
     "  && steamcmd \\",
     "    +force_install_dir /mnt \\",
     "    +login anonymous \\",
-    "    @sSteamCmdForcePlatformType linux \\",
+    "    @sSteamCmdForcePlatformType" + steamapp.platform_type + " \\",
     "    +app_update " + steamapp.app_id + " \\",
     "    +quit",
     "",
@@ -94,10 +94,15 @@ function generateContainerDefinition(steamapp: Steamapp | undefined): string {
     "COPY --from=steamcmd /mnt /home/steam",
     steamapp.execs && steamapp.execs.length
       ? `RUN ${steamapp.execs.join(" && ")}`
-      : ""
-    // TODO entrypoint/cmd
+      : "",
+    "",
+    steamapp.entrypoint && steamapp.entrypoint.length
+      ? `ENTRYPOINT [${steamapp.entrypoint.map(e => `"${e}"`).join(", ")}]`
+      : "",
+    steamapp.cmd && steamapp.cmd.length
+      ? `CMD [${steamapp.cmd.map(c => `"${c}"`).join(", ")}]`
+      : "",
     // TODO branch
-    // TODO launch/platform type?
   ]
 
   return lines.join("\n");
