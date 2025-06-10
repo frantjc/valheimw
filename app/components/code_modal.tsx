@@ -73,6 +73,14 @@ export function CodeModal({ steamapp, open, onClose, lines = 16 }: CodeModalProp
 function generateContainerDefinition(steamapp: Steamapp | undefined): string {
   if (!steamapp) return "";
 
+  const isBeta = steamapp.branch && steamapp.branch !== "public";
+  if (isBeta && (!steamapp.beta_password || steamapp.beta_password.length === 0)) {
+    // TODO
+  }
+
+  const betaBranch = isBeta ? ` -beta ${steamapp.branch}` : "";
+  const betaPassword = isBeta ? " -betapassword ${STEAM_BETA_PASSWORD}" : "";
+
   const lines = [
     "FROM steamcmd/steamcmd AS steamcmd",
     "RUN groupadd --system steam \\",
@@ -80,8 +88,8 @@ function generateContainerDefinition(steamapp: Steamapp | undefined): string {
     "  && steamcmd \\",
     "    +force_install_dir /mnt \\",
     "    +login anonymous \\",
-    "    @sSteamCmdForcePlatformType" + steamapp.platform_type + " \\",
-    "    +app_update " + steamapp.app_id + " \\",
+    `    @sSteamCmdForcePlatformType ${steamapp.platform_type} \\`,
+    `    +app_update ${steamapp.app_id}${betaBranch}${betaPassword} \\`,
     "    +quit",
     "",
     "FROM " + steamapp.base_image,
