@@ -6,7 +6,13 @@
 
 ## Running locally
 
-The first time you're running against a cluster or any time you change the types of a CRD, run:
+If you want to develop the frontend without needing Stoker running, you can run the it with hot-reloading using builtin dummy data:
+
+```sh
+STOKER_URL=dummy:// yarn dev
+```
+
+If you want to develop (against) the backend, the first time you're running against a cluster or any time you change the types of a CRD, run:
 
 ```sh
 make apply
