@@ -2,7 +2,7 @@ import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import React from "react";
 import { BsClipboard, BsClipboardCheck } from "react-icons/bs";
-import { getSteamappLocal, getSteamappsLocal, Steamapp, SteamappSummary } from "~/client";
+import { getSteamapp, getSteamapps, Steamapp, SteamappSummary } from "~/client";
 import { CodeModal } from "~/components/code_modal";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -10,35 +10,15 @@ const meta: MetaFunction = () => {
   const title = "Sindri";
   const description = "Read-only container registry for Steamapp images.";
 
-  let url;
-  try {
-    if (typeof process !== "object") {
-      url = new URL(window.location.href);
-    } else {
-      const port = process.env.PORT || 3000;
-      const base = process.env.URL || `http://localhost:${port}/`;
-      url = location && new URL(location.pathname, base);
-    }
-  } catch (_) { /**/ }
-
   return [
     { charSet: "utf-8" },
     { name: "viewport", content: "width=device-width,initial-scale=1" },
     { property: "og:site_name", content: title },
     { title },
     { property: "og:title", content: title },
-    { property: "twitter:title", content: title },
     { name: "description", content: description },
     { property: "og:description", content: description },
-    { property: "twitter:description", content: description },
     { property: "og:type", content: "website" },
-    { property: "twitter:card", content: "summary" },
-    ...((url && [
-      { property: "og:url", content: url.toString() },
-      { property: "twitter:domain", content: url.hostname },
-      { property: "twitter:url", content: url.toString() },
-    ]) ||
-      []),
   ];
 };
 
@@ -60,7 +40,7 @@ export default function Index() {
   const [err, setErr] = React.useState<Error>();
 
   const more = React.useCallback((token?: string) => {
-    return getSteamappsLocal({ continue: token })
+    return getSteamapps({ continue: token })
       .then(res => {
         setSteamapps(s => [
           ...s,
@@ -102,7 +82,7 @@ export default function Index() {
     const steamapp = steamapps[index];
 
     if (steamapp && !(steamapp as Steamapp).base_image) {
-      return getSteamappLocal(steamapp.app_id, steamapp.branch)
+      return getSteamapp(steamapp.app_id, steamapp.branch)
         .then(s => {
           setSteamapps(ss => {
             const newSteamapps = [...ss];
