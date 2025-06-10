@@ -6,7 +6,13 @@
 
 ## Running locally
 
-The first time you're running against a cluster or any time you change the types of a CRD, run:
+If you want to develop the frontend without needing Stoker running, you can run the it with hot-reloading using builtin dummy data:
+
+```sh
+STOKER_URL=dummy:// yarn dev
+```
+
+If you want to develop (against) the backend, the first time you're running against a cluster or any time you change the types of a CRD, run:
 
 ```sh
 make apply
@@ -19,6 +25,8 @@ docker compose up --build stoker boiler migrate
 ```
 
 The migrate service just initializes the cluster with some well-known Steamapps, so only needs ran once.
+
+The boiler service is only necessary if you intend to `docker pull` a Steamapp image.
 
 After its first run, you'll need to approve the Steamapps, otherwise they Stoker won't return them. This manual step is here to avoid running arbitrary code without validation during the build process.
 
