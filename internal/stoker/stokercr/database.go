@@ -13,8 +13,10 @@ import (
 	"github.com/frantjc/sindri/internal/stoker"
 	"github.com/frantjc/sindri/internal/stoker/stokercr/api/v1alpha1"
 	"github.com/frantjc/sindri/steamapp"
-	xslice "github.com/frantjc/x/slice"
+	xslices "github.com/frantjc/x/slices"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -223,7 +225,7 @@ func (d *Database) ValidateCreate(_ context.Context, obj runtime.Object) (admiss
 }
 
 func (d *Database) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	nsa, ok := newObj.(*v1alpha1.Steamapp)
+	_, ok := newObj.(*v1alpha1.Steamapp)
 	if !ok {
 		return nil, fmt.Errorf("expected a Steamapp object but got %T", newObj)
 	}
@@ -237,14 +239,6 @@ func (d *Database) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Obje
 		if locked, _ := strconv.ParseBool(osa.Annotations[AnnotationLocked]); locked {
 			return nil, fmt.Errorf("cannot update locked Steamapp")
 		}
-	}
-
-	if osa.Spec.AppID != nsa.Spec.AppID {
-		return nil, fmt.Errorf(".spec.appID is immutable")
-	}
-
-	if osa.Spec.Branch != nsa.Spec.Branch {
-		return nil, fmt.Errorf(".spec.branch is immutable")
 	}
 
 	return nil, nil
@@ -302,11 +296,37 @@ func (d *Database) Get(ctx context.Context, steamappID int, opts ...stoker.GetOp
 	}
 
 	return &stoker.Steamapp{
-		SteamappDetail: stoker.SteamappDetail(sa.Spec.SteamappSpecImageOpts),
+		SteamappDetail: stoker.SteamappDetail{
+			Ports: xslices.Map(sa.Spec.Ports, func(port v1alpha1.SteamappPort, _ int) stoker.SteamappPort {
+				return stoker.SteamappPort{
+					Port: port.Port,
+					Protocols: xslices.Map(port.Protocols, func(protocol corev1.Protocol, _ int) string {
+						return string(protocol)
+					}),
+				}
+			}),
+			Resources: stoker.SteamappResources{
+				CPU:    sa.Spec.Resources.Cpu().String(),
+				Memory: sa.Spec.Resources.Memory().String(),
+			},
+			Volumes: xslices.Map(sa.Spec.Volumes, func(volume v1alpha1.SteamappVolume, _ int) stoker.SteamappVolume {
+				return stoker.SteamappVolume(volume)
+			}),
+			SteamappImageOpts: stoker.SteamappImageOpts{
+				BetaPassword: sa.Spec.BetaPassword,
+				BaseImageRef: sa.Spec.BaseImageRef,
+				AptPkgs:      sa.Spec.AptPkgs,
+				LaunchType:   sa.Spec.LaunchType,
+				PlatformType: sa.Spec.PlatformType,
+				Execs:        sa.Spec.Execs,
+				Entrypoint:   sa.Spec.Entrypoint,
+				Cmd:          sa.Spec.Cmd,
+			},
+		},
 		SteamappSummary: stoker.SteamappSummary{
 			AppID:   steamappID,
 			Name:    sa.Status.Name,
-			Branch:  sa.Spec.Branch,
+			Branch:  sa.Spec.Beta,
 			IconURL: sa.Status.IconURL,
 			Created: sa.CreationTimestamp.Time,
 			Locked:  locked,
@@ -344,7 +364,7 @@ func (d *Database) List(ctx context.Context, opts ...stoker.ListOpt) ([]stoker.S
 		return nil, "", err
 	}
 
-	return xslice.Map(steamapps.Items, func(sa v1alpha1.Steamapp, _ int) stoker.SteamappSummary {
+	return xslices.Map(steamapps.Items, func(sa v1alpha1.Steamapp, _ int) stoker.SteamappSummary {
 		locked := false
 		if sa.Annotations != nil {
 			locked, _ = strconv.ParseBool(sa.Annotations[AnnotationLocked])
@@ -353,7 +373,7 @@ func (d *Database) List(ctx context.Context, opts ...stoker.ListOpt) ([]stoker.S
 		return stoker.SteamappSummary{
 			AppID:   sa.Spec.AppID,
 			Name:    sa.Status.Name,
-			Branch:  sa.Spec.Branch,
+			Branch:  sa.Spec.Beta,
 			IconURL: sa.Status.IconURL,
 			Created: sa.CreationTimestamp.Time,
 			Locked:  locked,
@@ -378,28 +398,63 @@ func sanitizeBranchName(branch string) string {
 }
 
 // Upsert implements stoker.Database.
-func (d *Database) Upsert(ctx context.Context, steamappID int, detail *stoker.SteamappDetail, opts ...stoker.UpsertOpt) error {
+func (d *Database) Upsert(ctx context.Context, appID int, detail *stoker.SteamappDetail, opts ...stoker.UpsertOpt) error {
 	var (
-		o        = newUpsertOpts(opts...)
-		steamapp = &v1alpha1.Steamapp{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: d.Namespace,
-				Name:      fmt.Sprintf("%d-%s", steamappID, sanitizeBranchName(o.Branch)),
-			},
-			Spec: v1alpha1.SteamappSpec{
-				AppID:                 steamappID,
-				Branch:                o.Branch,
-				BetaPassword:          o.BetaPassword,
-				SteamappSpecImageOpts: v1alpha1.SteamappSpecImageOpts(*detail),
+		o    = newUpsertOpts(opts...)
+		spec = v1alpha1.SteamappSpec{
+			Ports: xslices.Map(detail.Ports, func(port stoker.SteamappPort, _ int) v1alpha1.SteamappPort {
+				return v1alpha1.SteamappPort{
+					Port: port.Port,
+					Protocols: xslices.Map(port.Protocols, func(protocol string, _ int) corev1.Protocol {
+						return corev1.Protocol(protocol)
+					}),
+				}
+			}),
+			Resources: corev1.ResourceList{},
+			Volumes: xslices.Map(detail.Volumes, func(volume stoker.SteamappVolume, _ int) v1alpha1.SteamappVolume {
+				return v1alpha1.SteamappVolume(volume)
+			}),
+			AppID: appID,
+			SteamappSpecImageOpts: v1alpha1.SteamappSpecImageOpts{
+				BaseImageRef: detail.BaseImageRef,
+				AptPkgs:      detail.AptPkgs,
+				Beta:         o.Branch,
+				BetaPassword: detail.BetaPassword,
+				LaunchType:   detail.LaunchType,
+				PlatformType: detail.PlatformType,
+				Execs:        detail.Execs,
+				Entrypoint:   detail.Entrypoint,
+				Cmd:          detail.Cmd,
 			},
 		}
 	)
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, d.Client, steamapp, func() error {
-		steamapp.Spec.AppID = steamappID
-		steamapp.Spec.Branch = o.Branch
-		steamapp.Spec.BetaPassword = o.BetaPassword
-		steamapp.Spec.SteamappSpecImageOpts = v1alpha1.SteamappSpecImageOpts(*detail)
+	cpu, err := resource.ParseQuantity(detail.Resources.CPU)
+	if err != nil {
+		return err
+	}
+
+	spec.Resources["cpu"] = cpu
+
+	memory, err := resource.ParseQuantity(detail.Resources.Memory)
+	if err != nil {
+		return err
+	}
+
+	spec.Resources["cpu"] = memory
+
+	var (
+		sa = &v1alpha1.Steamapp{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: d.Namespace,
+				Name:      fmt.Sprintf("%d-%s", appID, sanitizeBranchName(o.Branch)),
+			},
+			Spec: spec,
+		}
+	)
+
+	if _, err := controllerutil.CreateOrUpdate(ctx, d.Client, sa, func() error {
+		sa.Spec = spec
 		return nil
 	}); err != nil {
 		return err

@@ -3,30 +3,34 @@ import compression from "compression";
 import express from "express";
 import proxy from "express-http-proxy";
 
-const date_created = new Date("1970-01-01T00:00:00.000Z")
+const date_created = new Date("1970-01-01T00:00:00.000Z");
 
 const dummySteamapps = {
   896660: {
-      name: "Valheim",
-      branch: "public",
-      icon_url: "https://placehold.co/64x64",
-      date_created,
-      locked: false,
-      base_image: "debian:stable-slim",
-      apt_packages: [
-        "ca-certificates",
-      ],
-      launch_type: "server",
-      platform_type: "linux",
-      execs: [
-        "rm -r /home/steam/docker /home/steam/docker_start_server.sh /home/steam/start_server_xterm.sh /home/steam/start_server.sh",
-        "ln -s /home/steam/linux64/steamclient.so /usr/lib/x86_64-linux-gnu/steamclient.so"
-      ],
-      entrypoint: [
-        "/home/steam/valheim_server.x86_64",
-      ],
-      cmd: [],
-    },
+    name: "Valheim",
+    branch: "public",
+    icon_url: "https://placehold.co/64x64",
+    date_created,
+    locked: false,
+    base_image: "debian:stable-slim",
+    apt_packages: [
+      "ca-certificates",
+    ],
+    launch_type: "server",
+    platform_type: "linux",
+    execs: [
+      "rm -r /home/steam/docker /home/steam/docker_start_server.sh /home/steam/start_server_xterm.sh /home/steam/start_server.sh",
+      "ln -s /home/steam/linux64/steamclient.so /usr/lib/x86_64-linux-gnu/steamclient.so"
+    ],
+    entrypoint: [
+      "/home/steam/valheim_server.x86_64",
+    ],
+    ports: [
+      {
+        port: 2456,
+      }
+    ]
+  },
 }
 
 const dummySteamappsKeys = Object.keys(dummySteamapps);
@@ -112,7 +116,7 @@ try {
   }
 } catch (_) { /**/ }
 
-// handle asset requests
+// Handle asset requests.
 if (viteDevServer) {
   app.use(viteDevServer.middlewares);
 } else {
@@ -127,7 +131,7 @@ if (viteDevServer) {
 // more aggressive with this caching.
 app.use(express.static("build/client", { maxAge: "1h" }));
 
-// handle SSR requests
+// Handle SSR requests.
 app.all("*", remixHandler);
 
 const port = process.env.PORT || 3000;

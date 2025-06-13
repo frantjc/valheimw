@@ -1,6 +1,7 @@
 package stoker
 
 import (
+	"cmp"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -11,10 +12,10 @@ import (
 	"time"
 
 	"github.com/frantjc/sindri/internal/httputil"
+	"github.com/frantjc/sindri/internal/logutil"
 	"github.com/frantjc/sindri/steamapp"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/go-logr/logr"
 	"github.com/go-openapi/spec"
 	"github.com/google/uuid"
 	swagger "github.com/swaggo/http-swagger/v2"
@@ -65,8 +66,7 @@ func newAPIHandlerOpts(opts ...APIHandlerOpt) *APIHandlerOpts {
 }
 
 type UpsertOpts struct {
-	Branch       string
-	BetaPassword string
+	Branch string
 }
 
 type UpsertOpt interface {
@@ -77,9 +77,6 @@ func (o *UpsertOpts) ApplyToUpsert(opts *UpsertOpts) {
 	if o != nil {
 		if o.Branch != "" {
 			opts.Branch = o.Branch
-		}
-		if o.BetaPassword != "" {
-			opts.BetaPassword = o.BetaPassword
 		}
 	}
 }
@@ -146,9 +143,9 @@ func NewAPIHandler(database Database, opts ...APIHandlerOpt) http.Handler {
 	r.Use(middleware.RealIP)
 	r.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			log := logr.FromContextOrDiscard(r.Context()).WithValues("request", uuid.NewString())
+			log := logutil.SloggerFrom(r.Context()).With("request", uuid.NewString())
 			log.Info(r.URL.Path, "method", r.Method)
-			h.ServeHTTP(w, r.WithContext(logr.NewContext(r.Context(), log)))
+			h.ServeHTTP(w, r.WithContext(logutil.SloggerInto(r.Context(), log)))
 		})
 	})
 
@@ -220,12 +217,12 @@ type Error struct {
 func handleErr(handler func(w http.ResponseWriter, r *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := handler(w, r); err != nil {
-			log := logr.FromContextOrDiscard(r.Context())
+			log := logutil.SloggerFrom(r.Context())
 
-			log.Error(err, "handling request")
+			log.Error("handling request", "err", err.Error())
 
 			if nErr := negotiate(w, r, "application/json"); nErr != nil {
-				log.Error(err, "negotiating JSON error response")
+				log.Error("negotiating JSON error response", "err", err.Error())
 
 				http.Error(w, err.Error(), httputil.HTTPStatusCode(err))
 				return
@@ -256,10 +253,10 @@ func wantsPretty(r *http.Request) bool {
 }
 
 func respondJSON(w http.ResponseWriter, r *http.Request, a any) error {
-	log := logr.FromContextOrDiscard(r.Context())
+	log := logutil.SloggerFrom(r.Context())
 
 	if err := negotiate(w, r, "application/json"); err != nil {
-		log.Error(err, "negotiating JSON response")
+		log.Error("negotiating JSON response", "err", err.Error())
 
 		return err
 	}
@@ -290,9 +287,9 @@ const (
 func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 	var (
 		steamappID = chi.URLParam(r, appIDParam)
-		log        = logr.FromContextOrDiscard(r.Context()).WithValues(appIDParam, steamappID)
+		log        = logutil.SloggerFrom(r.Context()).With(appIDParam, steamappID)
 	)
-	r = r.WithContext(logr.NewContext(r.Context(), log))
+	r = r.WithContext(logutil.SloggerInto(r.Context(), log))
 
 	parsedSteamappAppID, err := strconv.Atoi(steamappID)
 	if err != nil {
@@ -319,14 +316,14 @@ func (h *handler) getSteamapp(w http.ResponseWriter, r *http.Request) error {
 // @Router		/steamapps [get]
 func (h *handler) getSteamapps(w http.ResponseWriter, r *http.Request) error {
 	var (
-		_        = logr.FromContextOrDiscard(r.Context())
+		_        = logutil.SloggerFrom(r.Context())
 		limit, _ = strconv.Atoi(r.URL.Query().Get("limit"))
 	)
 	if limit <= 0 {
 		limit = 10
 	}
 
-	steamapps, continueToken, err := h.Database.List(r.Context(), &ListOpts{
+	steamapps, token, err := h.Database.List(r.Context(), &ListOpts{
 		Continue: r.URL.Query().Get("continue"),
 		Limit:    int64(limit),
 	})
@@ -334,22 +331,44 @@ func (h *handler) getSteamapps(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	if continueToken != "" {
-		w.Header().Set("X-Continue-Token", continueToken)
-		w.Header().Set("Link", fmt.Sprintf("%s?continue=%s", path.Join(h.Path, "steamapps"), continueToken))
+	if token != "" {
+		w.Header().Set("X-Continue-Token", token)
+		w.Header().Set("Link", fmt.Sprintf("%s?continue=%s", path.Join(h.Path, "steamapps"), token))
 	}
 
 	return respondJSON(w, r, steamapps)
 }
 
+type SteamappResources struct {
+	CPU    string `json:"cpu,omitempty"`
+	Memory string `json:"memory,omitempty"`
+}
+
 type Steamapp struct {
-	SteamappDetail
 	SteamappSummary
+	SteamappDetail
 }
 
 type SteamappDetail struct {
+	Ports     []SteamappPort    `json:"ports,omitempty"`
+	Resources SteamappResources `json:"resources,omitempty"`
+	Volumes   []SteamappVolume  `json:"volumes,omitempty"`
+	SteamappImageOpts
+}
+
+type SteamappPort struct {
+	Port      int32    `json:"port"`
+	Protocols []string `json:"protocols,omitempty"`
+}
+
+type SteamappVolume struct {
+	Path string `json:"path"`
+}
+
+type SteamappImageOpts struct {
 	BaseImageRef string   `json:"base_image,omitempty"`
 	AptPkgs      []string `json:"apt_packages,omitempty"`
+	BetaPassword string   `json:"beta_password,omitempty"`
 	LaunchType   string   `json:"launch_type,omitempty"`
 	PlatformType string   `json:"platform_type,omitempty"`
 	Execs        []string `json:"execs,omitempty"`
@@ -369,14 +388,13 @@ type SteamappSummary struct {
 // @Summary	Create or update the details of a specific Steamapp ID
 // @Accept		application/json
 // @Produce	json
-// @Param		appID			path		int				true	"Steamapp ID"
-// @Param		branch			path		string			false	"Steamapp branch (default public)"
-// @Param		betapassword	query		string			false	"Steamapp branch password"
-// @Param		request			body		SteamappDetail	true	"Steamapp detail"
-// @Success	202				{object}	Steamapp
-// @Failure	400				{object}	Error
-// @Failure	415				{object}	Error
-// @Failure	500				{object}	Error
+// @Param		appID	path	int				true	"Steamapp ID"
+// @Param		branch	path	string			false	"Steamapp branch (default public)"
+// @Param		request	body	SteamappDetail	true	"Steamapp detail"
+// @Success	202
+// @Failure	400	{object}	Error
+// @Failure	415	{object}	Error
+// @Failure	500	{object}	Error
 // @Router		/steamapps/{appID} [post]
 // @Router		/steamapps/{appID}/{branch} [post]
 // @Router		/steamapps/{appID} [put]
@@ -384,9 +402,9 @@ type SteamappSummary struct {
 func (h *handler) upsertSteamapp(w http.ResponseWriter, r *http.Request) error {
 	var (
 		steamappID = chi.URLParam(r, appIDParam)
-		log        = logr.FromContextOrDiscard(r.Context()).WithValues(appIDParam, steamappID)
+		log        = logutil.SloggerFrom(r.Context()).With(appIDParam, steamappID)
 	)
-	r = r.WithContext(logr.NewContext(r.Context(), log))
+	r = r.WithContext(logutil.SloggerInto(r.Context(), log))
 
 	parsedSteamappAppID, err := strconv.Atoi(steamappID)
 	if err != nil {
@@ -397,15 +415,21 @@ func (h *handler) upsertSteamapp(w http.ResponseWriter, r *http.Request) error {
 		return httputil.NewHTTPStatusCodeError(err, http.StatusBadRequest)
 	}
 
-	steamappDetail := &SteamappDetail{}
-	if err := json.NewDecoder(r.Body).Decode(steamappDetail); err != nil {
+	var (
+		detail = &SteamappDetail{}
+		branch = cmp.Or(chi.URLParam(r, branchParam), steamapp.DefaultBranchName)
+	)
+	if err := json.NewDecoder(r.Body).Decode(detail); err != nil {
 		return httputil.NewHTTPStatusCodeError(err, http.StatusBadRequest)
 	}
 
-	if err := h.Database.Upsert(r.Context(), parsedSteamappAppID, steamappDetail, &UpsertOpts{
-		Branch:       chi.URLParam(r, branchParam),
-		BetaPassword: r.URL.Query().Get("betapassword"),
-	}); err != nil {
+	if detail.BetaPassword != "" {
+		if branch == steamapp.DefaultBranchName {
+			return httputil.NewHTTPStatusCodeError(fmt.Errorf("cannot set beta_password on branch %q", branch), http.StatusBadRequest)
+		}
+	}
+
+	if err := h.Database.Upsert(r.Context(), parsedSteamappAppID, detail, &UpsertOpts{Branch: branch}); err != nil {
 		return fmt.Errorf("upsert Steamapp: %w", err)
 	}
 

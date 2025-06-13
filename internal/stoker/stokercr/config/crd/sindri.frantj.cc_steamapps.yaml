@@ -18,7 +18,7 @@ spec:
     - jsonPath: .spec.appID
       name: AppID
       type: string
-    - jsonPath: .spec.branch
+    - jsonPath: .spec.beta
       name: Branch
       type: string
     - jsonPath: .status.name
@@ -63,10 +63,10 @@ spec:
               baseImage:
                 default: docker.io/library/debian:stable-slim
                 type: string
-              betaPassword:
-                type: string
-              branch:
+              beta:
                 default: public
+                type: string
+              betaPassword:
                 type: string
               cmd:
                 items:
@@ -90,6 +90,45 @@ spec:
                 - windows
                 - macos
                 type: string
+              ports:
+                items:
+                  properties:
+                    port:
+                      format: int32
+                      maximum: 65536
+                      minimum: 1
+                      type: integer
+                    protocols:
+                      default:
+                      - UDP
+                      description: Protocols for port.
+                      items:
+                        description: Protocol defines network protocols supported
+                          for things like container ports.
+                        type: string
+                      type: array
+                  required:
+                  - port
+                  type: object
+                type: array
+              resources:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: ResourceList is a set of (resource name, quantity) pairs.
+                type: object
+              volumes:
+                items:
+                  properties:
+                    path:
+                      type: string
+                  required:
+                  - path
+                  type: object
+                type: array
             required:
             - appID
             type: object

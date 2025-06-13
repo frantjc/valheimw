@@ -43,7 +43,9 @@ gen: generate
 internal/stoker/swagger.json: swag
 	@$(SWAG) fmt -g api.go --dir internal/stoker
 	@$(SWAG) init -g api.go --dir internal/stoker --output internal/stoker --outputTypes json --parseInternal
-	@sed -i 's/stoker\.//g' $@
+	@sed 's/stoker\.//g' $@ > internal/stoker/swagger.json.tmp
+	@cat internal/stoker/swagger.json.tmp > $@
+	@rm internal/stoker/swagger.json.tmp
 	@echo >> $@
 
 .PHONY: swagger

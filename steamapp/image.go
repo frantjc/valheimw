@@ -9,11 +9,11 @@ import (
 	"io"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/internal/appinfoutil"
-	xslice "github.com/frantjc/x/slice"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -164,8 +164,8 @@ func getImageConfig(ctx context.Context, appID int, opts *BuildImageOpts) (*spec
 					icfg.Entrypoint = []string{filepath.Join(opts.Dir, launch.Executable)}
 				}
 				if icfg.Cmd == nil {
-					icfg.Cmd = xslice.Filter(regexp.MustCompile(`\s+`).Split(launch.Arguments, -1), func(arg string, _ int) bool {
-						return arg != ""
+					icfg.Cmd = slices.DeleteFunc(regexp.MustCompile(`\s+`).Split(launch.Arguments, -1), func(arg string) bool {
+						return arg == ""
 					})
 					if len(icfg.Cmd) == 0 {
 						icfg.Cmd = nil

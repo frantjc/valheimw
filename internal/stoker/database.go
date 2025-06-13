@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/steamapp"
-	xslice "github.com/frantjc/x/slice"
 )
 
 const Scheme = "stoker"
@@ -24,7 +24,7 @@ func init() {
 type databaseURLOpener struct{}
 
 func (d *databaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamapp.Database, error) {
-	if !xslice.Includes([]string{Scheme, "https", "http"}, u.Scheme) {
+	if !slices.Contains([]string{Scheme, "https", "http"}, u.Scheme) {
 		return nil, fmt.Errorf("invalid scheme %s, expected %s", u.Scheme, Scheme)
 	}
 
@@ -79,7 +79,7 @@ func (c *Client) GetBuildImageOpts(ctx context.Context, appID int, branch string
 	return &steamapp.GettableBuildImageOpts{
 		BaseImageRef: sa.BaseImageRef,
 		AptPkgs:      sa.AptPkgs,
-		// TODO: BetaPassword: "",
+		BetaPassword: sa.BetaPassword,
 		LaunchType:   sa.LaunchType,
 		PlatformType: steamcmd.PlatformType(sa.PlatformType),
 		Execs:        sa.Execs,

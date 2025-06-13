@@ -37,20 +37,38 @@ export type SteamappSummary = {
   locked: boolean;
 }
 
-export type SteamappDetail = {
-	base_image: string;
-	apt_packages: Array<string>;
-	launch_type: string;
-	platform_type: string;
-	execs: Array<string>;
-	entrypoint: Array<string>;
-	cmd: Array<string>;
+export type Protocol = "TCP" | "UDP";
+
+export type SteamappPort = {
+  port: number;
+  protocols: Array<Protocol>
+};
+
+export type SteamappVolume = {
+  path: string;
+};
+
+export type SteamappResources = {
+  cpu: string;
+  memory: string;
 }
 
-export type Steamapp = SteamappSummary & SteamappDetail;
+export type Steamapp = SteamappSummary & {
+  ports?: Array<SteamappPort>;
+  resources?: SteamappResources;
+  volumes?: Array<SteamappVolume>;
+	base_image: string;
+	apt_packages?: Array<string>;
+  beta_password?: string;
+	launch_type: string;
+	platform_type: string;
+	execs?: Array<string>;
+	entrypoint: Array<string>;
+	cmd: Array<string>;
+};
 
 export type SteamappList = {
-  continue?: string;
+  token?: string;
   steamapps: Array<SteamappSummary>;
 }
 
@@ -60,8 +78,8 @@ export type SteamappList = {
 export function getUrl(path: string) {
   if (typeof process !== "object") {
     return path;
-  } else if (process.env.STOKER_API_URL) {
-    return new URL(path, process.env.STOKER_API_URL).toString();
+  } else if (process.env.STOKER_URL) {
+    return new URL(path, process.env.STOKER_URL).toString();
   }
 
   return new URL(
@@ -87,10 +105,10 @@ export function getSteamapp(id: number, branch?: string): Promise<Steamapp> {
 
 export function getSteamapps(
   {
-    continue: cont,
+    token,
     limit = 10,
   }: {
-    continue?: string;
+    token?: string;
     limit?: number;
   } = {}
 ): Promise<SteamappList> {
@@ -98,7 +116,7 @@ export function getSteamapps(
     getUrl(
       `/api/v1/steamapps?${
         new URLSearchParams(
-          Object.entries({ continue: cont, limit })
+          Object.entries({ continue: token, limit })
             .reduce(
               (acc, [k, v]) =>
                 v && v.toString()
@@ -122,7 +140,7 @@ export function getSteamapps(
     .then(async (res) => {
       return res.json().then((steamapps) => {
         return {
-          continue: res.headers.get("X-Continue-Token") || undefined,
+          token: res.headers.get("X-Continue-Token") || undefined,
           steamapps,
         }
       });

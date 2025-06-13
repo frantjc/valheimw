@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"slices"
 	"strconv"
 
 	"github.com/frantjc/go-steamcmd"
@@ -13,7 +14,7 @@ import (
 	"github.com/frantjc/sindri/internal/stoker/stokercr/api/v1alpha1"
 	"github.com/frantjc/sindri/steamapp"
 	xio "github.com/frantjc/x/io"
-	xslice "github.com/frantjc/x/slice"
+	xslices "github.com/frantjc/x/slices"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,7 +58,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	if len(sa.Status.Conditions) > 0 && xslice.Every(sa.Status.Conditions, func(condition metav1.Condition, _ int) bool {
+	if len(sa.Status.Conditions) > 0 && xslices.Every(sa.Status.Conditions, func(condition metav1.Condition, _ int) bool {
 		return condition.Status == metav1.ConditionTrue && condition.ObservedGeneration == sa.Generation
 	}) {
 		return ctrl.Result{}, nil
@@ -100,14 +101,14 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	branch, ok := appInfo.Depots.Branches[sa.Spec.Branch]
+	branch, ok := appInfo.Depots.Branches[sa.Spec.Beta]
 	if !ok {
-		r.Eventf(sa, corev1.EventTypeWarning, "BranchMissing", "Branch %s not found", sa.Spec.Branch)
+		r.Eventf(sa, corev1.EventTypeWarning, "BranchMissing", "Branch %s not found", sa.Spec.Beta)
 		SetCondition(sa, metav1.Condition{
 			Type:    "Branch",
 			Status:  metav1.ConditionFalse,
 			Reason:  "BranchMissing",
-			Message: fmt.Sprintf("Branch %s not found", sa.Spec.Branch),
+			Message: fmt.Sprintf("Branch %s not found", sa.Spec.Beta),
 		})
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
@@ -116,22 +117,22 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	betaPwd := sa.Spec.BetaPassword
 
 	if branch.PwdRequired && betaPwd == "" {
-		r.Eventf(sa, corev1.EventTypeWarning, "BetaPwdMissing", "Branch %s requires a password", sa.Spec.Branch)
+		r.Eventf(sa, corev1.EventTypeWarning, "BetaPwdMissing", "Branch %s requires a password", sa.Spec.Beta)
 		SetCondition(sa, metav1.Condition{
 			Type:    "BetaPwd",
 			Status:  metav1.ConditionFalse,
 			Reason:  "BetaPwdMissing",
-			Message: fmt.Sprintf("Branch %s requires a password, but none was given", sa.Spec.Branch),
+			Message: fmt.Sprintf("Branch %s requires a password, but none was given", sa.Spec.Beta),
 		})
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	} else if !branch.PwdRequired && betaPwd != "" {
-		r.Eventf(sa, corev1.EventTypeWarning, "UnexpectedBetaPwd", "Branch %s does not require a password, refusing to use given: %s", sa.Spec.Branch, sa.Spec.BetaPassword)
+		r.Eventf(sa, corev1.EventTypeWarning, "UnexpectedBetaPwd", "Branch %s does not require a password, refusing to use given: %s", sa.Spec.Beta, sa.Spec.BetaPassword)
 		SetCondition(sa, metav1.Condition{
 			Type:    "BetaPwd",
 			Status:  metav1.ConditionFalse,
 			Reason:  "UnexpectedBetaPwd",
-			Message: fmt.Sprintf("Branch %s does not require a password, refusing to use given: %s", sa.Spec.Branch, sa.Spec.BetaPassword),
+			Message: fmt.Sprintf("Branch %s does not require a password, refusing to use given: %s", sa.Spec.Beta, sa.Spec.BetaPassword),
 		})
 		betaPwd = ""
 	}
@@ -251,8 +252,8 @@ func (r *SteamappReconciler) Default(_ context.Context, obj runtime.Object) erro
 		sa.Status.Phase = v1alpha1.PhasePending
 	}
 
-	if sa.Spec.Branch == "" {
-		sa.Spec.Branch = steamapp.DefaultBranchName
+	if sa.Spec.Beta == "" {
+		sa.Spec.Beta = steamapp.DefaultBranchName
 	}
 
 	if sa.Spec.LaunchType == "" {
@@ -276,7 +277,7 @@ func (r *SteamappReconciler) ValidateCreate(_ context.Context, obj runtime.Objec
 		return nil, fmt.Errorf("expected a Steamapp object but got %T", obj)
 	}
 
-	if !xslice.Includes(
+	if !slices.Contains(
 		[]steamcmd.PlatformType{
 			steamcmd.PlatformTypeLinux,
 			steamcmd.PlatformTypeWindows,
@@ -301,7 +302,7 @@ func (r *SteamappReconciler) ValidateUpdate(_ context.Context, oldObj, newObj ru
 		return nil, fmt.Errorf("expected a Steamapp object but got %T", newObj)
 	}
 
-	if !xslice.Includes(
+	if !slices.Contains(
 		[]steamcmd.PlatformType{
 			steamcmd.PlatformTypeLinux,
 			steamcmd.PlatformTypeWindows,
