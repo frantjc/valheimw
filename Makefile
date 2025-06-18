@@ -7,9 +7,10 @@ endif
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+DOCKER ?= docker
 GO ?= go
 KUBECTL ?= kubectl
-DOCKER ?= docker
+YARN ?= yarn
 
 .PHONY: apply
 apply: manifests
@@ -35,7 +36,7 @@ dev: $(KIND)
 	@$(KIND) get kubeconfig --name $(KIND_CLUSTER_NAME) --internal > dev/internal
 	@KUBECONFIG=./dev/internal $(DOCKER) compose up --build --detach stoker migrate
 	@$(GO) run ./cmd/kubectl-approve_steamapps --kubeconfig dev/config --all
-	@STOKER_URL=http://localhost:5050 yarn $@
+	@STOKER_URL=http://localhost:5050 $(YARN) $@
 
 .PHONY: manifests
 manifests: internal/stoker/stokercr/config/crd
