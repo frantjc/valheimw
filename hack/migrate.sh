@@ -14,8 +14,7 @@ wget $1/steamapps/896660 \
       "entrypoint": ["/home/steam/valheim_server.x86_64"],
       "ports": [
         {
-          "port": 2456,
-          "protocols": ["UDP"]
+          "port": 2456
         }
       ]
     }' -O-
@@ -36,7 +35,13 @@ wget $1/steamapps/1963720 \
       ],
       "entrypoint": [
         "/home/steam/_launch.sh",
-        "-logfile", "/dev/stdout"
+        "-logfile",
+        "/dev/stdout"
+      ],
+      "volumes": [
+        {
+          "path": "/home/steam/.config/unity3d/Pugstorm/Core Keeper/DedicatedServer"
+        }
       ]
     }' -O-
 
@@ -47,11 +52,36 @@ wget $1/steamapps/2394010 \
         "ca-certificates",
         "xdg-user-dirs"
       ],
-      "launch_type": "default"
+      "launch_type": "default",
+      "ports": [
+        {
+          "port": 8211,
+          "protocols": ["TCP", "UDP"]
+        },
+        {
+          "port": 27015,
+          "protocols": ["TCP", "UDP"]
+        }
+      ]
     }' -O-
 
 wget $1/steamapps/1690800 \
     --header="Content-Type: application/json" \
     --post-data='{
-      "launch_type": "default"
+      "launch_type": "default",
+      "ports": [
+        {
+          "port": 7777,
+          "protocols": ["TCP", "UDP"]
+        },
+        {
+          "port": 8888,
+          "protocols": ["TCP"]
+        }
+      ],
+      "volumes": [
+        {
+          "path": "/home/steam/.config/Epic/FactoryGame/Saved/SaveGames"
+        }
+      ]
     }' -O-
