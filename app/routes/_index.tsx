@@ -47,6 +47,7 @@ export default function Index() {
   const [token, setToken] = React.useState(initialToken);
   const [err, setErr] = React.useState<Error>();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleError = React.useCallback((err: any) => {
     if (err instanceof Error) {
       setErr(err);
@@ -164,13 +165,13 @@ export default function Index() {
           <pre
             className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border border-gray-500"
           >
-            <code className="font-mono text-white">
+            <code className="font-mono text-white overflow-auto pr-4">
               <span className="pr-2 text-gray-500">$</span>
               {command}
             </code>
             <button
               onClick={handleCopy}
-              className="bg-blue-400 hover:bg-blue-600 text-white font-bold p-2 rounded flex items-center"
+              className="bg-blue-400 hover:bg-blue-600 text-white p-2 rounded flex items-center"
             >
               {copied ? <BsClipboardCheck className="h-4 w-8" /> : <BsClipboard className="h-4 w-8" />}
             </button>
