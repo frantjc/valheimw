@@ -24,7 +24,7 @@ const meta: MetaFunction = () => {
 
 export function loader(args: LoaderFunctionArgs) {
   return {
-    host: args.request.headers.get("Host") || `localhost:${process.env.PORT ? process.env.PORT : "3000"}`,
+    host: args.request.headers.get("Host") || `localhost:${process.env.PORT || "3000"}`,
   };
 }
 
