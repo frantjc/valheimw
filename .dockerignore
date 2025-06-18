@@ -15,4 +15,7 @@ site/
 gh-pages/
 
 dev/
+Makefile
+*Dockerfile
+compose.yml
 .env

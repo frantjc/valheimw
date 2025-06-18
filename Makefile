@@ -34,7 +34,8 @@ dev: $(KIND)
 	fi
 	@$(KIND) get kubeconfig --name $(KIND_CLUSTER_NAME) --internal > dev/internal
 	@KUBECONFIG=./dev/internal $(DOCKER) compose up --build --detach stoker migrate
-	@$(GO) run ./cmd/kubectl-approve_steamapps --kubeconfig dev/config
+	@$(GO) run ./cmd/kubectl-approve_steamapps --kubeconfig dev/config --all
+	@STOKER_URL=http://localhost:5050 yarn $@
 
 .PHONY: manifests
 manifests: internal/stoker/stokercr/config/crd
