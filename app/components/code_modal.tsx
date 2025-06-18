@@ -25,8 +25,6 @@ export function CodeModal({ steamapp, open, onClose, lines = 16 }: CodeModalProp
 
   if (!open) return null;
 
-  console.log(steamapp);
-
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
       <div className="bg-white rounded shadow-lg min-w-[750px] max-w-[90vw]">
@@ -40,13 +38,11 @@ export function CodeModal({ steamapp, open, onClose, lines = 16 }: CodeModalProp
           </button>
         </div>
         <div className="relative flex">
-          {/* Line numbers */}
           <pre className="select-none text-right text-gray-400 bg-gray-100 py-4 pl-4 pr-2 rounded-bl rounded-tl">
             {codeLines.map((_, i) => (
               <div key={i} className="h-5 leading-5">{i + 1}</div>
             ))}
           </pre>
-          {/* Code area */}
           <pre className="relative bg-black text-white font-mono py-4 px-4 rounded-br rounded-tr overflow-x-auto w-full">
             <code
               className="block outline-none"
@@ -55,7 +51,6 @@ export function CodeModal({ steamapp, open, onClose, lines = 16 }: CodeModalProp
             >
               {codeLines.join("\n")}
             </code>
-            {/* Copy button */}
             <button
               onClick={handleCopy}
               className="absolute top-2 right-2 bg-blue-400 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded flex items-center"
@@ -70,16 +65,16 @@ export function CodeModal({ steamapp, open, onClose, lines = 16 }: CodeModalProp
   );
 }
 
-function generateContainerDefinition(steamapp: Steamapp | undefined): string {
+export function generateContainerDefinition(steamapp: Steamapp | undefined): string {
   if (!steamapp) return "";
 
   const isBeta = steamapp.branch && steamapp.branch !== "public";
   if (isBeta && (!steamapp.beta_password || steamapp.beta_password.length === 0)) {
-    // TODO
+    throw new Error("Beta branch requires a beta_password, but none was provided");
   }
 
   const betaBranch = isBeta ? ` -beta ${steamapp.branch}` : "";
-  const betaPassword = isBeta ? " -betapassword ${STEAM_BETA_PASSWORD}" : "";
+  const betaPassword = isBeta ? ` -betapassword ${steamapp.beta_password}` : "";
 
   const lines = [
     "FROM steamcmd/steamcmd AS steamcmd",
@@ -110,8 +105,7 @@ function generateContainerDefinition(steamapp: Steamapp | undefined): string {
     steamapp.cmd && steamapp.cmd.length
       ? `CMD [${steamapp.cmd.map(c => `"${c}"`).join(", ")}]`
       : "",
-    // TODO branch
-  ]
+  ];
 
   return lines.join("\n");
 }
