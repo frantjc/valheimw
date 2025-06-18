@@ -36,16 +36,16 @@ const dummySteamapps = {
 const dummySteamappsKeys = Object.keys(dummySteamapps);
 
 function dummyGetSteamapps(req, res) {
-  const cont = req.query.cont || 0;
+  const token = parseInt(req.query.continue) || 0;
   const limit = req.query.limit || 10;
-  const end = cont + limit;
+  const end = token + limit;
 
   if (dummySteamappsKeys.length > end) {
     res.setHeader("X-Continue-Token", end)
   }
 
   res.json(
-    dummySteamappsKeys.slice(cont, limit).map((app_id) => ({
+    dummySteamappsKeys.slice(token, end).map((app_id) => ({
       app_id,
       ...dummySteamappsKeys[app_id],
     })),
