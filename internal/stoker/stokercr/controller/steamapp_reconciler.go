@@ -101,14 +101,14 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	branch, ok := appInfo.Depots.Branches[sa.Spec.Beta]
+	branch, ok := appInfo.Depots.Branches[sa.Spec.Branch]
 	if !ok {
-		r.Eventf(sa, corev1.EventTypeWarning, "BranchMissing", "Branch %s not found", sa.Spec.Beta)
+		r.Eventf(sa, corev1.EventTypeWarning, "BranchMissing", "Branch %s not found", sa.Spec.Branch)
 		SetCondition(sa, metav1.Condition{
 			Type:    "Branch",
 			Status:  metav1.ConditionFalse,
 			Reason:  "BranchMissing",
-			Message: fmt.Sprintf("Branch %s not found", sa.Spec.Beta),
+			Message: fmt.Sprintf("Branch %s not found", sa.Spec.Branch),
 		})
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
@@ -117,22 +117,22 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	betaPwd := sa.Spec.BetaPassword
 
 	if branch.PwdRequired && betaPwd == "" {
-		r.Eventf(sa, corev1.EventTypeWarning, "BetaPwdMissing", "Branch %s requires a password", sa.Spec.Beta)
+		r.Eventf(sa, corev1.EventTypeWarning, "BetaPwdMissing", "Branch %s requires a password", sa.Spec.Branch)
 		SetCondition(sa, metav1.Condition{
 			Type:    "BetaPwd",
 			Status:  metav1.ConditionFalse,
 			Reason:  "BetaPwdMissing",
-			Message: fmt.Sprintf("Branch %s requires a password, but none was given", sa.Spec.Beta),
+			Message: fmt.Sprintf("Branch %s requires a password, but none was given", sa.Spec.Branch),
 		})
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	} else if !branch.PwdRequired && betaPwd != "" {
-		r.Eventf(sa, corev1.EventTypeWarning, "UnexpectedBetaPwd", "Branch %s does not require a password, refusing to use given: %s", sa.Spec.Beta, sa.Spec.BetaPassword)
+		r.Eventf(sa, corev1.EventTypeWarning, "UnexpectedBetaPwd", "Branch %s does not require a password, refusing to use given: %s", sa.Spec.Branch, sa.Spec.BetaPassword)
 		SetCondition(sa, metav1.Condition{
 			Type:    "BetaPwd",
 			Status:  metav1.ConditionFalse,
 			Reason:  "UnexpectedBetaPwd",
-			Message: fmt.Sprintf("Branch %s does not require a password, refusing to use given: %s", sa.Spec.Beta, sa.Spec.BetaPassword),
+			Message: fmt.Sprintf("Branch %s does not require a password, refusing to use given: %s", sa.Spec.Branch, sa.Spec.BetaPassword),
 		})
 		betaPwd = ""
 	}
@@ -252,8 +252,8 @@ func (r *SteamappReconciler) Default(_ context.Context, obj runtime.Object) erro
 		sa.Status.Phase = v1alpha1.PhasePending
 	}
 
-	if sa.Spec.Beta == "" {
-		sa.Spec.Beta = steamapp.DefaultBranchName
+	if sa.Spec.Branch == "" {
+		sa.Spec.Branch = steamapp.DefaultBranchName
 	}
 
 	if sa.Spec.LaunchType == "" {

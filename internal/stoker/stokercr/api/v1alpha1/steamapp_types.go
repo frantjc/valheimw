@@ -19,10 +19,10 @@ type SteamappSpecImageOpts struct {
 	// +kubebuilder:validation:Optional
 	AptPkgs []string `json:"aptPackages,omitempty"`
 	// +kubebuilder:default="public"
-	Beta string `json:"beta,omitempty"`
+	Branch string `json:"branch,omitempty"`
 	// +kubebuilder:validation:Optional
 	BetaPassword string `json:"betaPassword,omitempty"`
-	// +kubebuilder:default=server
+	// +kubebuilder:default="server"
 	LaunchType string `json:"launchType,omitempty"`
 	// +kubebuilder:default="linux"
 	// +kubebuilder:validation:Enum=linux;windows;macos
@@ -75,7 +75,7 @@ const (
 
 // SteamappStatus defines the observed state of Steamapp.
 type SteamappStatus struct {
-	// +kubebuilder:default=Pending
+	// +kubebuilder:default="Pending"
 	// +kubebuilder:validation:Enum=Pending;Ready;Failed;Paused
 	Phase string `json:"phase"`
 	// +kubebuilder:validation:Optional
@@ -89,7 +89,7 @@ type SteamappStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="AppID",type=string,JSONPath=`.spec.appID`
-// +kubebuilder:printcolumn:name="Branch",type=string,JSONPath=`.spec.beta`
+// +kubebuilder:printcolumn:name="Branch",type=string,JSONPath=`.spec.branch`
 // +kubebuilder:printcolumn:name="Name",type=string,JSONPath=`.status.name`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 

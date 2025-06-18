@@ -18,7 +18,7 @@ spec:
     - jsonPath: .spec.appID
       name: AppID
       type: string
-    - jsonPath: .spec.beta
+    - jsonPath: .spec.branch
       name: Branch
       type: string
     - jsonPath: .status.name
@@ -63,10 +63,10 @@ spec:
               baseImage:
                 default: docker.io/library/debian:stable-slim
                 type: string
-              beta:
-                default: public
-                type: string
               betaPassword:
+                type: string
+              branch:
+                default: public
                 type: string
               cmd:
                 items:

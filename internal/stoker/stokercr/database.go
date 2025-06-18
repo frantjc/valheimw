@@ -326,7 +326,7 @@ func (d *Database) Get(ctx context.Context, steamappID int, opts ...stoker.GetOp
 		SteamappSummary: stoker.SteamappSummary{
 			AppID:   steamappID,
 			Name:    sa.Status.Name,
-			Branch:  sa.Spec.Beta,
+			Branch:  sa.Spec.Branch,
 			IconURL: sa.Status.IconURL,
 			Created: sa.CreationTimestamp.Time,
 			Locked:  locked,
@@ -373,7 +373,7 @@ func (d *Database) List(ctx context.Context, opts ...stoker.ListOpt) ([]stoker.S
 		return stoker.SteamappSummary{
 			AppID:   sa.Spec.AppID,
 			Name:    sa.Status.Name,
-			Branch:  sa.Spec.Beta,
+			Branch:  sa.Spec.Branch,
 			IconURL: sa.Status.IconURL,
 			Created: sa.CreationTimestamp.Time,
 			Locked:  locked,
@@ -418,7 +418,7 @@ func (d *Database) Upsert(ctx context.Context, appID int, detail *stoker.Steamap
 			SteamappSpecImageOpts: v1alpha1.SteamappSpecImageOpts{
 				BaseImageRef: detail.BaseImageRef,
 				AptPkgs:      detail.AptPkgs,
-				Beta:         o.Branch,
+				Branch:       o.Branch,
 				BetaPassword: detail.BetaPassword,
 				LaunchType:   detail.LaunchType,
 				PlatformType: detail.PlatformType,
@@ -427,21 +427,22 @@ func (d *Database) Upsert(ctx context.Context, appID int, detail *stoker.Steamap
 				Cmd:          detail.Cmd,
 			},
 		}
+		err error
 	)
 
-	cpu, err := resource.ParseQuantity(detail.Resources.CPU)
-	if err != nil {
-		return err
+	if detail.Resources.CPU != "" {
+		spec.Resources["cpu"], err = resource.ParseQuantity(detail.Resources.CPU)
+		if err != nil {
+			return err
+		}
 	}
 
-	spec.Resources["cpu"] = cpu
-
-	memory, err := resource.ParseQuantity(detail.Resources.Memory)
-	if err != nil {
-		return err
+	if detail.Resources.Memory != "" {
+		spec.Resources["memory"], err = resource.ParseQuantity(detail.Resources.Memory)
+		if err != nil {
+			return err
+		}
 	}
-
-	spec.Resources["cpu"] = memory
 
 	var (
 		sa = &v1alpha1.Steamapp{
