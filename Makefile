@@ -33,7 +33,7 @@ dev: $(KIND)
 		$(DOCKER) network connect sindri_default $(KIND_CLUSTER_NAME)-control-plane; \
 	fi
 	@$(KIND) get kubeconfig --name $(KIND_CLUSTER_NAME) --internal > dev/internal
-	@KUBECONFIG=./dev/internal $(DOCKER) compose up --build stoker migrate
+	@KUBECONFIG=./dev/internal $(DOCKER) compose up --build --detach stoker migrate
 	@$(GO) run ./cmd/kubectl-approve_steamapps --kubeconfig dev/config
 
 .PHONY: manifests
