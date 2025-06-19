@@ -75,6 +75,8 @@ func (o *databaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamap
 		return nil, err
 	}
 
+	cli = client.NewNamespacedClient(cli, namespace)
+
 	return &Database{
 		Namespace: namespace,
 		Client:    cli,
@@ -93,7 +95,7 @@ func init() {
 type Database struct {
 	Namespace string
 	Client    client.Client
-	APIReader client.Reader
+	Reader    client.Reader
 }
 
 // GetBuildImageOpts implements steamapp.Database.
@@ -194,7 +196,7 @@ func (d *Database) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result
 // SetupWithManager sets up the controller with the Manager.
 func (d *Database) SetupWithManager(mgr ctrl.Manager) error {
 	d.Client = mgr.GetClient()
-	d.APIReader = mgr.GetAPIReader()
+	d.Reader = mgr.GetAPIReader()
 
 	if err := ctrl.NewControllerManagedBy(mgr).
 		Named("stoker").
@@ -312,16 +314,14 @@ func (d *Database) Get(ctx context.Context, steamappID int, opts ...stoker.GetOp
 			Volumes: xslices.Map(sa.Spec.Volumes, func(volume v1alpha1.SteamappVolume, _ int) stoker.SteamappVolume {
 				return stoker.SteamappVolume(volume)
 			}),
-			SteamappImageOpts: stoker.SteamappImageOpts{
-				BetaPassword: sa.Spec.BetaPassword,
-				BaseImageRef: sa.Spec.BaseImageRef,
-				AptPkgs:      sa.Spec.AptPkgs,
-				LaunchType:   sa.Spec.LaunchType,
-				PlatformType: sa.Spec.PlatformType,
-				Execs:        sa.Spec.Execs,
-				Entrypoint:   sa.Spec.Entrypoint,
-				Cmd:          sa.Spec.Cmd,
-			},
+			BetaPassword: sa.Spec.BetaPassword,
+			BaseImageRef: sa.Spec.BaseImageRef,
+			AptPkgs:      sa.Spec.AptPkgs,
+			LaunchType:   sa.Spec.LaunchType,
+			PlatformType: sa.Spec.PlatformType,
+			Execs:        sa.Spec.Execs,
+			Entrypoint:   sa.Spec.Entrypoint,
+			Cmd:          sa.Spec.Cmd,
 		},
 		SteamappSummary: stoker.SteamappSummary{
 			AppID:   steamappID,
@@ -353,7 +353,7 @@ func (d *Database) List(ctx context.Context, opts ...stoker.ListOpt) ([]stoker.S
 		o         = newListOpts(opts...)
 	)
 
-	if err := d.APIReader.List(ctx, steamapps, &client.ListOptions{
+	if err := d.Reader.List(ctx, steamapps, &client.ListOptions{
 		Namespace: d.Namespace,
 		Continue:  o.Continue,
 		Limit:     o.Limit,

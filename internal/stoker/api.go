@@ -350,10 +350,17 @@ type Steamapp struct {
 }
 
 type SteamappDetail struct {
-	Ports     []SteamappPort    `json:"ports,omitempty"`
-	Resources SteamappResources `json:"resources,omitempty"`
-	Volumes   []SteamappVolume  `json:"volumes,omitempty"`
-	SteamappImageOpts
+	Ports        []SteamappPort    `json:"ports,omitempty"`
+	Resources    SteamappResources `json:"resources,omitempty"`
+	Volumes      []SteamappVolume  `json:"volumes,omitempty"`
+	BaseImageRef string            `json:"base_image,omitempty"`
+	AptPkgs      []string          `json:"apt_packages,omitempty"`
+	BetaPassword string            `json:"beta_password,omitempty"`
+	LaunchType   string            `json:"launch_type,omitempty"`
+	PlatformType string            `json:"platform_type,omitempty"`
+	Execs        []string          `json:"execs,omitempty"`
+	Entrypoint   []string          `json:"entrypoint,omitempty"`
+	Cmd          []string          `json:"cmd,omitempty"`
 }
 
 type SteamappPort struct {
@@ -363,17 +370,6 @@ type SteamappPort struct {
 
 type SteamappVolume struct {
 	Path string `json:"path"`
-}
-
-type SteamappImageOpts struct {
-	BaseImageRef string   `json:"base_image,omitempty"`
-	AptPkgs      []string `json:"apt_packages,omitempty"`
-	BetaPassword string   `json:"beta_password,omitempty"`
-	LaunchType   string   `json:"launch_type,omitempty"`
-	PlatformType string   `json:"platform_type,omitempty"`
-	Execs        []string `json:"execs,omitempty"`
-	Entrypoint   []string `json:"entrypoint,omitempty"`
-	Cmd          []string `json:"cmd,omitempty"`
 }
 
 type SteamappSummary struct {

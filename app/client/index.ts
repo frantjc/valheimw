@@ -53,7 +53,7 @@ export type SteamappResources = {
   memory: string;
 }
 
-export type Steamapp = SteamappSummary & {
+export type SteamappDetail = {
   ports?: Array<SteamappPort>;
   resources?: SteamappResources;
   volumes?: Array<SteamappVolume>;
@@ -66,6 +66,8 @@ export type Steamapp = SteamappSummary & {
 	entrypoint: Array<string>;
 	cmd: Array<string>;
 };
+
+export type Steamapp = SteamappSummary & SteamappDetail;
 
 export type SteamappList = {
   token?: string;

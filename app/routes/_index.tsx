@@ -89,7 +89,7 @@ export default function Index() {
     }
   }, [steamapps, setPrefetchIndex]);
 
-  const getSteamappImageOpts = React.useCallback((index: number) => {
+  const getSteamappDetails = React.useCallback((index: number) => {
     const steamapp = steamapps[index];
 
     if (steamapp && !(steamapp as Steamapp).base_image) {
@@ -112,14 +112,14 @@ export default function Index() {
 
   React.useEffect(() => {
     if (steamapps.length > prefetchIndex && prefetchIndex >= 0) {
-      getSteamappImageOpts(prefetchIndex)
+      getSteamappDetails(prefetchIndex)
         .then(() => {
           setDockerRunIndex(prefetchIndex);
         })
         .catch(() => { /**/ });
     }
 
-  }, [prefetchIndex, getSteamappImageOpts, setDockerRunIndex, steamapps]);
+  }, [prefetchIndex, getSteamappDetails, setDockerRunIndex, steamapps]);
 
   const [selectedSteamapp, setSelectedSteamapp] = React.useState<number>(-1);
 
@@ -229,7 +229,7 @@ export default function Index() {
                     <td className="border-gray-500">
                       <button
                         onClick={() =>
-                          getSteamappImageOpts(i)
+                          getSteamappDetails(i)
                             .then(() => setSelectedSteamapp(i))
                             .catch(setErr)
                         }
