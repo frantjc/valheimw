@@ -17,7 +17,7 @@ func SloggerInto(ctx context.Context, log *slog.Logger) context.Context {
 	return context.WithValue(ctx, contextKey{}, log)
 }
 
-// SloggerFrom returns a *slog.Logger from the logr.Logger in the context.
+// SloggerFrom returns a *slog.Logger from the context.
 func SloggerFrom(ctx context.Context) *slog.Logger {
 	v := ctx.Value(contextKey{})
 	if v == nil {

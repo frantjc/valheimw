@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"slices"
 	"strconv"
 
 	"github.com/frantjc/go-steamcmd"
@@ -13,7 +14,7 @@ import (
 	"github.com/frantjc/sindri/internal/stoker/stokercr/api/v1alpha1"
 	"github.com/frantjc/sindri/steamapp"
 	xio "github.com/frantjc/x/io"
-	xslice "github.com/frantjc/x/slice"
+	xslices "github.com/frantjc/x/slices"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,7 +58,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	if len(sa.Status.Conditions) > 0 && xslice.Every(sa.Status.Conditions, func(condition metav1.Condition, _ int) bool {
+	if len(sa.Status.Conditions) > 0 && xslices.Every(sa.Status.Conditions, func(condition metav1.Condition, _ int) bool {
 		return condition.Status == metav1.ConditionTrue && condition.ObservedGeneration == sa.Generation
 	}) {
 		return ctrl.Result{}, nil
@@ -276,7 +277,7 @@ func (r *SteamappReconciler) ValidateCreate(_ context.Context, obj runtime.Objec
 		return nil, fmt.Errorf("expected a Steamapp object but got %T", obj)
 	}
 
-	if !xslice.Includes(
+	if !slices.Contains(
 		[]steamcmd.PlatformType{
 			steamcmd.PlatformTypeLinux,
 			steamcmd.PlatformTypeWindows,
@@ -301,7 +302,7 @@ func (r *SteamappReconciler) ValidateUpdate(_ context.Context, oldObj, newObj ru
 		return nil, fmt.Errorf("expected a Steamapp object but got %T", newObj)
 	}
 
-	if !xslice.Includes(
+	if !slices.Contains(
 		[]steamcmd.PlatformType{
 			steamcmd.PlatformTypeLinux,
 			steamcmd.PlatformTypeWindows,

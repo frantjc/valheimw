@@ -3,7 +3,7 @@ import { useLoaderData } from "@remix-run/react";
 import React from "react";
 import { BsClipboard, BsClipboardCheck } from "react-icons/bs";
 import { getSteamapp, getSteamapps, Steamapp, SteamappSummary } from "~/client";
-import { CodeModal } from "~/components/code_modal";
+import { CodeModal } from "~/components";
 
 export const meta: MetaFunction = () => {
   const title = "Sindri";
@@ -22,47 +22,59 @@ export const meta: MetaFunction = () => {
 };
 
 export function loader(args: LoaderFunctionArgs) {
-  return {
-    host: args.request.headers.get("Host") || `localhost:${process.env.PORT || "3000"}`,
-  };
+  const host = args.request.headers.get("Host") || `localhost:${process.env.PORT || "3000"}`;
+
+  return getSteamapps()
+    .then(({ token, steamapps }) => {
+      return {
+        host,
+        steamapps,
+        token,
+      };
+    })
+    .catch(() => {
+      return { host, steamapps: [], token: "" };
+    });
 }
 
 const defaultTag = "latest";
 const defaultBranch = "public";
 
 export default function Index() {
-  const { host } = useLoaderData<typeof loader>();
+  const { host, steamapps: initialSteamapps, token: initialToken } = useLoaderData<typeof loader>();
 
-  const [steamapps, setSteamapps] = React.useState<Array<SteamappSummary | Steamapp>>([]);
-  const [cont, setContinue] = React.useState<string>();
-  const [loading, setLoading] = React.useState(true);
+  const [steamapps, setSteamapps] = React.useState<Array<SteamappSummary | Steamapp>>(initialSteamapps);
+  const [token, setToken] = React.useState(initialToken);
   const [err, setErr] = React.useState<Error>();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleError = React.useCallback((err: any) => {
+    if (err instanceof Error) {
+      setErr(err);
+    } else if (err instanceof Response) {
+      setErr(new Error(`${err.status}: ${err.statusText}`));
+    } else {
+      setErr(new Error(err));
+    }
+  }, [setErr]);
+
   const more = React.useCallback((token?: string) => {
-    return getSteamapps({ continue: token })
+    return getSteamapps({ token })
       .then(res => {
         setSteamapps(s => [
           ...s,
           ...res.steamapps.filter(app => !s.some(existing => existing.app_id === app.app_id && existing.branch === app.branch))
         ]);
-        setContinue(res.continue);
+        setToken(res.token);
       })
-      .catch((err) => {
-        if (err instanceof Error) {
-          setErr(err);
-        } else if (err instanceof Response) {
-          setErr(new Error(`${err.status}: ${err.statusText}`));
-        } else {
-          setErr(new Error(err));
-        }
-      });
-  }, [setSteamapps, setContinue]);
+      .catch(handleError);
+  }, [setSteamapps, setToken, handleError]);
 
   React.useEffect(() => {
-    // Loading doesn't stop until after the first Steamapp (details included) is successfully prefetched.
-    setLoading(true);
-    more();
-  }, [more, setLoading]);
+    if (steamapps.length === 0) {
+      more();
+    }
+  }, [more, steamapps]);
 
   const [prefetchIndex, setPrefetchIndex] = React.useState(0);
 
@@ -88,14 +100,13 @@ export default function Index() {
             newSteamapps[index] = s;
             return newSteamapps;
           });
-          setLoading(false);
 
           return s;
         });
     }
 
     return Promise.resolve(steamapp as Steamapp);
-  }, [steamapps, setSteamapps, setLoading]);
+  }, [steamapps, setSteamapps]);
 
   const [dockerRunIndex, setDockerRunIndex] = React.useState(0);
 
@@ -118,10 +129,12 @@ export default function Index() {
     }
   }, [err]);
 
-  const steamapp = steamapps && steamapps.length > 0 && steamapps[dockerRunIndex];
+  const steamapp = steamapps && steamapps.length > 0 && (steamapps[dockerRunIndex] as Steamapp).base_image && steamapps[dockerRunIndex] as Steamapp ;
   const tag = steamapp && steamapp.branch || defaultBranch;
   const branch = tag === defaultTag ? defaultBranch : tag;
-  const command = steamapp && `docker run ${host}/${steamapp.app_id.toString()}:${tag}`
+  const command = steamapp && "docker run"
+    .concat(steamapp.ports ? steamapp.ports.map(port => ` -p ${port.port}:${port.port}`).join("") : "")
+    .concat(` ${host}/${steamapp.app_id.toString()}:${tag}`);
 
   const [copied, setCopied] = React.useState(false);
 
@@ -136,11 +149,6 @@ export default function Index() {
 
   return (
     <div className="grid grid-cols-1 gap-4 pb-8">
-      {loading && (
-        <div className="flex h-24 pt-8 justify-center items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500" />
-        </div>
-      )}
       {!!steamapp && (
         <>
           <p className="text-3xl pt-8">Run the...</p>
@@ -157,13 +165,13 @@ export default function Index() {
           <pre
             className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border border-gray-500"
           >
-            <code className="font-mono text-white">
+            <code className="font-mono text-white overflow-auto pr-4">
               <span className="pr-2 text-gray-500">$</span>
               {command}
             </code>
             <button
               onClick={handleCopy}
-              className="bg-blue-400 hover:bg-blue-600 text-white font-bold p-2 rounded flex items-center"
+              className="bg-blue-400 hover:bg-blue-600 text-white p-2 rounded flex items-center"
             >
               {copied ? <BsClipboardCheck className="h-4 w-8" /> : <BsClipboard className="h-4 w-8" />}
             </button>
@@ -241,18 +249,14 @@ export default function Index() {
             steamapp={steamapps[selectedSteamapp] as Steamapp}
             lines={16}
           />
-          {!!cont && (
+          {!!token && (
             <div className="flex justify-center items-center py-4">
-              {loading ? (
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500" />
-              ) : (
                 <button
-                  onClick={() => more(cont)}
+                  onClick={() => more(token)}
                   className="bg-blue-400 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
                 >
                   Load More
                 </button>
-              )}
             </div>
           )}
         </>
