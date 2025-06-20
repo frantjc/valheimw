@@ -14,4 +14,8 @@ node_modules/
 site/
 gh-pages/
 
+dev/
+Makefile
+*Dockerfile
+compose.yml
 .env

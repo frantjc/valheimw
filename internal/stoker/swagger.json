@@ -108,12 +108,6 @@
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Steamapp branch password",
-                        "name": "betapassword",
-                        "in": "query"
-                    },
-                    {
                         "description": "Steamapp detail",
                         "name": "request",
                         "in": "body",
@@ -125,10 +119,7 @@
                 ],
                 "responses": {
                     "202": {
-                        "description": "Accepted",
-                        "schema": {
-                            "$ref": "#/definitions/Steamapp"
-                        }
+                        "description": "Accepted"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -167,12 +158,6 @@
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Steamapp branch password",
-                        "name": "betapassword",
-                        "in": "query"
-                    },
-                    {
                         "description": "Steamapp detail",
                         "name": "request",
                         "in": "body",
@@ -184,10 +169,7 @@
                 ],
                 "responses": {
                     "202": {
-                        "description": "Accepted",
-                        "schema": {
-                            "$ref": "#/definitions/Steamapp"
-                        }
+                        "description": "Accepted"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -281,12 +263,6 @@
                         "in": "path"
                     },
                     {
-                        "type": "string",
-                        "description": "Steamapp branch password",
-                        "name": "betapassword",
-                        "in": "query"
-                    },
-                    {
                         "description": "Steamapp detail",
                         "name": "request",
                         "in": "body",
@@ -298,10 +274,7 @@
                 ],
                 "responses": {
                     "202": {
-                        "description": "Accepted",
-                        "schema": {
-                            "$ref": "#/definitions/Steamapp"
-                        }
+                        "description": "Accepted"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -346,12 +319,6 @@
                         "in": "path"
                     },
                     {
-                        "type": "string",
-                        "description": "Steamapp branch password",
-                        "name": "betapassword",
-                        "in": "query"
-                    },
-                    {
                         "description": "Steamapp detail",
                         "name": "request",
                         "in": "body",
@@ -363,10 +330,7 @@
                 ],
                 "responses": {
                     "202": {
-                        "description": "Accepted",
-                        "schema": {
-                            "$ref": "#/definitions/Steamapp"
-                        }
+                        "description": "Accepted"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -414,6 +378,9 @@
                 "base_image": {
                     "type": "string"
                 },
+                "beta_password": {
+                    "type": "string"
+                },
                 "branch": {
                     "type": "string"
                 },
@@ -452,6 +419,21 @@
                 },
                 "platform_type": {
                     "type": "string"
+                },
+                "ports": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SteamappPort"
+                    }
+                },
+                "resources": {
+                    "$ref": "#/definitions/SteamappResources"
+                },
+                "volumes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SteamappVolume"
+                    }
                 }
             }
         },
@@ -465,6 +447,9 @@
                     }
                 },
                 "base_image": {
+                    "type": "string"
+                },
+                "beta_password": {
                     "type": "string"
                 },
                 "cmd": {
@@ -489,6 +474,46 @@
                     "type": "string"
                 },
                 "platform_type": {
+                    "type": "string"
+                },
+                "ports": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SteamappPort"
+                    }
+                },
+                "resources": {
+                    "$ref": "#/definitions/SteamappResources"
+                },
+                "volumes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SteamappVolume"
+                    }
+                }
+            }
+        },
+        "SteamappPort": {
+            "type": "object",
+            "properties": {
+                "port": {
+                    "type": "integer"
+                },
+                "protocols": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "SteamappResources": {
+            "type": "object",
+            "properties": {
+                "cpu": {
+                    "type": "string"
+                },
+                "memory": {
                     "type": "string"
                 }
             }
@@ -512,6 +537,14 @@
                     "type": "boolean"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "SteamappVolume": {
+            "type": "object",
+            "properties": {
+                "path": {
                     "type": "string"
                 }
             }

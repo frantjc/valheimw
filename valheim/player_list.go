@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	xslice "github.com/frantjc/x/slice"
+	xslices "github.com/frantjc/x/slices"
 )
 
 var (
@@ -87,7 +87,7 @@ func writePlayerListFile(name string, playerIDs []int64) error {
 			return err
 		}
 
-		playerIDs = xslice.Unique(append(currentPlayerIDs, playerIDs...))
+		playerIDs = xslices.Unique(append(currentPlayerIDs, playerIDs...))
 
 		return WritePlayerList(f, playerIDs)
 	}

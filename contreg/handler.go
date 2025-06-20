@@ -11,8 +11,8 @@ import (
 	"github.com/frantjc/go-ingress"
 	"github.com/frantjc/sindri/internal/httputil"
 	"github.com/frantjc/sindri/internal/imgutil"
+	"github.com/frantjc/sindri/internal/logutil"
 	xhttp "github.com/frantjc/x/net/http"
-	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 )
 
@@ -55,7 +55,7 @@ func NewPullHandler(puller Puller) http.Handler {
 						ep        = split[lenSplit-2]
 						name      = strings.Join(split[2:lenSplit-2], "/")
 						reference = split[lenSplit-1]
-						log       = logr.FromContextOrDiscard(r.Context()).WithValues(
+						log       = logutil.SloggerFrom(r.Context()).With(
 							"method", r.Method,
 							"name", name,
 							"reference", reference,
@@ -63,14 +63,14 @@ func NewPullHandler(puller Puller) http.Handler {
 						)
 					)
 
-					r = r.WithContext(logr.NewContext(r.Context(), log))
+					r = r.WithContext(logutil.SloggerInto(r.Context(), log))
 					log.Info(ep)
 
 					switch ep {
 					case "manifests":
 						if r.Method == http.MethodHead {
 							if err := puller.HeadManifest(r.Context(), name, reference); err != nil {
-								log.Error(err, ep)
+								log.Error(ep, "err", err.Error())
 								http.Error(w, err.Error(), httputil.HTTPStatusCode(err))
 								return
 							}
@@ -81,21 +81,21 @@ func NewPullHandler(puller Puller) http.Handler {
 
 						manifest, err := puller.GetManifest(r.Context(), name, reference)
 						if err != nil {
-							log.Error(err, ep)
+							log.Error(ep, "err", err.Error())
 							http.Error(w, err.Error(), httputil.HTTPStatusCode(err))
 							return
 						}
 
 						digest, err := imgutil.GetManifestDigest(manifest)
 						if err != nil {
-							log.Error(err, ep)
+							log.Error(ep, "err", err.Error())
 							http.Error(w, err.Error(), httputil.HTTPStatusCode(err))
 							return
 						}
 
 						buf := new(bytes.Buffer)
 						if err = json.NewEncoder(buf).Encode(manifest); err != nil {
-							log.Error(err, ep)
+							log.Error(ep, "err", err.Error())
 							http.Error(w, err.Error(), httputil.HTTPStatusCode(err))
 							return
 						}
@@ -108,7 +108,7 @@ func NewPullHandler(puller Puller) http.Handler {
 					case "blobs":
 						if r.Method == http.MethodHead {
 							if err := puller.HeadBlob(r.Context(), name, reference); err != nil {
-								log.Error(err, ep)
+								log.Error(ep, "err", err.Error())
 								http.Error(w, err.Error(), httputil.HTTPStatusCode(err))
 								return
 							}
@@ -119,14 +119,14 @@ func NewPullHandler(puller Puller) http.Handler {
 
 						blob, err := puller.GetBlob(r.Context(), name, reference)
 						if err != nil {
-							log.Error(err, ep)
+							log.Error(ep, "err", err.Error())
 							http.Error(w, err.Error(), httputil.HTTPStatusCode(err))
 							return
 						}
 
 						hash, err := blob.Digest()
 						if err != nil {
-							log.Error(err, "blob digest")
+							log.Error("blob digest", "err", err.Error())
 							http.Error(w, err.Error(), httputil.HTTPStatusCode(err))
 							return
 						}
@@ -135,7 +135,7 @@ func NewPullHandler(puller Puller) http.Handler {
 
 						rc, err := blob.Compressed()
 						if err != nil {
-							log.Error(err, "compressed blob reader")
+							log.Error("compressed blob reader", "err", err.Error())
 							http.Error(w, err.Error(), httputil.HTTPStatusCode(err))
 							return
 						}

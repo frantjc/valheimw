@@ -13,7 +13,7 @@ import (
 	xtar "github.com/frantjc/x/archive/tar"
 	xzip "github.com/frantjc/x/archive/zip"
 	xio "github.com/frantjc/x/io"
-	xslice "github.com/frantjc/x/slice"
+	xslices "github.com/frantjc/x/slices"
 )
 
 type OpenOpts struct {
@@ -54,7 +54,7 @@ func Open(ctx context.Context, pkg *Package, opts ...Opt) (io.ReadCloser, error)
 		return nil, err
 	}
 
-	pkgZipRdr.File = xslice.Map(pkgZipRdr.File, func(f *zip.File, _ int) *zip.File {
+	pkgZipRdr.File = xslices.Map(pkgZipRdr.File, func(f *zip.File, _ int) *zip.File {
 		f.Name = strings.ReplaceAll(f.Name, "\\", "/")
 		f.Name = strings.TrimPrefix(f.Name, pkg.Name)
 		return f
