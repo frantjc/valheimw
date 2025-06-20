@@ -10,6 +10,7 @@ import (
 
 	"github.com/frantjc/sindri/contreg"
 	"github.com/frantjc/sindri/internal/cache"
+	"github.com/frantjc/sindri/internal/dummy"
 	"github.com/frantjc/sindri/internal/logutil"
 	"github.com/frantjc/sindri/steamapp"
 	"github.com/moby/buildkit/client"
@@ -86,7 +87,7 @@ func NewBoiler() *cobra.Command {
 	cmd.Flags().IntVar(&addr, "addr", 5000, "Port for boiler to listen on")
 	cmd.Flags().StringVar(&buildkitd, "buildkitd", appdefaults.Address, "BuildKitd URL for boiler")
 	cmd.Flags().StringVar(&bucket, "bucket", fmt.Sprintf("file://%s?create_dir=1&no_tmp_dir=1", filepath.Join(cache.Dir, "boiler")), "Bucket URL for boiler")
-	cmd.Flags().StringVar(&db, "db", fmt.Sprintf("dummy://%s", steamapp.DefaultDir), "Database URL for boiler")
+	cmd.Flags().StringVar(&db, "db", fmt.Sprintf("%s://%s", steamapp.DefaultDir, dummy.Scheme), "Database URL for boiler")
 
 	return cmd
 }
