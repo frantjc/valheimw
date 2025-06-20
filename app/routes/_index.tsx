@@ -3,7 +3,7 @@ import { useLoaderData } from "@remix-run/react";
 import React from "react";
 import { BsClipboard, BsClipboardCheck } from "react-icons/bs";
 import { getSteamapp, getSteamapps, Steamapp, SteamappSummary } from "~/client";
-import { CodeModal } from "~/lib/code_modal";
+import { CodeModal } from "~/components/CodeModal";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const meta: MetaFunction = () => {

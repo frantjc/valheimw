@@ -24,7 +24,12 @@ export function generateContainerDefinition(steamapp: Steamapp | undefined): str
     "",
     "FROM " + steamapp.base_image,
     steamapp.apt_packages && steamapp.apt_packages.length
-      ? `RUN apt-get update -y && apt-get install -y --no-install-recommends ${steamapp.apt_packages.join(" ")} && rm -rf /var/lib/apt/lists/* && apt-get clean`
+      ? [
+          "RUN apt-get update -y \\",
+          "  && apt-get install -y --no-install-recommends " + steamapp.apt_packages.join(" ") + " \\",
+          "  && rm -rf /var/lib/apt/lists/* \\",
+          "  && apt-get clean"
+        ].join("\n")
       : "",
     "RUN groupadd --system steam \\",
     "  && useradd --system --gid steam --shell /bin/bash --create-home steam",
