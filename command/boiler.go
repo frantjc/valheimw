@@ -87,7 +87,7 @@ func NewBoiler() *cobra.Command {
 	cmd.Flags().IntVar(&addr, "addr", 5000, "Port for boiler to listen on")
 	cmd.Flags().StringVar(&buildkitd, "buildkitd", appdefaults.Address, "BuildKitd URL for boiler")
 	cmd.Flags().StringVar(&bucket, "bucket", fmt.Sprintf("file://%s?create_dir=1&no_tmp_dir=1", filepath.Join(cache.Dir, "boiler")), "Bucket URL for boiler")
-	cmd.Flags().StringVar(&db, "db", fmt.Sprintf("%s://%s", steamapp.DefaultDir, dummy.Scheme), "Database URL for boiler")
+	cmd.Flags().StringVar(&db, "db", fmt.Sprintf("%s://%s", dummy.Scheme, steamapp.DefaultDir), "Database URL for boiler")
 
 	return cmd
 }
