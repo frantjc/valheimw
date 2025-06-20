@@ -6,19 +6,27 @@
 
 ## Running locally
 
-If you want to develop the frontend without needing Stoker running, you can run the it with hot-reloading using builtin dummy data:
+### Using `kind`
+
+```sh
+make dev
+```
+
+### Frontend only
 
 ```sh
 STOKER_URL=dummy:// yarn dev
 ```
 
-If you want to develop (against) the backend, the first time you're running against a cluster or any time you change the types of a CRD, run:
+### Using your own Kubernetes cluster
+
+The first time you're running against a cluster or any time you change the types of a CRD, run:
 
 ```sh
 make apply
 ```
 
-Now you can the backend services against your cluster:
+Now you can run the backend services against your cluster:
 
 ```sh
 docker compose up --build stoker boiler migrate
@@ -28,10 +36,10 @@ The migrate service just initializes the cluster with some well-known Steamapps,
 
 The boiler service is only necessary if you intend to `docker pull` a Steamapp image.
 
-After its first run, you'll need to approve the Steamapps, otherwise they Stoker won't return them. This manual step is here to avoid running arbitrary code without validation during the build process.
+After its first run, you'll need to approve the Steamapps, otherwise Stoker won't return them. This manual step exists to avoid running arbitrary code without validation during the build process.
 
 ```sh
-go run ./cmd/kubectl-approve-steamapps --all
+go run ./cmd/kubectl-approve_steamapps --all
 ```
 
 If you're developing the frontend, you can bring it up with hot-reloading, too:

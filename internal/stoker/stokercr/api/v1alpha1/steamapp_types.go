@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -17,9 +18,13 @@ type SteamappSpecImageOpts struct {
 	BaseImageRef string `json:"baseImage,omitempty"`
 	// +kubebuilder:validation:Optional
 	AptPkgs []string `json:"aptPackages,omitempty"`
-	// +kubebuilder:default=server
+	// +kubebuilder:default="public"
+	Branch string `json:"branch,omitempty"`
+	// +kubebuilder:validation:Optional
+	BetaPassword string `json:"betaPassword,omitempty"`
+	// +kubebuilder:default="server"
 	LaunchType string `json:"launchType,omitempty"`
-	// +kubebuilder:default=linux
+	// +kubebuilder:default="linux"
 	// +kubebuilder:validation:Enum=linux;windows;macos
 	PlatformType string `json:"platformType,omitempty"`
 	// +kubebuilder:validation:Optional
@@ -36,12 +41,29 @@ type SteamappSpec struct {
 	// +kubebuilder:validation:Minimum=10
 	// +kubebuilder:validation:MultipleOf=10
 	AppID int `json:"appID"`
-	// +kubebuilder:default=public
-	Branch string `json:"branch,omitempty"`
 	// +kubebuilder:validation:Optional
-	BetaPassword string `json:"betaPassword,omitempty"`
+	Ports []SteamappPort `json:"ports,omitempty"`
+	// +kubebuilder:validation:Optional
+	Resources corev1.ResourceList `json:"resources,omitempty"`
+	// +kubebuilder:validation:Optional
+	Volumes []SteamappVolume `json:"volumes,omitempty"`
 	// +kubebuilder:validation:Optional
 	SteamappSpecImageOpts `json:",inline"`
+}
+
+type SteamappPort struct {
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65536
+	Port int32 `json:"port"`
+	// Protocols for port.
+	// +kubebuilder:default={"UDP"}
+	Protocols []corev1.Protocol `json:"protocols,omitempty"`
+}
+
+type SteamappVolume struct {
+	// +kubebuilder:validation:Required
+	Path string `json:"path"`
 }
 
 const (
@@ -53,7 +75,7 @@ const (
 
 // SteamappStatus defines the observed state of Steamapp.
 type SteamappStatus struct {
-	// +kubebuilder:default=Pending
+	// +kubebuilder:default="Pending"
 	// +kubebuilder:validation:Enum=Pending;Ready;Failed;Paused
 	Phase string `json:"phase"`
 	// +kubebuilder:validation:Optional

@@ -7,11 +7,36 @@ endif
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+DOCKER ?= docker
 GO ?= go
+KUBECTL ?= kubectl
+YARN ?= yarn
 
 .PHONY: apply
 apply: manifests
-	@kubectl apply -f internal/stoker/stokercr/config/crd
+	@$(KUBECTL) apply -f internal/stoker/stokercr/config/crd
+
+KIND_CLUSTER_NAME ?= sindri
+
+.PHONY: dev
+dev: $(KIND)
+	@if ! $(KIND) get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
+		$(KIND) create cluster --config hack/kind.yml --kubeconfig dev/config --name $(KIND_CLUSTER_NAME); \
+	else \
+		$(KIND) get kubeconfig --name $(KIND_CLUSTER_NAME) > dev/config; \
+	fi
+	@$(MAKE) apply KUBECONFIG=dev/config
+	@if ! $(KUBECTL) --kubeconfig dev/config get ns sindri-system; then \
+		$(KUBECTL) --kubeconfig dev/config create ns sindri-system; \
+	fi
+	@$(DOCKER) compose create buildkitd
+	@if ! $(DOCKER) network inspect sindri_default --format '{{range .Containers}}{{.Name}}{{end}}' | grep -q "$(KIND_CLUSTER_NAME)-control-plane"; then \
+		$(DOCKER) network connect sindri_default $(KIND_CLUSTER_NAME)-control-plane; \
+	fi
+	@$(KIND) get kubeconfig --name $(KIND_CLUSTER_NAME) --internal > dev/internal
+	@KUBECONFIG=./dev/internal $(DOCKER) compose up --build --detach stoker migrate
+	@$(GO) run ./cmd/kubectl-approve_steamapps --kubeconfig dev/config --all
+	@STOKER_URL=http://localhost:5050 $(YARN) $@
 
 .PHONY: manifests
 manifests: internal/stoker/stokercr/config/crd
@@ -43,7 +68,9 @@ gen: generate
 internal/stoker/swagger.json: swag
 	@$(SWAG) fmt -g api.go --dir internal/stoker
 	@$(SWAG) init -g api.go --dir internal/stoker --output internal/stoker --outputTypes json --parseInternal
-	@sed -i 's/stoker\.//g' $@
+	@sed 's/stoker\.//g' $@ > internal/stoker/swagger.json.tmp
+	@cat internal/stoker/swagger.json.tmp > $@
+	@rm internal/stoker/swagger.json.tmp
 	@echo >> $@
 
 .PHONY: swagger
@@ -55,10 +82,12 @@ $(LOCALBIN):
 
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
+KIND ?= $(LOCALBIN)/kind
 SWAG ?= $(LOCALBIN)/swag
 
 CONTROLLER_TOOLS_VERSION ?= v0.17.1
 GOLANGCI_LINT_VERSION ?= v2.1.5
+KIND_VERSION ?= v0.29.0
 SWAG_VERSION ?= v1.16.4
 
 .PHONY: controller-gen
@@ -70,6 +99,11 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 golangci-lint: $(GOLANGCI_LINT)
 $(GOLANGCI_LINT): $(LOCALBIN)
 	@$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+
+.PHONY: kind
+kind: $(KIND)
+$(KIND): $(LOCALBIN)
+	@$(call go-install-tool,$(KIND),sigs.k8s.io/kind,$(KIND_VERSION))
 
 .PHONY: swag
 swag: $(SWAG)

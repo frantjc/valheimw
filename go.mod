@@ -8,8 +8,8 @@ require (
 	github.com/adrg/xdg v0.5.3
 	github.com/frantjc/go-ingress v0.3.0
 	github.com/frantjc/go-reproducible-builds v0.0.0-20241021140423-9651d3e86a85
-	github.com/frantjc/go-steamcmd v0.0.0-20250310173726-82d7a360675a
-	github.com/frantjc/x v0.0.0-20250313024319-704d6c833b5b
+	github.com/frantjc/go-steamcmd v0.0.0-20250610160823-27a654624483
+	github.com/frantjc/x v0.0.0-20250610102853-b97418de6613
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-logr/logr v1.4.3
 	github.com/go-openapi/spec v0.21.0
@@ -83,7 +83,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/frantjc/go-encoding-vdf v0.0.0-20250217055241-10dc1a0e728f // indirect
+	github.com/frantjc/go-encoding-vdf v0.0.0-20250505052333-4ba0456e21d7 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect

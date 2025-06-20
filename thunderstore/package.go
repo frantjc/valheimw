@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	xslice "github.com/frantjc/x/slice"
+	xslices "github.com/frantjc/x/slices"
 )
 
 type Package struct {
@@ -101,7 +101,7 @@ func ParsePackage(s string) (*Package, error) {
 		lenParts = len(parts)
 	)
 	switch {
-	case xslice.Some(parts, func(part string, _ int) bool {
+	case xslices.Some(parts, func(part string, _ int) bool {
 		return part == ""
 	}):
 	case lenParts == 2:
@@ -126,7 +126,7 @@ func ParsePackageFullname(s string) (*Package, error) {
 		lenParts = len(parts)
 	)
 	switch {
-	case xslice.Some(parts, func(part string, _ int) bool {
+	case xslices.Some(parts, func(part string, _ int) bool {
 		return part == ""
 	}):
 	case lenParts == 2:
