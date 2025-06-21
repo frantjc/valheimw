@@ -34,8 +34,7 @@ export function generateContainerDefinition(steamapp: Steamapp | undefined): str
       : "",
     "RUN groupadd --system steam \\",
     "  && useradd --system --gid steam --shell /bin/bash --create-home steam",
-    "USER steam",
-    "COPY --from=steamcmd /mnt /home/steam",
+    "COPY --from=steamcmd --chown=steam:steam /mnt /home/steam",
     steamapp.execs && steamapp.execs.length
       ? [
           "RUN " + steamapp.execs[0] + (steamapp.execs.length > 1 ? " \\" : ""),
@@ -46,6 +45,7 @@ export function generateContainerDefinition(steamapp: Steamapp | undefined): str
           )
         ].join("\n")
       : "",
+    "USER steam",
     steamapp.entrypoint && steamapp.entrypoint.length
       ? `ENTRYPOINT [${steamapp.entrypoint.map(e => `"${e}"`).join(", ")}]`
       : "",
