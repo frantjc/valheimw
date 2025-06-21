@@ -5,8 +5,7 @@ import { BsClipboard, BsClipboardCheck } from "react-icons/bs";
 import { getSteamapp, getSteamapps, Steamapp, SteamappSummary } from "~/client";
 import { CodeModal } from "~/components/CodeModal";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const meta: MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const title = "Sindri";
   const description = "Read-only container registry for Steamapp images.";
 
@@ -207,7 +206,6 @@ export default function Index() {
                 <th className="border-gray-500" />
                 <th className="border-gray-500 font-bold">Steamapp</th>
                 <th className="border-gray-500 font-bold">Image</th>
-                <th className="border-gray-500 font-bold">Definition</th>
               </tr>
             </thead>
             <tbody>

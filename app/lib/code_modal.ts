@@ -26,7 +26,8 @@ export function generateContainerDefinition(steamapp: Steamapp | undefined): str
     steamapp.apt_packages && steamapp.apt_packages.length
       ? [
           "RUN apt-get update -y \\",
-          "  && apt-get install -y --no-install-recommends " + steamapp.apt_packages.join(" ") + " \\",
+          "  && apt-get install -y --no-install-recommends \\",
+          ...steamapp.apt_packages.map(pkg => `    ${pkg} \\`),
           "  && rm -rf /var/lib/apt/lists/* \\",
           "  && apt-get clean"
         ].join("\n")
@@ -36,9 +37,15 @@ export function generateContainerDefinition(steamapp: Steamapp | undefined): str
     "USER steam",
     "COPY --from=steamcmd /mnt /home/steam",
     steamapp.execs && steamapp.execs.length
-      ? `RUN ${steamapp.execs.join(" && ")}`
+      ? [
+          "RUN " + steamapp.execs[0] + (steamapp.execs.length > 1 ? " \\" : ""),
+          ...steamapp.execs.slice(1).map((exec, i) => 
+            i === steamapp.execs!.length - 2 
+              ? `  && ${exec}` 
+              : `  && ${exec} \\`
+          )
+        ].join("\n")
       : "",
-    "",
     steamapp.entrypoint && steamapp.entrypoint.length
       ? `ENTRYPOINT [${steamapp.entrypoint.map(e => `"${e}"`).join(", ")}]`
       : "",
