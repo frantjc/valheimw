@@ -48,7 +48,7 @@ RUN apt-get update -y \
         lib32gcc-s1 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
-ENV NODE_ENV production
+ENV NODE_ENV=production
 ENTRYPOINT ["/usr/local/bin/stoker"]
 COPY server.js package.json /app/
 COPY --from=build /stoker /usr/local/bin/stoker

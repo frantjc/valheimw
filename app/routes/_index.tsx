@@ -3,7 +3,7 @@ import { useLoaderData } from "@remix-run/react";
 import React from "react";
 import { BsClipboard, BsClipboardCheck } from "react-icons/bs";
 import { getSteamapp, getSteamapps, Steamapp, SteamappSummary } from "~/client";
-import { CodeModal } from "~/components";
+import { CodeModal } from "~/components/CodeModal";
 
 export const meta: MetaFunction = () => {
   const title = "Sindri";
@@ -206,7 +206,6 @@ export default function Index() {
                 <th className="border-gray-500" />
                 <th className="border-gray-500 font-bold">Steamapp</th>
                 <th className="border-gray-500 font-bold">Image</th>
-                <th className="border-gray-500 font-bold">Definition</th>
               </tr>
             </thead>
             <tbody>

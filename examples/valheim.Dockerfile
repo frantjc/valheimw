@@ -16,8 +16,8 @@ RUN apt-get update -y && \
   && apt-get clean \
   && groupadd --system steam \
   && useradd --system --gid steam --shell /bin/bash --create-home steam 
-USER steam
-COPY --from=steamcmd /mnt /home/steam
+COPY --from=steamcmd --chown=steam:steam /mnt /home/steam
 RUN rm -r /home/steam/docker /home/steam/docker_start_server.sh /home/steam/start_server_xterm.sh /home/steam/start_server.sh \
   && ln -s /home/steam/linux64/steamclient.so /usr/lib/x86_64-linux-gnu/steamclient.so
+USER steam
 ENTRYPOINT ["/home/steam/valheim_server.x86_64"]
