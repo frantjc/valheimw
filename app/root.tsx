@@ -34,15 +34,31 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="max-w-screen overflow-x-hidden">
             <header className="border-b border-gray-500">
               <nav className="flex h-14 items-center justify-between px-4">
-                <a className="text-2xl font-bold hover:text-gray-500" aria-label="Home" href="/">Sindri</a>
+                <a
+                  className="text-2xl font-bold hover:text-gray-500"
+                  aria-label="Home"
+                  href="/"
+                >
+                  Sindri
+                </a>
                 <ul className="flex items-center gap-6">
                   <li>
-                    <a href="https://github.com/frantjc/sindri" target="_blank" rel="noopener noreferrer" className="hover:text-gray-500">
+                    <a
+                      href="https://github.com/frantjc/sindri"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-gray-500"
+                    >
                       <FaGithub className="h-6 w-6" />
                     </a>
                   </li>
                   <li>
-                    <a href="/api/v1" target="_blank" rel="noopener noreferrer" className="hover:text-gray-500">
+                    <a
+                      href="/api/v1"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-gray-500"
+                    >
                       <TbApi className="h-6 w-6" />
                     </a>
                   </li>
@@ -70,13 +86,11 @@ export function ErrorBoundary() {
 
   return (
     <Layout>
-      {
-        isRouteErrorResponse(err)
-          ? err.statusText
-          : err instanceof Error
-            ? err.message
-            : "Unknown error"
-      }
+      {isRouteErrorResponse(err)
+        ? err.statusText
+        : err instanceof Error
+          ? err.message
+          : "Unknown error"}
     </Layout>
   );
 }
