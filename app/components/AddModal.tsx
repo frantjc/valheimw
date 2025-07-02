@@ -22,6 +22,50 @@ export function AddModal({ open, onClose }: AddModalProps) {
     resources: { cpu: "", memory: "" },
   });
 
+  const [aptPackageInput, setAptPackageInput] = React.useState("");
+
+  const addAptPackage = () => {
+    if (
+      aptPackageInput.trim() &&
+      !(formData.apt_packages ?? []).includes(aptPackageInput.trim())
+    ) {
+      setFormData(prev => ({
+        ...prev,
+        apt_packages: [...(prev.apt_packages ?? []), aptPackageInput.trim()]
+      }));
+      setAptPackageInput("");
+    }
+  };
+
+  const removeAptPackage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      apt_packages: (prev.apt_packages ?? []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const [execInput, setExecInput] = React.useState("");
+
+  const addExec = () => {
+    if (
+      execInput.trim() &&
+      !(formData.execs ?? []).includes(execInput.trim())
+    ) {
+      setFormData(prev => ({
+        ...prev,
+        execs: [...(prev.execs ?? []), execInput.trim()]
+      }));
+      setExecInput("");
+    }
+  };
+
+  const removeExec = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      execs: (prev.execs ?? []).filter((_, i) => i !== index)
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Submit to API
@@ -86,9 +130,169 @@ export function AddModal({ open, onClose }: AddModalProps) {
                   }
                 />
               </div>
+              <div>
+                <label
+                  htmlFor="base_image"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Base Image
+                </label>
+                <input
+                  id="base_image"
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={formData.base_image || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      base_image: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label 
+                  htmlFor="apt_packages"
+                  className="block text-sm font-medium mb-1"
+                >
+                  APT Packages
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    placeholder="e.g. curl, wget, git"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={aptPackageInput}
+                    onChange={(e) => setAptPackageInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addAptPackage();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={addAptPackage}
+                    className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-600"
+                  >
+                    Add
+                  </button>
+                </div>
+                {(formData.apt_packages ?? []).length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {(formData.apt_packages ?? []).map((pkg, index) => (
+                      <span 
+                        key={index}
+                        className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                      >
+                        {pkg}
+                        <button
+                          type="button"
+                          onClick={() => removeAptPackage(index)}
+                          className="text-red-500 hover:text-red-700 font-bold"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label
+                  htmlFor="launch_type"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Launch Type
+                </label>
+                <input
+                  id="launch_type"
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={formData.launch_type || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      launch_type: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="platform_type"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Platform Type
+                </label>
+                <select
+                  id="platform_type"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={formData.platform_type || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      platform_type: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Select platform...</option>
+                  <option value="linux">Linux</option>
+                  <option value="windows">Windows</option>
+                  <option value="macos">macOS</option>
+                </select>
+              </div>
+              <div>
+                <label 
+                  htmlFor="execs"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Executables
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={execInput}
+                    onChange={(e) => setExecInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addExec();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={addExec}
+                    className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-600"
+                  >
+                    Add
+                  </button>
+                </div>
+                {(formData.execs ?? []).length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {(formData.execs ?? []).map((pkg, index) => (
+                      <span 
+                        key={index}
+                        className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                      >
+                        {pkg}
+                        <button
+                          type="button"
+                          onClick={() => removeExec(index)}
+                          className="text-red-500 hover:text-red-700 font-bold"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-
           <div className="flex justify-start gap-3 mt-8 pt-4 border-t">
             <button
               type="submit"
