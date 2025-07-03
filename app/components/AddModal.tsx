@@ -23,7 +23,6 @@ export function AddModal({ open, onClose }: AddModalProps) {
   });
 
   const [aptPackageInput, setAptPackageInput] = React.useState("");
-
   const addAptPackage = () => {
     if (
       aptPackageInput.trim() &&
@@ -45,7 +44,6 @@ export function AddModal({ open, onClose }: AddModalProps) {
   };
 
   const [execInput, setExecInput] = React.useState("");
-
   const addExec = () => {
     if (
       execInput.trim() &&
@@ -64,6 +62,50 @@ export function AddModal({ open, onClose }: AddModalProps) {
       ...prev,
       execs: (prev.execs ?? []).filter((_, i) => i !== index)
     }));
+  };
+
+  const [entrypointInput, setEntrypointInput] = React.useState("");
+  const addEntrypoint = () => {
+    if (
+      entrypointInput.trim() &&
+      !(formData.entrypoint ?? []).includes(entrypointInput.trim())
+    ) {
+      setFormData(prev => ({
+        ...prev,
+        entrypoint: [...(prev.entrypoint ?? []), entrypointInput.trim()]
+      }));
+      setEntrypointInput("");
+    }
+  };
+
+  const removeEntrypoint = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      entrypoint: (prev.entrypoint ?? []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleCancel = () => {
+    setFormData({
+      app_id: 0,
+      base_image: "",
+      apt_packages: [],
+      beta_password: "",
+      launch_type: "",
+      platform_type: "",
+      execs: [],
+      entrypoint: [],
+      cmd: [],
+      ports: [],
+      volumes: [],
+      resources: { cpu: "", memory: "" },
+    });
+    
+    setAptPackageInput("");
+    setExecInput("");
+    setEntrypointInput("");
+    
+    onClose();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -291,6 +333,54 @@ export function AddModal({ open, onClose }: AddModalProps) {
                   </div>
                 )}
               </div>
+              <div>
+                <label 
+                  htmlFor="entrypoints"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Entrypoints
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={entrypointInput}
+                    onChange={(e) => setEntrypointInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addEntrypoint();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={addEntrypoint}
+                    className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-600"
+                  >
+                    Add
+                  </button>
+                </div>
+                {(formData.entrypoint ?? []).length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {(formData.entrypoint ?? []).map((pkg, index) => (
+                      <span
+                        key={index}
+                        className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                      >
+                        {pkg}
+                        <button
+                          type="button"
+                          onClick={() => removeEntrypoint(index)}
+                          className="text-red-500 hover:text-red-700 font-bold"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex justify-start gap-3 mt-8 pt-4 border-t">
@@ -302,8 +392,8 @@ export function AddModal({ open, onClose }: AddModalProps) {
             </button>
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+              onClick={handleCancel}
+              className="px-4 py-2 bg-red-500 text-white border border-red-500 rounded hover:bg-red-600"
             >
               Cancel
             </button>
