@@ -85,6 +85,27 @@ export function AddModal({ open, onClose }: AddModalProps) {
     }));
   };
 
+  const [cmdInput, setCmdInput] = React.useState("");
+  const addCmd = () => {
+    if (
+      cmdInput.trim() &&
+      !(formData.cmd ?? []).includes(cmdInput.trim())
+    ) {
+      setFormData(prev => ({
+        ...prev,
+        cmd: [...(prev.cmd ?? []), cmdInput.trim()]
+      }));
+      setCmdInput("");
+    }
+  };
+
+  const removeCmd = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      cmd: (prev.cmd ?? []).filter((_, i) => i !== index)
+    }));
+  };
+
   const handleCancel = () => {
     setFormData({
       app_id: 0,
@@ -104,6 +125,7 @@ export function AddModal({ open, onClose }: AddModalProps) {
     setAptPackageInput("");
     setExecInput("");
     setEntrypointInput("");
+    setCmdInput("");
     
     onClose();
   };
@@ -113,6 +135,14 @@ export function AddModal({ open, onClose }: AddModalProps) {
     // TODO: Submit to API
     console.log("Submitting:", formData);
     onClose();
+  };
+
+  const isFormValid = () => {
+    const hasAppId = formData.app_id > 0;
+    const hasBranch = formData.branch && formData.branch.trim() !== "";
+    const hasBetaPassword = formData.beta_password && formData.beta_password.trim() !== "";
+
+    return hasAppId && (!hasBranch || hasBetaPassword);
   };
 
   if (!open) return null;
@@ -381,12 +411,116 @@ export function AddModal({ open, onClose }: AddModalProps) {
                   </div>
                 )}
               </div>
+              <div>
+                <label 
+                  htmlFor="commands"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Commands
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={cmdInput}
+                    onChange={(e) => setCmdInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addCmd();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={addCmd}
+                    className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-600"
+                  >
+                    Add
+                  </button>
+                </div>
+                {(formData.cmd ?? []).length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {(formData.cmd ?? []).map((pkg, index) => (
+                      <span
+                        key={index}
+                        className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                      >
+                        {pkg}
+                        <button
+                          type="button"
+                          onClick={() => removeCmd(index)}
+                          className="text-red-500 hover:text-red-700 font-bold"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label
+                  htmlFor="branch"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Branch
+                </label>
+                <input
+                  id="branch"
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={formData.branch || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      branch: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="beta_password"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Beta Password {formData.branch && formData.branch.trim() !== "" ? "*" : ""}
+                </label>
+                <input
+                  id="beta_password"
+                  type="text"
+                  required={!!(formData.branch && formData.branch.trim() !== "")}
+                  disabled={!formData.branch || formData.branch.trim() === ""}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    !formData.branch || formData.branch.trim() === "" 
+                      ? "bg-gray-100 cursor-not-allowed" 
+                      : ""
+                  }`}
+                  value={formData.beta_password || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      beta_password: e.target.value,
+                    }))
+                  }
+                />
+                {formData.branch && formData.branch.trim() !== "" && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    Beta password is required when branch is specified
+                  </p>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex justify-start gap-3 mt-8 pt-4 border-t">
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-600"
+              disabled={!isFormValid()}
+              className={`px-4 py-2 text-white rounded ${
+                isFormValid()
+                  ? "bg-blue-400 hover:bg-blue-600 cursor-pointer"
+                  : "bg-gray-400 cursor-not-allowed"
+              }`}
             >
               Submit
             </button>
