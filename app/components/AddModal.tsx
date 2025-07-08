@@ -19,6 +19,9 @@ export function AddModal({ open, onClose }: AddModalProps) {
     cmd: [],
   });
 
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
   const [aptPackageInput, setAptPackageInput] = React.useState("");
   const addAptPackage = () => {
     if (
@@ -127,13 +130,44 @@ export function AddModal({ open, onClose }: AddModalProps) {
     onClose();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const { branch, beta_password, ...body } = formData;
+
+    let url = `/api/v1/steamapp/${formData.app_id}`;
+    if (
+      branch && 
+      branch.trim() !== "" && 
+      beta_password && 
+      beta_password.trim() !== ""
+    ) {
+      url += `/${branch}?beta_password=${encodeURIComponent(beta_password)}`;
+    }
     
-    
-    console.log("Submitting:", formData);
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        throw new Error(`failed to submit steam app: ${res.statusText}`);
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(String(err));
+      }
+    }
+
+    setLoading(false);
     onClose();
-  };
+  }
 
   const isFormValid = () => {
     const hasAppId = formData.app_id > 0;
@@ -512,14 +546,17 @@ export function AddModal({ open, onClose }: AddModalProps) {
                   </p>
                 )}
               </div>
-            </div> { /** Here */}
+            </div>
           </div>
+          {error && (
+            <div className="text-red-600 mb-4">{error}</div>
+          )}
           <div className="flex justify-start gap-3 mt-8 pt-4 border-t">
             <button
               type="submit"
-              disabled={!isFormValid()}
+              disabled={!isFormValid() || loading}
               className={`px-4 py-2 text-white rounded ${
-                isFormValid()
+                isFormValid() && !loading
                   ? "bg-blue-400 hover:bg-blue-600 cursor-pointer"
                   : "bg-gray-400 cursor-not-allowed"
               }`}
