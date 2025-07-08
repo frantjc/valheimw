@@ -17,9 +17,6 @@ export function AddModal({ open, onClose }: AddModalProps) {
     execs: [],
     entrypoint: [],
     cmd: [],
-    ports: [],
-    volumes: [],
-    resources: { cpu: "", memory: "" },
   });
 
   const [aptPackageInput, setAptPackageInput] = React.useState("");
@@ -132,7 +129,8 @@ export function AddModal({ open, onClose }: AddModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Submit to API
+    
+    
     console.log("Submitting:", formData);
     onClose();
   };
@@ -232,7 +230,7 @@ export function AddModal({ open, onClose }: AddModalProps) {
                 <div className="flex gap-2 mb-2">
                   <input
                     type="text"
-                    placeholder="e.g. curl, wget, git"
+                    placeholder="curl"
                     className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={aptPackageInput}
                     onChange={(e) => setAptPackageInput(e.target.value)}
@@ -281,6 +279,7 @@ export function AddModal({ open, onClose }: AddModalProps) {
                 <input
                   id="launch_type"
                   type="text"
+                  placeholder="default"
                   className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.launch_type || ""}
                   onChange={(e) =>
@@ -315,150 +314,153 @@ export function AddModal({ open, onClose }: AddModalProps) {
                   <option value="macos">macOS</option>
                 </select>
               </div>
-              <div>
-                <label 
-                  htmlFor="execs"
-                  className="block text-sm font-medium mb-1"
+            </div>
+            <div className="md:col-span-2">
+              <label 
+                htmlFor="execs"
+                className="block text-sm font-medium mb-1"
+              >
+                Executables
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  placeholder="ln -s /home/steam/linux64/steamclient.so /usr/lib/x86_64-linux-gnu/steamclient.so"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={execInput}
+                  onChange={(e) => setExecInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addExec();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={addExec}
+                  className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-600"
                 >
-                  Executables
-                </label>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={execInput}
-                    onChange={(e) => setExecInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addExec();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={addExec}
-                    className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-600"
-                  >
-                    Add
-                  </button>
-                </div>
-                {(formData.execs ?? []).length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {(formData.execs ?? []).map((pkg, index) => (
-                      <span 
-                        key={index}
-                        className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                      >
-                        {pkg}
-                        <button
-                          type="button"
-                          onClick={() => removeExec(index)}
-                          className="text-red-500 hover:text-red-700 font-bold"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
+                  Add
+                </button>
               </div>
-              <div>
-                <label 
-                  htmlFor="entrypoints"
-                  className="block text-sm font-medium mb-1"
+              {(formData.execs ?? []).length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {(formData.execs ?? []).map((pkg, index) => (
+                    <span 
+                      key={index}
+                      className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                    >
+                      {pkg}
+                      <button
+                        type="button"
+                        onClick={() => removeExec(index)}
+                        className="text-red-500 hover:text-red-700 font-bold"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="md:col-span-2">
+              <label 
+                htmlFor="entrypoints"
+                className="block text-sm font-medium mb-1"
+              >
+                Entrypoints
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={entrypointInput}
+                  onChange={(e) => setEntrypointInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addEntrypoint();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={addEntrypoint}
+                  className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-600"
                 >
-                  Entrypoints
-                </label>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={entrypointInput}
-                    onChange={(e) => setEntrypointInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addEntrypoint();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={addEntrypoint}
-                    className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-600"
-                  >
-                    Add
-                  </button>
-                </div>
-                {(formData.entrypoint ?? []).length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {(formData.entrypoint ?? []).map((pkg, index) => (
-                      <span
-                        key={index}
-                        className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                      >
-                        {pkg}
-                        <button
-                          type="button"
-                          onClick={() => removeEntrypoint(index)}
-                          className="text-red-500 hover:text-red-700 font-bold"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
+                  Add
+                </button>
               </div>
-              <div>
-                <label 
-                  htmlFor="commands"
-                  className="block text-sm font-medium mb-1"
+              {(formData.entrypoint ?? []).length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {(formData.entrypoint ?? []).map((pkg, index) => (
+                    <span
+                      key={index}
+                      className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                    >
+                      {pkg}
+                      <button
+                        type="button"
+                        onClick={() => removeEntrypoint(index)}
+                        className="text-red-500 hover:text-red-700 font-bold"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="md:col-span-2">
+              <label 
+                htmlFor="commands"
+                className="block text-sm font-medium mb-1"
+              >
+                Commands
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={cmdInput}
+                  onChange={(e) => setCmdInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addCmd();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={addCmd}
+                  className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-600"
                 >
-                  Commands
-                </label>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={cmdInput}
-                    onChange={(e) => setCmdInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addCmd();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={addCmd}
-                    className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-600"
-                  >
-                    Add
-                  </button>
-                </div>
-                {(formData.cmd ?? []).length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {(formData.cmd ?? []).map((pkg, index) => (
-                      <span
-                        key={index}
-                        className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                      >
-                        {pkg}
-                        <button
-                          type="button"
-                          onClick={() => removeCmd(index)}
-                          className="text-red-500 hover:text-red-700 font-bold"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
+                  Add
+                </button>
               </div>
+              {(formData.cmd ?? []).length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {(formData.cmd ?? []).map((pkg, index) => (
+                    <span
+                      key={index}
+                      className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                    >
+                      {pkg}
+                      <button
+                        type="button"
+                        onClick={() => removeCmd(index)}
+                        className="text-red-500 hover:text-red-700 font-bold"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="space-y-4">
               <div>
                 <label
                   htmlFor="branch"
@@ -510,7 +512,7 @@ export function AddModal({ open, onClose }: AddModalProps) {
                   </p>
                 )}
               </div>
-            </div>
+            </div> { /** Here */}
           </div>
           <div className="flex justify-start gap-3 mt-8 pt-4 border-t">
             <button
