@@ -7,7 +7,9 @@ type AddModalProps = {
 };
 
 export function AddModal({ open, onClose }: AddModalProps) {
-  const [formData, setFormData] = React.useState<SteamappDetail & {app_id: number, branch?: string}>({
+  const [formData, setFormData] = React.useState<
+    SteamappDetail & { app_id: number; branch?: string }
+  >({
     app_id: 0,
     base_image: "",
     apt_packages: [],
@@ -28,18 +30,18 @@ export function AddModal({ open, onClose }: AddModalProps) {
       aptPackageInput.trim() &&
       !(formData.apt_packages ?? []).includes(aptPackageInput.trim())
     ) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        apt_packages: [...(prev.apt_packages ?? []), aptPackageInput.trim()]
+        apt_packages: [...(prev.apt_packages ?? []), aptPackageInput.trim()],
       }));
       setAptPackageInput("");
     }
   };
 
   const removeAptPackage = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      apt_packages: (prev.apt_packages ?? []).filter((_, i) => i !== index)
+      apt_packages: (prev.apt_packages ?? []).filter((_, i) => i !== index),
     }));
   };
 
@@ -49,18 +51,18 @@ export function AddModal({ open, onClose }: AddModalProps) {
       execInput.trim() &&
       !(formData.execs ?? []).includes(execInput.trim())
     ) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        execs: [...(prev.execs ?? []), execInput.trim()]
+        execs: [...(prev.execs ?? []), execInput.trim()],
       }));
       setExecInput("");
     }
   };
 
   const removeExec = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      execs: (prev.execs ?? []).filter((_, i) => i !== index)
+      execs: (prev.execs ?? []).filter((_, i) => i !== index),
     }));
   };
 
@@ -70,39 +72,36 @@ export function AddModal({ open, onClose }: AddModalProps) {
       entrypointInput.trim() &&
       !(formData.entrypoint ?? []).includes(entrypointInput.trim())
     ) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        entrypoint: [...(prev.entrypoint ?? []), entrypointInput.trim()]
+        entrypoint: [...(prev.entrypoint ?? []), entrypointInput.trim()],
       }));
       setEntrypointInput("");
     }
   };
 
   const removeEntrypoint = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      entrypoint: (prev.entrypoint ?? []).filter((_, i) => i !== index)
+      entrypoint: (prev.entrypoint ?? []).filter((_, i) => i !== index),
     }));
   };
 
   const [cmdInput, setCmdInput] = React.useState("");
   const addCmd = () => {
-    if (
-      cmdInput.trim() &&
-      !(formData.cmd ?? []).includes(cmdInput.trim())
-    ) {
-      setFormData(prev => ({
+    if (cmdInput.trim() && !(formData.cmd ?? []).includes(cmdInput.trim())) {
+      setFormData((prev) => ({
         ...prev,
-        cmd: [...(prev.cmd ?? []), cmdInput.trim()]
+        cmd: [...(prev.cmd ?? []), cmdInput.trim()],
       }));
       setCmdInput("");
     }
   };
 
   const removeCmd = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      cmd: (prev.cmd ?? []).filter((_, i) => i !== index)
+      cmd: (prev.cmd ?? []).filter((_, i) => i !== index),
     }));
   };
 
@@ -121,16 +120,16 @@ export function AddModal({ open, onClose }: AddModalProps) {
       volumes: [],
       resources: { cpu: "", memory: "" },
     });
-    
+
     setAptPackageInput("");
     setExecInput("");
     setEntrypointInput("");
     setCmdInput("");
-    
+
     onClose();
   };
 
-async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -139,14 +138,14 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
 
     let url = `/api/v1/steamapp/${formData.app_id}`;
     if (
-      branch && 
-      branch.trim() !== "" && 
-      beta_password && 
+      branch &&
+      branch.trim() !== "" &&
+      beta_password &&
       beta_password.trim() !== ""
     ) {
       url += `/${branch}?beta_password=${encodeURIComponent(beta_password)}`;
     }
-    
+
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -172,7 +171,8 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
   const isFormValid = () => {
     const hasAppId = formData.app_id > 0;
     const hasBranch = formData.branch && formData.branch.trim() !== "";
-    const hasBetaPassword = formData.beta_password && formData.beta_password.trim() !== "";
+    const hasBetaPassword =
+      formData.beta_password && formData.beta_password.trim() !== "";
 
     return hasAppId && (!hasBranch || hasBetaPassword);
   };
@@ -255,7 +255,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
                 />
               </div>
               <div>
-                <label 
+                <label
                   htmlFor="apt_packages"
                   className="block text-sm font-medium mb-1"
                 >
@@ -269,7 +269,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
                     value={aptPackageInput}
                     onChange={(e) => setAptPackageInput(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         addAptPackage();
                       }
@@ -286,7 +286,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
                 {(formData.apt_packages ?? []).length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {(formData.apt_packages ?? []).map((pkg, index) => (
-                      <span 
+                      <span
                         key={index}
                         className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2"
                       >
@@ -350,10 +350,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
               </div>
             </div>
             <div className="md:col-span-2">
-              <label 
-                htmlFor="execs"
-                className="block text-sm font-medium mb-1"
-              >
+              <label htmlFor="execs" className="block text-sm font-medium mb-1">
                 Executables
               </label>
               <div className="flex gap-2 mb-2">
@@ -364,7 +361,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
                   value={execInput}
                   onChange={(e) => setExecInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       e.preventDefault();
                       addExec();
                     }
@@ -381,7 +378,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
               {(formData.execs ?? []).length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {(formData.execs ?? []).map((pkg, index) => (
-                    <span 
+                    <span
                       key={index}
                       className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2"
                     >
@@ -399,7 +396,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
               )}
             </div>
             <div className="md:col-span-2">
-              <label 
+              <label
                 htmlFor="entrypoints"
                 className="block text-sm font-medium mb-1"
               >
@@ -412,7 +409,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
                   value={entrypointInput}
                   onChange={(e) => setEntrypointInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       e.preventDefault();
                       addEntrypoint();
                     }
@@ -447,7 +444,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
               )}
             </div>
             <div className="md:col-span-2">
-              <label 
+              <label
                 htmlFor="commands"
                 className="block text-sm font-medium mb-1"
               >
@@ -460,7 +457,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
                   value={cmdInput}
                   onChange={(e) => setCmdInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       e.preventDefault();
                       addCmd();
                     }
@@ -520,16 +517,19 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
                   htmlFor="beta_password"
                   className="block text-sm font-medium mb-1"
                 >
-                  Beta Password {formData.branch && formData.branch.trim() !== "" ? "*" : ""}
+                  Beta Password{" "}
+                  {formData.branch && formData.branch.trim() !== "" ? "*" : ""}
                 </label>
                 <input
                   id="beta_password"
                   type="text"
-                  required={!!(formData.branch && formData.branch.trim() !== "")}
+                  required={
+                    !!(formData.branch && formData.branch.trim() !== "")
+                  }
                   disabled={!formData.branch || formData.branch.trim() === ""}
                   className={`w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    !formData.branch || formData.branch.trim() === "" 
-                      ? "bg-gray-100 cursor-not-allowed" 
+                    !formData.branch || formData.branch.trim() === ""
+                      ? "bg-gray-100 cursor-not-allowed"
                       : ""
                   }`}
                   value={formData.beta_password || ""}
@@ -548,9 +548,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
               </div>
             </div>
           </div>
-          {error && (
-            <div className="text-red-600 mb-4">{error}</div>
-          )}
+          {error && <div className="text-red-600 mb-4">{error}</div>}
           <div className="flex justify-start gap-3 mt-8 pt-4 border-t">
             <button
               type="submit"

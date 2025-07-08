@@ -94,7 +94,7 @@ export function getSteamapp(id: number, branch?: string): Promise<Steamapp> {
       headers: {
         Accept: "application/json",
       },
-    },
+    }
   )
     .then(handleError)
     .then((res) => {
@@ -120,15 +120,15 @@ export function getSteamapps({
                   [k]: v.toString(),
                 }
               : acc,
-          {},
-        ),
-      )}`,
+          {}
+        )
+      )}`
     ),
     {
       headers: {
         Accept: "application/json",
       },
-    },
+    }
   )
     .then(handleError)
     .then(async (res) => {

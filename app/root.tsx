@@ -89,8 +89,8 @@ export function ErrorBoundary() {
       {isRouteErrorResponse(err)
         ? err.statusText
         : err instanceof Error
-          ? err.message
-          : "Unknown error"}
+        ? err.message
+        : "Unknown error"}
     </Layout>
   );
 }

@@ -44,7 +44,7 @@ function dummyGetSteamapps(req, res) {
     dummySteamappsKeys.slice(token, end).map((app_id) => ({
       app_id,
       ...dummySteamappsKeys[app_id],
-    })),
+    }))
   );
 }
 
@@ -73,7 +73,7 @@ const viteDevServer =
     : await import("vite").then((vite) =>
         vite.createServer({
           server: { middlewareMode: true },
-        }),
+        })
       );
 
 const remixHandler = createRequestHandler({
@@ -102,7 +102,7 @@ try {
             proxyReqOpts.headers["Host"] = stokerUrl.hostname;
             return proxyReqOpts;
           },
-        }),
+        })
       );
       break;
     case "dummy":
@@ -124,7 +124,7 @@ if (viteDevServer) {
   // Vite fingerprints its assets so we can cache forever.
   app.use(
     "/assets",
-    express.static("build/client/assets", { immutable: true, maxAge: "1y" }),
+    express.static("build/client/assets", { immutable: true, maxAge: "1y" })
   );
 }
 

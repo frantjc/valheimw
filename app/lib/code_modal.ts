@@ -1,7 +1,7 @@
 import { Steamapp } from "../client";
 
 export function generateContainerDefinition(
-  steamapp: Steamapp | undefined,
+  steamapp: Steamapp | undefined
 ): string {
   if (!steamapp) return "";
 
@@ -11,7 +11,7 @@ export function generateContainerDefinition(
     (!steamapp.beta_password || steamapp.beta_password.length === 0)
   ) {
     throw new Error(
-      "Beta branch requires a beta_password, but none was provided",
+      "Beta branch requires a beta_password, but none was provided"
     );
   }
 
@@ -50,7 +50,7 @@ export function generateContainerDefinition(
             .map((exec, i) =>
               i === steamapp.execs!.length - 2
                 ? `  && ${exec}`
-                : `  && ${exec} \\`,
+                : `  && ${exec} \\`
             ),
         ].join("\n")
       : "",

@@ -56,15 +56,18 @@ export default function Index() {
   const [err, setErr] = React.useState<Error>();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleError = React.useCallback((err: any) => {
-    if (err instanceof Error) {
-      setErr(err);
-    } else if (err instanceof Response) {
-      setErr(new Error(`${err.status}: ${err.statusText}`));
-    } else {
-      setErr(new Error(err));
-    }
-  }, [setErr]);
+  const handleError = React.useCallback(
+    (err: any) => {
+      if (err instanceof Error) {
+        setErr(err);
+      } else if (err instanceof Response) {
+        setErr(new Error(`${err.status}: ${err.statusText}`));
+      } else {
+        setErr(new Error(err));
+      }
+    },
+    [setErr]
+  );
 
   const more = React.useCallback(
     (token?: string) => {
@@ -77,15 +80,15 @@ export default function Index() {
                 !s.some(
                   (existing) =>
                     existing.app_id === app.app_id &&
-                    existing.branch === app.branch,
-                ),
+                    existing.branch === app.branch
+                )
             ),
           ]);
           setToken(res.token);
         })
         .catch(handleError);
     },
-    [setSteamapps, setToken, handleError],
+    [setSteamapps, setToken, handleError]
   );
 
   React.useEffect(() => {
@@ -100,7 +103,7 @@ export default function Index() {
     if (steamapps.length && steamapps.length > 1) {
       const timeout = setInterval(
         () => setPrefetchIndex((i) => (i + 1) % steamapps.length),
-        2000,
+        2000
       );
 
       return () => clearTimeout(timeout);
@@ -125,7 +128,7 @@ export default function Index() {
 
       return Promise.resolve(steamapp as Steamapp);
     },
-    [steamapps, setSteamapps],
+    [steamapps, setSteamapps]
   );
 
   const [dockerRunIndex, setDockerRunIndex] = React.useState(0);
@@ -165,7 +168,7 @@ export default function Index() {
           ? steamapp.ports
               .map((port) => ` -p ${port.port}:${port.port}`)
               .join("")
-          : "",
+          : ""
       )
       .concat(` ${host}/${steamapp.app_id.toString()}:${tag}`);
 

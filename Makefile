@@ -55,6 +55,7 @@ generate: controller-gen
 .PHONY: fmt vet test
 fmt vet test:
 	@$(GO) $@ ./...
+	@$(YARN) fmt
 
 .PHONY: lint
 lint: golangci-lint fmt
