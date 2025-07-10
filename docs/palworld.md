@@ -35,19 +35,19 @@ services:
 
 To run the Palworld server this way, run the following commands in the directory that the above files are placed in.
 
-First, run [`boiler`](boiler.md) in the background. We will use it to pre-build a container image with the Palworld server installed:
+First, run [Boiler](boiler.md) in the background. We will use it to pre-build a container image with the Palworld server installed:
 
 ```sh
 docker compose up --detach boiler
 ```
 
-Next, build and run the Palworld server. This will pull a minimal container image with it pre-installed from `boiler` and then run the Palworld server container:
+Next, build and run the Palworld server. This will pull a minimal container image with it pre-installed from Boiler and then run the Palworld server container:
 
 ```sh
 docker compose up --detach palworld
 ```
 
-Finally, `boiler` can be stopped:
+Finally, Boiler can be stopped:
 
 ```sh
 docker compose down boiler

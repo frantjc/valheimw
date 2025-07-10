@@ -39,7 +39,7 @@ This `docker-compose.yml` runs the Core Keeper server. To use it, place it in a 
 docker compose up --detach boiler
 ```
 
-Next, build and run the Core Keeper server. This will pull a minimal container image with it pre-installed from `boiler` and then run the Core Keeper server container:
+Next, build and run the Core Keeper server. This will pull a minimal container image with it pre-installed from Boiler and then run the Core Keeper server container:
 
 ```sh
 docker compose up --detach corekeeper
@@ -49,6 +49,6 @@ docker compose up --detach corekeeper
 
 The server's save data will be stored in `./saves`.
 
-Notably, the Core Keeper server does not any ports exposed, instead using _magic_ to allow players to connect to the server.
+Notably, the Core Keeper server does not need any ports exposed, instead using _magic_ to allow players to connect to the server.
 
 Once the container finishes starting up, the game ID will be in its logs and can be used to connect to the server.

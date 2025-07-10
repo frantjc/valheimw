@@ -30,7 +30,9 @@ describe("generateContainerDefinition", () => {
   it("includes apt packages if present", () => {
     const steamapp = { ...baseSteamapp, apt_packages: ["libfoo", "libbar"] };
     const def = generateContainerDefinition(steamapp);
-    expect(def).toContain("apt-get install -y --no-install-recommends libfoo libbar");
+    expect(def).toContain(
+      "apt-get install -y --no-install-recommends libfoo libbar",
+    );
   });
 
   it("includes execs if present", () => {
@@ -40,15 +42,25 @@ describe("generateContainerDefinition", () => {
   });
 
   it("includes entrypoint and cmd if present", () => {
-    const steamapp = { ...baseSteamapp, entrypoint: ["foo", "bar"], cmd: ["baz"] };
+    const steamapp = {
+      ...baseSteamapp,
+      entrypoint: ["foo", "bar"],
+      cmd: ["baz"],
+    };
     const def = generateContainerDefinition(steamapp);
     expect(def).toContain('ENTRYPOINT ["foo", "bar"]');
     expect(def).toContain('CMD ["baz"]');
   });
 
   it("throws if beta branch is missing beta_password", () => {
-    const steamapp = { ...baseSteamapp, branch: "beta", beta_password: undefined };
-    expect(() => generateContainerDefinition(steamapp)).toThrow(/beta_password/);
+    const steamapp = {
+      ...baseSteamapp,
+      branch: "beta",
+      beta_password: undefined,
+    };
+    expect(() => generateContainerDefinition(steamapp)).toThrow(
+      /beta_password/,
+    );
   });
 
   it("includes beta flags if beta branch and password are present", () => {
