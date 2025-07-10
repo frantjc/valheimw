@@ -31,7 +31,7 @@ describe("generateContainerDefinition", () => {
     const steamapp = { ...baseSteamapp, apt_packages: ["libfoo", "libbar"] };
     const def = generateContainerDefinition(steamapp);
     expect(def).toContain(
-      "apt-get install -y --no-install-recommends libfoo libbar"
+      "apt-get install -y --no-install-recommends libfoo libbar",
     );
   });
 
@@ -59,7 +59,7 @@ describe("generateContainerDefinition", () => {
       beta_password: undefined,
     };
     expect(() => generateContainerDefinition(steamapp)).toThrow(
-      /beta_password/
+      /beta_password/,
     );
   });
 

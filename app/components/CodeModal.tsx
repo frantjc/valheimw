@@ -51,16 +51,16 @@ export function CodeModal({
     }, 0);
   };
 
-  if (!open) return null;
-
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 px-4"
+      className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 px-4 ${
+        open ? "block" : "hidden"
+      }`}
       onClick={onClose}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+        if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
           onClose();
         }
       }}
