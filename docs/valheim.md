@@ -129,4 +129,4 @@ Flags:
 
 ## If you don't want to use `valheimw`...
 
-[`boiler`](boiler.md) is able to help.
+[Boiler](boiler.md) can help.

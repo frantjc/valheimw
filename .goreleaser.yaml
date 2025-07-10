@@ -9,9 +9,9 @@ builds:
       - linux
     goarch:
       - amd64
-    hooks:
-      post:
-        - upx {{ .Path }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
   - main: ./cmd/mist
     id: mist
     binary: mist
@@ -21,9 +21,9 @@ builds:
       - linux
     goarch:
       - amd64
-    hooks:
-      post:
-        - upx {{ .Path }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
   - main: ./cmd/stoker
     id: stoker
     binary: stoker
@@ -33,9 +33,9 @@ builds:
       - linux
     goarch:
       - amd64
-    hooks:
-      post:
-        - upx {{ .Path }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
   - main: ./cmd/valheimw
     id: valheimw
     binary: valheimw
@@ -45,9 +45,20 @@ builds:
       - linux
     goarch:
       - amd64
-    hooks:
-      post:
-        - upx {{ .Path }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+upx:
+  - enabled: true
+checksum:
+  name_template: checksums.txt
+source:
+  enabled: true
+sboms:
+  - artifacts: source
+release:
+  prerelease: auto
+  skip_upload: true
 changelog:
   use: github
   filters:
@@ -56,8 +67,6 @@ changelog:
       - Merge pull request
       - Merge remote-tracking branch
       - Merge branch
-release:
-  skip_upload: true
 dockers:
   - dockerfile: goreleaser.boiler.Dockerfile
     image_templates:
@@ -65,18 +74,39 @@ dockers:
       - ghcr.io/frantjc/boiler:{{ .Major }}.{{ .Minor }}
       - ghcr.io/frantjc/boiler:{{ .Major }}
       - ghcr.io/frantjc/boiler:latest
+    build_flag_templates:
+      - --pull
+      - --label=org.opencontainers.image.created={{ .Date }}
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --platform=linux/amd64
   - dockerfile: goreleaser.mist.Dockerfile
     image_templates:
       - ghcr.io/frantjc/mist:{{ .RawVersion }}
       - ghcr.io/frantjc/mist:{{ .Major }}.{{ .Minor }}
       - ghcr.io/frantjc/mist:{{ .Major }}
       - ghcr.io/frantjc/mist:latest
+    build_flag_templates:
+      - --pull
+      - --label=org.opencontainers.image.created={{ .Date }}
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --platform=linux/amd64
   - dockerfile: goreleaser.stoker.Dockerfile
     image_templates:
       - ghcr.io/frantjc/stoker:{{ .RawVersion }}
       - ghcr.io/frantjc/stoker:{{ .Major }}.{{ .Minor }}
       - ghcr.io/frantjc/stoker:{{ .Major }}
       - ghcr.io/frantjc/stoker:latest
+    build_flag_templates:
+      - --pull
+      - --label=org.opencontainers.image.created={{ .Date }}
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --platform=linux/amd64
     extra_files:
       - app/
       - public/
@@ -93,3 +123,18 @@ dockers:
       - ghcr.io/frantjc/valheimw:{{ .Major }}.{{ .Minor }}
       - ghcr.io/frantjc/valheimw:{{ .Major }}
       - ghcr.io/frantjc/valheimw:latest
+    build_flag_templates:
+      - --pull
+      - --label=org.opencontainers.image.created={{ .Date }}
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --platform=linux/amd64
+docker_signs:
+  - cmd: cosign
+    artifacts: images
+    args:
+      - "sign"
+      - "${artifact}"
+      - "--yes"
+    output: true
