@@ -20,13 +20,13 @@ STOKER_URL=dummy:// yarn dev
 
 ### Using your own Kubernetes cluster
 
-The first time you're running against a cluster or any time you change the types of a CRD, run:
+The first time you're running against a cluster or any time you change the types of a CRD, that CRD needs to be updated in the target cluster.
 
 ```sh
 make apply
 ```
 
-Now you can run the backend services against your cluster:
+Now you can run the backend services against your cluster.
 
 ```sh
 docker compose up --build stoker boiler migrate
@@ -34,7 +34,7 @@ docker compose up --build stoker boiler migrate
 
 The migrate service just initializes the cluster with some well-known Steamapps, so only needs ran once.
 
-The boiler service is only necessary if you intend to `docker pull` a Steamapp image.
+The Boiler service is only necessary if you intend to `docker pull` a Steamapp image.
 
 After its first run, you'll need to approve the Steamapps, otherwise Stoker won't return them. This manual step exists to avoid running arbitrary code without validation during the build process.
 
@@ -65,7 +65,7 @@ An API that handles CRUD for our Steamapp data model which contains the extra in
 
 ### Read-only container registry
 
-An HTTP(S) REST API from which you can `docker pull`, but not `docker push`
+An HTTP(S) REST API which you can `docker pull` from, but not `docker push` to.
 
 ### Kubernetes resource
 
@@ -83,7 +83,7 @@ An instance of a CRD.
 
 A service which connects to a Kubernetes cluster via its kube-apiserver, watches for events relating to a resource, and reacts to them to bring the desired and actual state of the thing that they represent closer together.
 
-Synonomous with Kubernetes operator.
+Synonomous with "Kubernetes operator".
 
 ### Steamapp
 

@@ -1,8 +1,8 @@
 # Mist
 
-`mist` is a CLI tool for use in `Dockerfile`s to install Steamapps, Steam Workshop items, and [thunderstore.io](https://thunderstore.io/) mods. It uses [GoCloud's URL concept](https://gocloud.dev/concepts/urls/) to expose installing the content from the different sources using a similar command.
+Mist is a CLI tool for use in `Dockerfile`s to install Steamapps, Steam Workshop items, and [thunderstore.io](https://thunderstore.io/) mods. It uses [GoCloud's URL concept](https://gocloud.dev/concepts/urls/) to expose installing the content from the different sources using a similar command.
 
-The following `Dockerfile` builds a container image for a modded Valheim server and provides an excellent example for how to use `mist`:
+The following `Dockerfile` builds a container image for a modded Valheim server and provides an excellent example for how to use Mist:
 
 ```Dockerfile
 FROM debian:stable-slim
