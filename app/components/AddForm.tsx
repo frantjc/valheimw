@@ -37,7 +37,7 @@ export function AddForm({ onClose, steamapp }: AddFormProps) {
       branch: "",
     };
   });
-  
+
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -151,7 +151,7 @@ export function AddForm({ onClose, steamapp }: AddFormProps) {
     setError(null);
 
     const { branch, beta_password, ...body } = formData;
-    
+
     postSteamapp(body.app_id, body, branch, beta_password)
       .then(() => {
         handleCancel();
@@ -187,10 +187,7 @@ export function AddForm({ onClose, steamapp }: AddFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div>
-            <label
-              htmlFor="app_id"
-              className="block text-sm font-medium mb-1"
-            >
+            <label htmlFor="app_id" className="block text-sm font-medium mb-1">
               App ID *
             </label>
             <input
@@ -417,10 +414,7 @@ export function AddForm({ onClose, steamapp }: AddFormProps) {
           )}
         </div>
         <div className="md:col-span-2">
-          <label
-            htmlFor="commands"
-            className="block text-sm font-medium mb-1"
-          >
+          <label htmlFor="commands" className="block text-sm font-medium mb-1">
             Commands
           </label>
           <div className="flex gap-2 mb-2">
@@ -466,10 +460,7 @@ export function AddForm({ onClose, steamapp }: AddFormProps) {
         </div>
         <div className="space-y-4">
           <div>
-            <label
-              htmlFor="branch"
-              className="block text-sm font-medium mb-1"
-            >
+            <label htmlFor="branch" className="block text-sm font-medium mb-1">
               Branch
             </label>
             <input
@@ -496,9 +487,7 @@ export function AddForm({ onClose, steamapp }: AddFormProps) {
             <input
               id="beta_password"
               type="text"
-              required={
-                !!(formData.branch && formData.branch.trim() !== "")
-              }
+              required={!!(formData.branch && formData.branch.trim() !== "")}
               disabled={!formData.branch || formData.branch.trim() === ""}
               className={`w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 !formData.branch || formData.branch.trim() === ""

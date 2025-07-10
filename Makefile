@@ -52,10 +52,18 @@ config: manifests
 generate: controller-gen
 	@$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-.PHONY: fmt vet test
-fmt vet test:
+.PHONY: node_modules node_modules/
+node_modules node_modules/:
+	@$(YARN) install
+
+.PHONY: fmt
+fmt: node_modules
 	@$(GO) $@ ./...
-	@$(YARN) fmt
+	@$(YARN) $@
+
+.PHONY: vet test
+vet test:
+	@$(GO) $@ ./...
 
 .PHONY: lint
 lint: golangci-lint fmt

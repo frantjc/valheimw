@@ -38,7 +38,7 @@ export function AddModal({ open, onClose }: AddModalProps) {
             </button>
           </div>
         </div>
-        <AddForm onClose={onClose}/>
+        <AddForm onClose={onClose} />
       </div>
     </div>
   );
