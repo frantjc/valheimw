@@ -1,25 +1,43 @@
 import React from "react";
-import { postSteamapp, SteamappDetail } from "../client";
+import { postSteamapp, Steamapp, SteamappDetail } from "../client";
 
 type AddFormProps = {
   onClose: () => void;
+  steamapp?: Steamapp;
 };
 
-export function AddForm({ onClose }: AddFormProps) {
+export function AddForm({ onClose, steamapp }: AddFormProps) {
   const [formData, setFormData] = React.useState<
     SteamappDetail & { app_id: number; branch?: string }
-  >({
-    app_id: 0,
-    base_image: "",
-    apt_packages: [],
-    beta_password: "",
-    launch_type: "",
-    platform_type: "",
-    execs: [],
-    entrypoint: [],
-    cmd: [],
+  >(() => {
+    if (steamapp) {
+      return {
+        app_id: steamapp.app_id,
+        base_image: steamapp.base_image || "",
+        apt_packages: steamapp.apt_packages || [],
+        beta_password: steamapp.beta_password || "",
+        launch_type: steamapp.launch_type || "",
+        platform_type: steamapp.platform_type || "",
+        execs: steamapp.execs || [],
+        entrypoint: steamapp.entrypoint || [],
+        cmd: steamapp.cmd || [],
+        branch: steamapp.branch || "",
+      };
+    }
+    return {
+      app_id: 0,
+      base_image: "",
+      apt_packages: [],
+      beta_password: "",
+      launch_type: "",
+      platform_type: "",
+      execs: [],
+      entrypoint: [],
+      cmd: [],
+      branch: "",
+    };
   });
-
+  
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
