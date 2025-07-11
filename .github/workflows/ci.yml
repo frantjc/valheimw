@@ -108,7 +108,7 @@ jobs:
           context: testdata/mist
           load: true
           build-args: |
-            mist_tag=${{ github.sha }}
+            MIST_TAG=${{ github.sha }}
       - uses: frantjc/actions/ghcr-delete-images@v1
         continue-on-error: true
         with:
