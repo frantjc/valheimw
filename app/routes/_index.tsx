@@ -2,9 +2,22 @@ import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import React from "react";
 import { BsClipboard, BsClipboardCheck } from "react-icons/bs";
-import { getSteamapp, getSteamapps, Steamapp, SteamappSummary } from "~/client";
-import { AddModal } from "~/components/AddModal";
-import { CodeModal } from "~/components/CodeModal";
+import { HiMagnifyingGlass } from "react-icons/hi2";
+import { IoMdAdd } from "react-icons/io";
+import { MdExpandMore, MdOutlineEdit } from "react-icons/md";
+import {
+  getSteamapp,
+  getSteamapps,
+  Steamapp,
+  SteamappSummary,
+  SteamappUpsert,
+  upsertSteamapp,
+} from "~/client";
+import {
+  DockerfilePreview,
+  Modal,
+  SteamappFormWithDockerfilePreview,
+} from "~/components";
 
 export const meta: MetaFunction = () => {
   const title = "Sindri";
@@ -54,6 +67,9 @@ export default function Index() {
     React.useState<Array<SteamappSummary | Steamapp>>(initialSteamapps);
   const [token, setToken] = React.useState(initialToken);
   const [err, setErr] = React.useState<Error>();
+  const [activity, setActivity] = React.useState<
+    "adding" | "editing" | "viewing"
+  >();
 
   const handleError = React.useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,7 +85,7 @@ export default function Index() {
     [setErr],
   );
 
-  const more = React.useCallback(
+  const getMoreSteamapps = React.useCallback(
     (token?: string) => {
       return getSteamapps({ token })
         .then((res) => {
@@ -93,14 +109,14 @@ export default function Index() {
 
   React.useEffect(() => {
     if (steamapps.length === 0) {
-      more();
+      getMoreSteamapps();
     }
-  }, [more, steamapps]);
+  }, [getMoreSteamapps, steamapps]);
 
   const [prefetchIndex, setPrefetchIndex] = React.useState(0);
 
   React.useEffect(() => {
-    if (steamapps.length && steamapps.length > 1) {
+    if (steamapps.length && steamapps.length > 1 && !activity) {
       const timeout = setInterval(
         () => setPrefetchIndex((i) => (i + 1) % steamapps.length),
         2000,
@@ -108,7 +124,7 @@ export default function Index() {
 
       return () => clearTimeout(timeout);
     }
-  }, [steamapps, setPrefetchIndex]);
+  }, [steamapps, setPrefetchIndex, activity]);
 
   const getSteamappDetails = React.useCallback(
     (index: number) => {
@@ -145,7 +161,8 @@ export default function Index() {
     }
   }, [prefetchIndex, getSteamappDetails, setDockerRunIndex, steamapps]);
 
-  const [selectedSteamapp, setSelectedSteamapp] = React.useState<number>(-1);
+  const [viewingSteamappIndex, setViewingSteamappIndex] =
+    React.useState<number>(-1);
 
   React.useEffect(() => {
     if (err) {
@@ -161,7 +178,7 @@ export default function Index() {
   const tag = (steamapp && steamapp.branch) || defaultBranch;
   const branch = tag === defaultTag ? defaultBranch : tag;
   const command =
-    steamapp &&
+    !!steamapp &&
     "docker run"
       .concat(
         steamapp.ports
@@ -175,21 +192,37 @@ export default function Index() {
   const [copied, setCopied] = React.useState(false);
 
   const handleCopy = () => {
-    if (command) {
-      navigator.clipboard.writeText(command);
-      setCopied(true);
-      const timeout = setTimeout(() => setCopied(false), 2000);
-      return () => clearTimeout(timeout);
+    if (!command) {
+      // This cannot happen.
+      setErr(new Error("panic"));
+      return;
     }
+
+    navigator.clipboard.writeText(command);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const [addModalOpen, setAddModalOpen] = React.useState(false);
+  const [addForm, setAddForm] = React.useState<SteamappUpsert>({
+    app_id: 0,
+    base_image: "docker.io/library/debian:stable-slim",
+    apt_packages: [],
+    launch_type: "",
+    platform_type: "linux",
+    execs: [],
+    entrypoint: [],
+    cmd: [],
+    branch: "public",
+    beta_password: "",
+  });
+
+  const [editForm, setEditForm] = React.useState(addForm);
 
   return (
-    <div className="grid grid-cols-1 gap-4 pb-8">
+    <div className="flex flex-col gap-8 py-8">
       {!!steamapp && (
-        <>
-          <p className="text-3xl pt-8">Run the...</p>
+        <div className="flex flex-col gap-4">
+          <p className="text-3xl">Run the...</p>
           <p className="text-xl">
             <a
               className="font-bold hover:underline"
@@ -202,39 +235,35 @@ export default function Index() {
             {tag !== defaultTag && <span>&#39;s {branch} branch</span>}
           </p>
           <pre className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border border-gray-500">
-            <code className="font-mono text-white overflow-auto pr-4">
+            <code className="font-mono text-white p-1 overflow-auto pr-4">
               <span className="pr-2 text-gray-500">$</span>
               {command}
             </code>
             <button
               onClick={handleCopy}
-              className="bg-blue-400 hover:bg-blue-600 text-white p-2 rounded flex items-center"
+              className="text-white hover:text-gray-500 p-2"
             >
-              {copied ? (
-                <BsClipboardCheck className="h-4 w-8" />
-              ) : (
-                <BsClipboard className="h-4 w-8" />
-              )}
+              {copied ? <BsClipboardCheck /> : <BsClipboard />}
             </button>
           </pre>
-        </>
+        </div>
       )}
-      <p className="py-4">
+      <p>
         Sindri is a read-only container registry for images with Steamapps
         installed on them.
       </p>
-      <p className="pb-4">
+      <p>
         Images are based on{" "}
         <code className="font-mono bg-black rounded text-white p-1">
           debian:stable-slim
         </code>{" "}
         and are nonroot for security purposes.
       </p>
-      <p className="pb-4">
+      <p>
         Images are built on-demand, so the pulled Steamapp is always up-to-date.
         To update, just pull the image again.
       </p>
-      <p className="pb-4">
+      <p>
         Steamapps commonly do not work out of the box, missing dependencies,
         specifying an invalid entrypoint or just generally not being
         container-friendly. Sindri attemps to fix this by crowd-sourcing
@@ -247,10 +276,10 @@ export default function Index() {
           rel="noopener noreferrer"
         >
           API
-        </a>
-        .
+        </a>{" "}
+        or the add button below.
       </p>
-      <p className="pb-4">
+      <p>
         Image references are of the form{" "}
         <code className="font-mono bg-black rounded text-white p-1">
           {host}/{"<steamapp-id>:<steamapp-branch>"}
@@ -271,20 +300,19 @@ export default function Index() {
         , which gets mapped to the default Steamapp branch, {defaultBranch}.
         Supported Steamapps can be found below.
       </p>
-      <div className="flex justify-start items-center py-4">
-        <button
-          onClick={() => setAddModalOpen(true)}
-          className="bg-blue-400 hover:bg-blue-600 text-white font-bold py-2 px-5 rounded inline-flex items-center text-lg"
-        >
-          Add
-        </button>
-      </div>
       {!!steamapps.length && (
         <>
           <table>
             <thead>
               <tr>
-                <th className="border-gray-500" />
+                <th className="p-2 border-gray-500 flex justify-center items-center">
+                  <button
+                    onClick={() => setActivity("adding")}
+                    className="hover:text-gray-500 p-2"
+                  >
+                    <IoMdAdd />
+                  </button>
+                </th>
                 <th className="border-gray-500 font-bold">Steamapp</th>
                 <th className="border-gray-500 font-bold">Image</th>
               </tr>
@@ -300,7 +328,7 @@ export default function Index() {
                         className="size-8 rounded object-contain"
                       />
                     </td>
-                    <td className="border-gray-500">
+                    <td className="border-gray-500 text-center">
                       <a
                         className="font-bold hover:underline"
                         href={`https://steamdb.info/app/${steamapp.app_id}/`}
@@ -313,7 +341,7 @@ export default function Index() {
                         ? `'s ${steamapp.branch} branch`
                         : ""}
                     </td>
-                    <td className="border-gray-500">
+                    <td className="border-gray-500 text-center">
                       <code className="font-mono">
                         {host}/{steamapp.app_id}
                         {steamapp.branch
@@ -321,16 +349,33 @@ export default function Index() {
                           : `:${defaultTag}`}
                       </code>
                     </td>
-                    <td className="border-gray-500">
+                    <td className="border-gray-500 text-center">
                       <button
                         onClick={() =>
                           getSteamappDetails(i)
-                            .then(() => setSelectedSteamapp(i))
+                            .then(() => setViewingSteamappIndex(i))
+                            .then(() => setActivity("viewing"))
                             .catch(setErr)
                         }
-                        className="bg-blue-400 hover:bg-blue-600 text-white font-bold p-2 rounded flex items-center"
+                        className="hover:text-gray-500 p-2"
                       >
-                        View
+                        <HiMagnifyingGlass />
+                      </button>
+                    </td>
+                    <td className="border-gray-500 text-center">
+                      <button
+                        onClick={() =>
+                          getSteamappDetails(i)
+                            .then(() =>
+                              setEditForm(steamapps[i] as SteamappUpsert),
+                            )
+                            .then(() => setActivity("editing"))
+                            .catch(setErr)
+                        }
+                        className={`${(steamapp as Steamapp).locked ? "hover:cursor-not-allowed" : "hover:text-gray-500"} p-2`}
+                        disabled={(steamapp as Steamapp).locked}
+                      >
+                        <MdOutlineEdit />
                       </button>
                     </td>
                   </tr>
@@ -338,28 +383,67 @@ export default function Index() {
               })}
             </tbody>
           </table>
-          <CodeModal
-            open={steamapps.length > selectedSteamapp && selectedSteamapp >= 0}
-            onClose={() => setSelectedSteamapp(-1)}
-            steamapp={steamapps[selectedSteamapp] as Steamapp}
-            lines={16}
-          />
-          <AddModal
-            open={addModalOpen}
-            onClose={() => setAddModalOpen(false)}
-          />
           {!!token && (
-            <div className="flex justify-center items-center py-4">
+            <div className="flex justify-center items-center">
               <button
-                onClick={() => more(token)}
-                className="bg-blue-400 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+                onClick={() => getMoreSteamapps(token)}
+                className="hover:text-gray-500 p-2"
               >
-                Load More
+                <MdExpandMore />
               </button>
             </div>
           )}
         </>
       )}
+      <Modal
+        open={activity === "adding"}
+        onClose={() => setActivity(undefined)}
+      >
+        <div className="rounded bg-white dark:bg-gray-900 h-[80vh] w-[90vw]">
+          <SteamappFormWithDockerfilePreview
+            className="pb-12"
+            steamapp={addForm}
+            onSubmit={(s) =>
+              upsertSteamapp(s)
+                .then(() => setActivity(undefined))
+                .catch(setErr)
+            }
+            onChange={setAddForm}
+          />
+        </div>
+      </Modal>
+      <Modal
+        open={activity === "editing"}
+        onClose={() => setActivity(undefined)}
+      >
+        <div className="rounded bg-white dark:bg-gray-900 h-[80vh] w-[90vw]">
+          <SteamappFormWithDockerfilePreview
+            editing
+            className="pb-12"
+            steamapp={editForm}
+            onSubmit={(s) =>
+              upsertSteamapp(s)
+                .then(() => setActivity(undefined))
+                .catch(setErr)
+            }
+            onChange={setEditForm}
+          />
+        </div>
+      </Modal>
+      <Modal
+        open={activity === "viewing"}
+        onClose={() => setActivity(undefined)}
+      >
+        <div className="rounded bg-white dark:bg-gray-900 h-[80vh] w-[80vw]">
+          {steamapps.length > viewingSteamappIndex &&
+            viewingSteamappIndex >= 0 && (
+              <DockerfilePreview
+                className="pb-12"
+                steamapp={steamapps[viewingSteamappIndex] as Steamapp}
+              />
+            )}
+        </div>
+      </Modal>
     </div>
   );
 }

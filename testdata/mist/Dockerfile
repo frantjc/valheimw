@@ -1,5 +1,5 @@
-ARG mist_tag=latest
-FROM ghcr.io/frantjc/mist:$mist_tag AS mist
+ARG MIST_TAG=latest
+FROM ghcr.io/frantjc/mist:$MIST_TAG AS mist
 
 FROM debian:stable-slim
 COPY --from=mist /mist /usr/local/bin

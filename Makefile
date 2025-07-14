@@ -56,19 +56,16 @@ generate: controller-gen
 node_modules node_modules/:
 	@$(YARN) install
 
-.PHONY: fmt
-fmt: node_modules
+.PHONY: fmt test
+fmt test: node_modules
 	@$(GO) $@ ./...
 	@$(YARN) $@
-
-.PHONY: vet test
-vet test:
-	@$(GO) $@ ./...
 
 .PHONY: lint
 lint: golangci-lint fmt
 	@$(GOLANGCI_LINT) config verify
 	@$(GOLANGCI_LINT) run --fix
+	@$(YARN) lint
 
 .PHONY: gen
 gen: generate
@@ -77,9 +74,9 @@ gen: generate
 internal/stoker/swagger.json: swag
 	@$(SWAG) fmt -g api.go --dir internal/stoker
 	@$(SWAG) init -g api.go --dir internal/stoker --output internal/stoker --outputTypes json --parseInternal
-	@sed 's/stoker\.//g' $@ > internal/stoker/swagger.json.tmp
-	@cat internal/stoker/swagger.json.tmp > $@
-	@rm internal/stoker/swagger.json.tmp
+	@sed 's/stoker\.//g' $@ > $@.tmp
+	@cat $@.tmp > $@
+	@rm $@.tmp
 	@echo >> $@
 
 .PHONY: swagger
