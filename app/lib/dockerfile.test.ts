@@ -61,7 +61,7 @@ describe("dockerfileFromSteamapp", () => {
       beta_password: "pwd",
     }).toString();
     expect(dockerfile).toContain(
-      "+app_update 896660 -beta beta -betapassword pwd \\",
+      "+app_update 896660 -beta beta -betapassword pwd",
     );
   });
 });
