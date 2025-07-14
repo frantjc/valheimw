@@ -403,7 +403,11 @@ export default function Index() {
           <SteamappFormWithDockerfilePreview
             className="pb-12"
             steamapp={addForm}
-            onSubmit={(s) => upsertSteamapp(s).catch(setErr)}
+            onSubmit={(s) =>
+              upsertSteamapp(s)
+                .then(() => setActivity(undefined))
+                .catch(setErr)
+            }
             onChange={setAddForm}
           />
         </div>
@@ -417,7 +421,11 @@ export default function Index() {
             editing
             className="pb-12"
             steamapp={editForm}
-            onSubmit={(s) => upsertSteamapp(s).catch(setErr)}
+            onSubmit={(s) =>
+              upsertSteamapp(s)
+                .then(() => setActivity(undefined))
+                .catch(setErr)
+            }
             onChange={setEditForm}
           />
         </div>

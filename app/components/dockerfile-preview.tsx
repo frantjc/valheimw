@@ -34,6 +34,7 @@ export function DockerfilePreview({
     // Try to download using https://developer.mozilla.org/en-US/docs/Web/API/Window/showSaveFilePicker.
     if ("showSaveFilePicker" in window) {
       try {
+        // eslint-disable-next-line
         const handle = await (window as any).showSaveFilePicker({
           suggestedName: "Dockerfile",
         });
@@ -78,15 +79,15 @@ export function DockerfilePreview({
               </div>
             ) : (
               <div key={i} className="h-5">
-                {line
-                  .split(" ")
-                  .map((word) =>
-                    word.match(/^[A-Z]+$/) ? (
-                      <span className="text-pink-600">{word} </span>
-                    ) : (
-                      `${word} `
-                    ),
-                  )}
+                {line.split(" ").map((word, j) =>
+                  word.match(/^[A-Z]+$/) ? (
+                    <span key={j} className="text-pink-600">
+                      {word}{" "}
+                    </span>
+                  ) : (
+                    `${word} `
+                  ),
+                )}
               </div>
             ),
           )}

@@ -21,6 +21,12 @@ export function Modal({
         <div
           className="relative bg-white dark:bg-gray-900 rounded shadow-lg overflow-auto p-12"
           onClick={(e) => e.stopPropagation()}
+          role="presentation"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              onClose();
+            }
+          }}
         >
           <button
             onClick={onClose}
