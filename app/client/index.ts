@@ -141,30 +141,34 @@ export function getSteamapps({
     });
 }
 
-export function postSteamapp(
-  appId: number,
-  data: SteamappDetail,
-  branch?: string,
-  betaPassword?: string,
-): Promise<void> {
-  let url = `/api/v1/steamapps/${appId}`;
-  if (
-    branch &&
-    branch.trim() !== "" &&
-    betaPassword &&
-    betaPassword.trim() !== ""
-  ) {
-    url += `/${branch}?beta_password=${encodeURIComponent(betaPassword)}`;
-  }
+export type SteamappUpsert = Omit<
+  Steamapp,
+  "name" | "date_created" | "icon_url" | "locked"
+>;
 
-  return fetch(getUrl(url), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
+export function upsertSteamapp({
+  app_id: appId,
+  branch,
+  beta_password: betaPassword,
+  ...rest
+}: SteamappUpsert): Promise<void> {
+  return fetch(
+    getUrl(
+      `/api/v1/steamapps/${appId}`.concat(
+        branch && betaPassword
+          ? `/${branch}?beta_password=${encodeURIComponent(betaPassword)}`
+          : "",
+      ),
+    ),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(rest),
     },
-    body: JSON.stringify(data),
-  })
+  )
     .then(handleError)
     .then(() => {
       return;

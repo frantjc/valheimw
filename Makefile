@@ -56,19 +56,16 @@ generate: controller-gen
 node_modules node_modules/:
 	@$(YARN) install
 
-.PHONY: fmt
-fmt: node_modules
+.PHONY: fmt test
+fmt test: node_modules
 	@$(GO) $@ ./...
 	@$(YARN) $@
-
-.PHONY: vet test
-vet test:
-	@$(GO) $@ ./...
 
 .PHONY: lint
 lint: golangci-lint fmt
 	@$(GOLANGCI_LINT) config verify
 	@$(GOLANGCI_LINT) run --fix
+	@$(YARN) lint
 
 .PHONY: gen
 gen: generate
