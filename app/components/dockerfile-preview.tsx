@@ -71,7 +71,7 @@ export function DockerfilePreview({
             </div>
           ))}
         </div>
-        <div className="whitespace-pre">
+        <div className="whitespace-pre text-white">
           {dockerfile.split("\n").map((line, i) =>
             line.startsWith("#") ? (
               <div key={i} className="text-green-800 h-5">

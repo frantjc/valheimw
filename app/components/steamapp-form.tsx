@@ -74,11 +74,11 @@ export function SteamappForm({
         <div>
           <div className="flex flex-col gap-2">
             <label htmlFor="platform_type" className="text-sm font-medium">
-              Platsteamapp Type
+              Platform Type
             </label>
             <select
               id="platform_type"
-              className="grow p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="grow p-2 bg-zinc-100 bg-dark:bg-zinc-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={steamapp.platform_type || ""}
               onChange={(e) =>
                 onChange({
@@ -177,7 +177,7 @@ function StringInput({
           required={required}
           disabled={disabled}
           placeholder={placeholder}
-          className={`${disabled ? "bg-gray-400 cursor-not-allowed " : ""}grow p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500`}
+          className={`${disabled ? "bg-gray-400 cursor-not-allowed " : "bg-zinc-100 dark:bg-zinc-700 "}${type === "number" ? "[appearance:textfield] " : ""}grow p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500`}
           value={steamapp[field] || ""}
           onChange={(e) =>
             onChange({
@@ -238,7 +238,7 @@ function StringArrayInput({
           <input
             type="text"
             placeholder={placeholder}
-            className="grow p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="grow p-2 bg-zinc-100 dark:bg-zinc-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {

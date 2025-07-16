@@ -161,7 +161,7 @@ export function upsertSteamapp({
       ),
     ),
     {
-      method: "POST",
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
