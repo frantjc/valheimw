@@ -402,8 +402,6 @@ func (h *handler) upsertSteamapp(w http.ResponseWriter, r *http.Request) error {
 	)
 	r = r.WithContext(logutil.SloggerInto(r.Context(), log))
 
-	return httputil.NewHTTPStatusCodeError(fmt.Errorf("lol"), http.StatusBadRequest)
-
 	parsedSteamappAppID, err := strconv.Atoi(steamappID)
 	if err != nil {
 		return httputil.NewHTTPStatusCodeError(err, http.StatusBadRequest)
