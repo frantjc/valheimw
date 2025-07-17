@@ -188,7 +188,7 @@ function StringInput({
   field: "app_id" | "base_image" | "branch" | "beta_password";
   steamapp: SteamappUpsert;
   onChange: (_: SteamappUpsert) => void;
-  getFormValidation?: () => { isValid: boolean; reason: string | null };
+  getFormValidation?: () => { isValid: boolean; reason: ValidationReason | null };
 } & Omit<
   React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>,
   "onChange"
