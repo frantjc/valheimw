@@ -4,6 +4,12 @@ import { FiSend } from "react-icons/fi";
 import { SteamappUpsert } from "~/client";
 import { DockerfilePreview } from "./dockerfile-preview";
 
+enum ValidationReason {
+  APP_ID_ZERO = "app_id_zero",
+  APP_ID_NOT_DIVISIBLE = "app_id_not_divisible", 
+  BETA_PASSWORD_REQUIRED = "beta_password_required"
+}
+
 export type SteamappFormProps = Omit<
   React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>,
   "onChange" | "onSubmit"
@@ -26,12 +32,26 @@ export function SteamappForm({
     onSubmit(steamapp);
   }
 
-  const isFormValid = () => {
-    const hasValidAppId = steamapp.app_id > 0 && steamapp.app_id % 10 === 0;
-    const hasBranch =
-      !!steamapp.branch?.trim() && steamapp.branch.trim() !== "public";
+  const getFormValidation = (): { isValid: boolean; reason: ValidationReason | null } => {
+    if (steamapp.app_id <= 0) {
+      return { isValid: false, reason: ValidationReason.APP_ID_ZERO };
+    }
+    if (steamapp.app_id % 10 !== 0) {
+      return { isValid: false, reason: ValidationReason.APP_ID_NOT_DIVISIBLE };
+    }
+    
+    const hasBranch = !!steamapp.branch?.trim() && steamapp.branch.trim() !== "public";
     const hasBetaPassword = !!steamapp.beta_password?.trim();
-    return hasValidAppId && (!hasBranch || hasBetaPassword);
+    
+    if (hasBranch && !hasBetaPassword) {
+      return { isValid: false, reason: ValidationReason.BETA_PASSWORD_REQUIRED };
+    }
+    
+    return { isValid: true, reason: null };
+  };
+
+  const isFormValid = () => {
+    return getFormValidation().isValid;
   };
 
   const isBetaPasswordRequired = () => {
@@ -50,6 +70,7 @@ export function SteamappForm({
           type="number"
           required
           disabled={editing}
+          getFormValidation={getFormValidation}
         />
         <StringInput
           steamapp={steamapp}
@@ -128,15 +149,20 @@ export function SteamappForm({
           field="beta_password"
           required={isBetaPasswordRequired()}
           disabled={!isBetaPasswordRequired()}
+          getFormValidation={getFormValidation}
         />
-        <button
-          type="submit"
-          disabled={!isFormValid()}
-          className={`${!isFormValid() ? "hover:cursor-not-allowed" : "hover:text-gray-500"} flex justify-center items-center gap-2 p-2`}
-        >
-          <FiSend />
-          Submit
-        </button>
+<button
+  type="submit"
+  disabled={!isFormValid()}
+  className={`flex justify-center items-center gap-2 p-2 w-32 mx-auto rounded border-2 transition-all duration-200 ${
+    !isFormValid() 
+      ? "border-gray-400 text-gray-400 cursor-not-allowed" 
+      : "border-gray-600 dark:border-gray-400 hover:border-gray-800 dark:hover:border-gray-200 hover:shadow-md"
+  }`}
+>
+  <FiSend />
+  Submit
+</button>
       </form>
     </div>
   );
@@ -151,6 +177,7 @@ function StringInput({
   field,
   steamapp,
   onChange,
+  getFormValidation,
   ...rest
 }: {
   title: string;
@@ -161,10 +188,35 @@ function StringInput({
   field: "app_id" | "base_image" | "branch" | "beta_password";
   steamapp: SteamappUpsert;
   onChange: (_: SteamappUpsert) => void;
+  getFormValidation?: () => { isValid: boolean; reason: string | null };
 } & Omit<
   React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>,
   "onChange"
 >) {
+  const getValidationMessage = () => {
+    if (!getFormValidation) return null;
+    
+    const validation = getFormValidation();
+    
+    if (!validation.isValid) {
+      switch (validation.reason) {
+        case ValidationReason.APP_ID_ZERO:
+          if (field === "app_id") return "App ID must be greater than 0";
+          break;
+        case ValidationReason.APP_ID_NOT_DIVISIBLE:
+          if (field === "app_id") return "App ID must be divisible by 10";
+          break;
+        case ValidationReason.BETA_PASSWORD_REQUIRED:
+          if (field === "beta_password") return "Beta password is required when branch is set";
+          break;
+      }
+    }
+    
+    return null;
+  };
+
+  const validationMessage = getValidationMessage();
+
   return (
     <div {...rest}>
       <div className="flex flex-col gap-2">
@@ -185,8 +237,11 @@ function StringInput({
               [field]:
                 field === "app_id" ? parseInt(e.target.value) : e.target.value,
             })
-          }
+          }   
         />
+        {validationMessage && (
+          <span className="text-red-500 text-xs">{validationMessage}</span>
+        )}
       </div>
     </div>
   );
