@@ -4,11 +4,10 @@ import { FiSend } from "react-icons/fi";
 import { SteamappUpsert } from "~/client";
 import { DockerfilePreview } from "./dockerfile-preview";
 
-enum ValidationReason {
-  APP_ID_ZERO = "app_id_zero",
-  APP_ID_NOT_DIVISIBLE = "app_id_not_divisible", 
-  BETA_PASSWORD_REQUIRED = "beta_password_required"
-}
+type Invalid = {
+  field: keyof SteamappUpsert;
+  reason: string;
+};
 
 export type SteamappFormProps = Omit<
   React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>,
@@ -32,32 +31,43 @@ export function SteamappForm({
     onSubmit(steamapp);
   }
 
-  const getFormValidation = (): { isValid: boolean; reason: ValidationReason | null } => {
+  function validate(): Invalid[] {
+    let inv: Invalid[] = [];
+
     if (steamapp.app_id <= 0) {
-      return { isValid: false, reason: ValidationReason.APP_ID_ZERO };
+      inv = inv.concat({
+        field: "app_id",
+        reason: "Steamapp IDs must be greater than zero",
+      });
     }
+
     if (steamapp.app_id % 10 !== 0) {
-      return { isValid: false, reason: ValidationReason.APP_ID_NOT_DIVISIBLE };
+      inv = inv.concat({
+        field: "app_id",
+        reason: "Steamapp IDs must be divisible by 10",
+      });
     }
-    
-    const hasBranch = !!steamapp.branch?.trim() && steamapp.branch.trim() !== "public";
-    const hasBetaPassword = !!steamapp.beta_password?.trim();
-    
-    if (hasBranch && !hasBetaPassword) {
-      return { isValid: false, reason: ValidationReason.BETA_PASSWORD_REQUIRED };
+
+    if (isBetaPasswordRequired() && !steamapp.beta_password?.trim()) {
+      inv = inv.concat({
+        field: "beta_password",
+        reason: "Non-public Steamapp branches must have beta passwords",
+      });
     }
-    
-    return { isValid: true, reason: null };
-  };
 
-  const isFormValid = () => {
-    return getFormValidation().isValid;
-  };
+    return inv;
+  }
 
-  const isBetaPasswordRequired = () => {
+  function isFormValid() {
+    return !validate().length;
+  }
+
+  function isBetaPasswordRequired() {
     const branch = steamapp?.branch?.trim();
     return !!branch && branch !== "public";
-  };
+  }
+
+  const invalids = validate();
 
   return (
     <div {...rest}>
@@ -70,13 +80,18 @@ export function SteamappForm({
           type="number"
           required
           disabled={editing}
-          getFormValidation={getFormValidation}
+          invalidReasons={invalids
+            .filter((invalid) => invalid.field === "app_id")
+            .map((invalid) => invalid.reason)}
         />
         <StringInput
           steamapp={steamapp}
           onChange={onChange}
           title="Base Image"
           field="base_image"
+          invalidReasons={invalids
+            .filter((invalid) => invalid.field === "base_image")
+            .map((invalid) => invalid.reason)}
         />
         <StringArrayInput
           steamapp={steamapp}
@@ -84,13 +99,6 @@ export function SteamappForm({
           title="APT Packages"
           field="apt_packages"
           placeholder="curl"
-        />
-        <StringInput
-          steamapp={steamapp}
-          onChange={onChange}
-          title="Base Image"
-          field="base_image"
-          placeholder="default"
         />
         <div>
           <div className="flex flex-col gap-2">
@@ -141,6 +149,9 @@ export function SteamappForm({
           title="Branch"
           field="branch"
           disabled={editing}
+          invalidReasons={invalids
+            .filter((invalid) => invalid.field === "branch")
+            .map((invalid) => invalid.reason)}
         />
         <StringInput
           steamapp={steamapp}
@@ -149,20 +160,22 @@ export function SteamappForm({
           field="beta_password"
           required={isBetaPasswordRequired()}
           disabled={!isBetaPasswordRequired()}
-          getFormValidation={getFormValidation}
+          invalidReasons={invalids
+            .filter((invalid) => invalid.field === "beta_password")
+            .map((invalid) => invalid.reason)}
         />
-<button
-  type="submit"
-  disabled={!isFormValid()}
-  className={`flex justify-center items-center gap-2 p-2 w-32 mx-auto rounded border-2 transition-all duration-200 ${
-    !isFormValid() 
-      ? "border-gray-400 text-gray-400 cursor-not-allowed" 
-      : "border-gray-600 dark:border-gray-400 hover:border-gray-800 dark:hover:border-gray-200 hover:shadow-md"
-  }`}
->
-  <FiSend />
-  Submit
-</button>
+        <button
+          type="submit"
+          disabled={!isFormValid()}
+          className={`flex justify-center items-center gap-2 p-2 w-32 mx-auto rounded border-2 transition-all duration-200 ${
+            !isFormValid()
+              ? "border-gray-400 text-gray-400 cursor-not-allowed"
+              : "text-black dark:text-white border-black dark:border-white hover:border-gray-500 hover:text-gray-500"
+          }`}
+        >
+          <FiSend />
+          Submit
+        </button>
       </form>
     </div>
   );
@@ -177,7 +190,7 @@ function StringInput({
   field,
   steamapp,
   onChange,
-  getFormValidation,
+  invalidReasons,
   ...rest
 }: {
   title: string;
@@ -188,35 +201,11 @@ function StringInput({
   field: "app_id" | "base_image" | "branch" | "beta_password";
   steamapp: SteamappUpsert;
   onChange: (_: SteamappUpsert) => void;
-  getFormValidation?: () => { isValid: boolean; reason: ValidationReason | null };
+  invalidReasons?: string[];
 } & Omit<
   React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>,
   "onChange"
 >) {
-  const getValidationMessage = () => {
-    if (!getFormValidation) return null;
-    
-    const validation = getFormValidation();
-    
-    if (!validation.isValid) {
-      switch (validation.reason) {
-        case ValidationReason.APP_ID_ZERO:
-          if (field === "app_id") return "App ID must be greater than 0";
-          break;
-        case ValidationReason.APP_ID_NOT_DIVISIBLE:
-          if (field === "app_id") return "App ID must be divisible by 10";
-          break;
-        case ValidationReason.BETA_PASSWORD_REQUIRED:
-          if (field === "beta_password") return "Beta password is required when branch is set";
-          break;
-      }
-    }
-    
-    return null;
-  };
-
-  const validationMessage = getValidationMessage();
-
   return (
     <div {...rest}>
       <div className="flex flex-col gap-2">
@@ -235,12 +224,16 @@ function StringInput({
             onChange({
               ...steamapp,
               [field]:
-                field === "app_id" ? parseInt(e.target.value) : e.target.value,
+                field === "app_id"
+                  ? parseInt(e.target.value) || 0
+                  : e.target.value,
             })
-          }   
+          }
         />
-        {validationMessage && (
-          <span className="text-red-500 text-xs">{validationMessage}</span>
+        {!!invalidReasons?.length && (
+          <span className="text-red-500 text-xs">
+            {invalidReasons.join(", ")}
+          </span>
         )}
       </div>
     </div>
