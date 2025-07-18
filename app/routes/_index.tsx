@@ -399,7 +399,7 @@ export default function Index() {
         open={activity === "adding"}
         onClose={() => setActivity(undefined)}
       >
-        <div className="rounded bg-white dark:bg-gray-900 h-[80vh] w-[90vw]">
+        <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[90vw]">
           <SteamappFormWithDockerfilePreview
             className="pb-12"
             steamapp={addForm}
@@ -416,7 +416,7 @@ export default function Index() {
         open={activity === "editing"}
         onClose={() => setActivity(undefined)}
       >
-        <div className="rounded bg-white dark:bg-gray-900 h-[80vh] w-[90vw]">
+        <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[90vw]">
           <SteamappFormWithDockerfilePreview
             editing
             className="pb-12"
@@ -434,7 +434,7 @@ export default function Index() {
         open={activity === "viewing"}
         onClose={() => setActivity(undefined)}
       >
-        <div className="rounded bg-white dark:bg-gray-900 h-[80vh] w-[80vw]">
+        <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[80vw]">
           {steamapps.length > viewingSteamappIndex &&
             viewingSteamappIndex >= 0 && (
               <DockerfilePreview
