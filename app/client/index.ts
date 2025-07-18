@@ -170,7 +170,5 @@ export function upsertSteamapp({
     },
   )
     .then(handleError)
-    .then(() => {
-      return;
-    });
+    .then(() => {});
 }

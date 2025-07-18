@@ -107,7 +107,7 @@ export function SteamappForm({
             </label>
             <select
               id="platform_type"
-              className="grow p-2 bg-zinc-100 bg-dark:bg-zinc-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="grow p-2 bg-zinc-100 dark:bg-zinc-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={steamapp.platform_type || ""}
               onChange={(e) =>
                 onChange({
@@ -116,7 +116,7 @@ export function SteamappForm({
                 })
               }
             >
-              <option value="">Select plat...</option>
+              <option value="">Select platform...</option>
               <option value="linux">Linux</option>
               <option value="windows">Windows</option>
               <option value="macos">macOS</option>

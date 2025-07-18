@@ -71,7 +71,7 @@ export default function Index() {
     "adding" | "editing" | "viewing"
   >();
 
-  const handleError = React.useCallback(
+  const handleErr = React.useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (err: any) => {
       if (err instanceof Error) {
@@ -102,9 +102,9 @@ export default function Index() {
           ]);
           setToken(res.token);
         })
-        .catch(handleError);
+        .catch(handleErr);
     },
-    [setSteamapps, setToken, handleError],
+    [setSteamapps, setToken, handleErr],
   );
 
   React.useEffect(() => {
@@ -166,7 +166,7 @@ export default function Index() {
 
   React.useEffect(() => {
     if (err) {
-      alert(`Error: ${err}.`);
+      alert(`${err}.`);
     }
   }, [err]);
 
@@ -194,7 +194,7 @@ export default function Index() {
   const handleCopy = () => {
     if (!command) {
       // This cannot happen.
-      setErr(new Error("panic"));
+      handleErr(new Error("panic"));
       return;
     }
 
@@ -355,7 +355,7 @@ export default function Index() {
                           getSteamappDetails(i)
                             .then(() => setViewingSteamappIndex(i))
                             .then(() => setActivity("viewing"))
-                            .catch(setErr)
+                            .catch(handleErr)
                         }
                         className="hover:text-gray-500 p-2"
                       >
@@ -370,7 +370,7 @@ export default function Index() {
                               setEditForm(steamapps[i] as SteamappUpsert),
                             )
                             .then(() => setActivity("editing"))
-                            .catch(setErr)
+                            .catch(handleErr)
                         }
                         className={`${(steamapp as Steamapp).locked ? "hover:cursor-not-allowed" : "hover:text-gray-500"} p-2`}
                         disabled={(steamapp as Steamapp).locked}
@@ -406,7 +406,7 @@ export default function Index() {
             onSubmit={(s) =>
               upsertSteamapp(s)
                 .then(() => setActivity(undefined))
-                .catch(setErr)
+                .catch(handleErr)
             }
             onChange={setAddForm}
           />
@@ -424,7 +424,7 @@ export default function Index() {
             onSubmit={(s) =>
               upsertSteamapp(s)
                 .then(() => setActivity(undefined))
-                .catch(setErr)
+                .catch(handleErr)
             }
             onChange={setEditForm}
           />
