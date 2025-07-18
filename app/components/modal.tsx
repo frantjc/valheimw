@@ -19,7 +19,7 @@ export function Modal({
     >
       {children && (
         <div
-          className="relative bg-white dark:bg-gray-900 rounded shadow-lg overflow-auto p-12"
+          className="relative bg-white dark:bg-gray-950 rounded shadow-lg overflow-auto p-12"
           onClick={(e) => e.stopPropagation()}
           role="presentation"
           onKeyDown={(e) => {

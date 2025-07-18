@@ -82,7 +82,7 @@ export function dockerfileFromSteamapp(steamapp: SteamappUpsert): Dockerfile {
         `\t\t+force_install_dir ${mount} \\\n` +
         `\t\t+login anonymous \\\n` +
         `\t\t@sSteamCmdForcePlatformType ${steamapp.platform_type} \\\n` +
-        `\t\t+app_update ${steamapp.app_id}${betaBranch}${betaPassword} \\\n` +
+        `\t\t+app_update ${steamapp.app_id || 0}${betaBranch}${betaPassword} \\\n` +
         `\t\t+quit`,
     ),
     new Directive(
