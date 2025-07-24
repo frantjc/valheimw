@@ -218,6 +218,89 @@ export default function Index() {
 
   const [editForm, setEditForm] = React.useState(addForm);
 
+  // fragment
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      const fragment = window.location.hash.slice(1);
+
+      if (fragment === "add") {
+        console.log("add fragment");
+        setActivity("adding");
+      } else if (fragment.startsWith("edit/")) {
+        console.log("edit fragment");
+        const appId = parseInt(fragment.split('/')[1]);
+        if (appId && !isNaN(appId)) {
+          const steamappIndex = steamapps.findIndex(s => s.app_id === appId);
+          if (steamappIndex >= 0) {
+            getSteamappDetails(steamappIndex)
+              .then(() => setEditForm(steamapps[steamappIndex] as SteamappUpsert))
+              .then(() => setActivity('editing'))
+              .catch(handleErr);
+          }
+        }
+      } else if (fragment.startsWith("view/")) {
+        console.log("view fragment");
+        const appId = parseInt(fragment.split('/')[1]);
+        if (appId && !isNaN(appId)) {
+          const steamappIndex = steamapps.findIndex(s => s.app_id === appId);
+          if (steamappIndex >= 0) {
+            getSteamappDetails(steamappIndex)
+              .then(() => setViewingSteamappIndex(steamappIndex))
+              .then(() => setActivity('viewing'))
+              .catch(handleErr);
+          }
+        }
+      } else if (fragment === "") {
+        setActivity(undefined);
+      }
+    }
+
+    handleHashChange();
+
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [steamapps, getSteamappDetails, setEditForm, handleErr])
+
+  const setActivityWithFragment = (newActivity: typeof activity, appId?: number) => {
+    if (newActivity === 'adding') {
+      window.location.hash = '#add';
+    } else if (newActivity === 'editing' && appId) {
+      window.location.hash = `#edit/${appId}`;
+    } else if (newActivity === 'viewing' && appId) {
+      window.location.hash = `#view/${appId}`;
+    } else {
+      window.location.hash = '';
+    }
+    setActivity(newActivity);
+  };
+
+  const openAddModal = () => {
+    setActivityWithFragment('adding');
+  };
+
+  const openEditModal = (index: number) => {
+    const steamapp = steamapps[index];
+    getSteamappDetails(index)
+      .then(() => setEditForm(steamapps[index] as SteamappUpsert))
+      .then(() => setActivityWithFragment('editing', steamapp.app_id))
+      .catch(handleErr);
+  };
+
+  const openViewModal = (index: number) => {
+    const steamapp = steamapps[index];
+    getSteamappDetails(index)
+      .then(() => setViewingSteamappIndex(index))
+      .then(() => setActivityWithFragment('viewing', steamapp.app_id))
+      .catch(handleErr);
+  };
+
+  const closeModal = () => {
+    setActivityWithFragment(undefined);
+  };
+
   return (
     <div className="flex flex-col gap-8 py-8">
       {!!steamapp && (
@@ -307,7 +390,7 @@ export default function Index() {
               <tr>
                 <th className="p-2 border-gray-500 flex justify-center items-center">
                   <button
-                    onClick={() => setActivity("adding")}
+                    onClick={openAddModal}
                     className="hover:text-gray-500 p-2"
                   >
                     <IoMdAdd />
@@ -351,12 +434,7 @@ export default function Index() {
                     </td>
                     <td className="border-gray-500 text-center">
                       <button
-                        onClick={() =>
-                          getSteamappDetails(i)
-                            .then(() => setViewingSteamappIndex(i))
-                            .then(() => setActivity("viewing"))
-                            .catch(handleErr)
-                        }
+                        onClick={() => openViewModal(i)}
                         className="hover:text-gray-500 p-2"
                       >
                         <HiMagnifyingGlass />
@@ -364,14 +442,7 @@ export default function Index() {
                     </td>
                     <td className="border-gray-500 text-center">
                       <button
-                        onClick={() =>
-                          getSteamappDetails(i)
-                            .then(() =>
-                              setEditForm(steamapps[i] as SteamappUpsert),
-                            )
-                            .then(() => setActivity("editing"))
-                            .catch(handleErr)
-                        }
+                        onClick={() => openEditModal(i)}
                         className={`${(steamapp as Steamapp).locked ? "hover:cursor-not-allowed" : "hover:text-gray-500"} p-2`}
                         disabled={(steamapp as Steamapp).locked}
                       >
@@ -397,7 +468,7 @@ export default function Index() {
       )}
       <Modal
         open={activity === "adding"}
-        onClose={() => setActivity(undefined)}
+        onClose={closeModal}
       >
         <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[90vw]">
           <SteamappFormWithDockerfilePreview
@@ -414,7 +485,7 @@ export default function Index() {
       </Modal>
       <Modal
         open={activity === "editing"}
-        onClose={() => setActivity(undefined)}
+        onClose={closeModal}
       >
         <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[90vw]">
           <SteamappFormWithDockerfilePreview
@@ -432,7 +503,7 @@ export default function Index() {
       </Modal>
       <Modal
         open={activity === "viewing"}
-        onClose={() => setActivity(undefined)}
+        onClose={closeModal}
       >
         <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[80vw]">
           {steamapps.length > viewingSteamappIndex &&
