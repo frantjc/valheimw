@@ -261,7 +261,7 @@ export default function Index() {
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
     };
-  }, [steamapps, getSteamappDetails, setEditForm, handleErr])
+  }, [steamapps, getSteamappDetails, handleErr])
 
   const setActivityWithFragment = (newActivity: typeof activity, appId?: number) => {
     if (newActivity === 'adding') {
