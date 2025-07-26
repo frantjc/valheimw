@@ -56,6 +56,19 @@ export function loader(args: LoaderFunctionArgs) {
 const defaultTag = "latest";
 const defaultBranch = "public";
 
+const defaultAddForm: SteamappUpsert = {
+  app_id: 0,
+  base_image: "docker.io/library/debian:stable-slim",
+  apt_packages: [],
+  launch_type: "",
+  platform_type: "linux",
+  execs: [],
+  entrypoint: [],
+  cmd: [],
+  branch: defaultBranch,
+  beta_password: "",
+};
+
 export default function Index() {
   const {
     host,
@@ -203,18 +216,7 @@ export default function Index() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const [addForm, setAddForm] = React.useState<SteamappUpsert>({
-    app_id: 0,
-    base_image: "docker.io/library/debian:stable-slim",
-    apt_packages: [],
-    launch_type: "",
-    platform_type: "linux",
-    execs: [],
-    entrypoint: [],
-    cmd: [],
-    branch: "public",
-    beta_password: "",
-  });
+  const [addForm, setAddForm] = React.useState<SteamappUpsert>(defaultAddForm);
 
   const [editForm, setEditForm] = React.useState(addForm);
 
@@ -224,10 +226,8 @@ export default function Index() {
       const fragment = window.location.hash.slice(1);
 
       if (fragment === "add") {
-        console.log("add fragment");
         setActivity("adding");
       } else if (fragment.startsWith("edit/")) {
-        console.log("edit fragment");
         const appId = parseInt(fragment.split('/')[1]);
         if (appId && !isNaN(appId)) {
           const steamappIndex = steamapps.findIndex(s => s.app_id === appId);
@@ -239,7 +239,6 @@ export default function Index() {
           }
         }
       } else if (fragment.startsWith("view/")) {
-        console.log("view fragment");
         const appId = parseInt(fragment.split('/')[1]);
         if (appId && !isNaN(appId)) {
           const steamappIndex = steamapps.findIndex(s => s.app_id === appId);
@@ -278,14 +277,17 @@ export default function Index() {
   };
 
   const openAddModal = () => {
+    setAddForm(defaultAddForm);
     setActivityWithFragment('adding');
   };
 
   const openEditModal = (index: number) => {
     const steamapp = steamapps[index];
     getSteamappDetails(index)
-      .then(() => setEditForm(steamapps[index] as SteamappUpsert))
-      .then(() => setActivityWithFragment('editing', steamapp.app_id))
+      .then(() => {
+        setEditForm(steamapp as SteamappUpsert);
+        setActivityWithFragment('editing', steamapp.app_id);
+      })
       .catch(handleErr);
   };
 
