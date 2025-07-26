@@ -229,7 +229,7 @@ export default function Index() {
         setActivity("adding");
       } else if (fragment.startsWith("edit/")) {
         const appId = parseInt(fragment.split('/')[1]);
-        if (appId && !isNaN(appId)) {
+        if (!isNaN(appId) && appId >= 0) {
           const steamappIndex = steamapps.findIndex(s => s.app_id === appId);
           if (steamappIndex >= 0) {
             getSteamappDetails(steamappIndex)
