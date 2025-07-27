@@ -232,8 +232,9 @@ export default function Index() {
         if (!isNaN(appId) && appId >= 0) {
           const steamappIndex = steamapps.findIndex(s => s.app_id === appId);
           if (steamappIndex >= 0) {
+            const steamapp = steamapps[steamappIndex];
             getSteamappDetails(steamappIndex)
-              .then(() => setEditForm(steamapps[steamappIndex] as SteamappUpsert))
+              .then(() => setEditForm(steamapp as SteamappUpsert))
               .then(() => setActivity('editing'))
               .catch(handleErr);
           }
