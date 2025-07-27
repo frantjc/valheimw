@@ -283,20 +283,22 @@ export default function Index() {
   };
 
   const openEditModal = (index: number) => {
-    const steamapp = steamapps[index];
     getSteamappDetails(index)
       .then(() => {
-        setEditForm(steamapp as SteamappUpsert);
-        setActivityWithFragment('editing', steamapp.app_id);
+        const updatedSteamapp = steamapps[index];
+        setEditForm(updatedSteamapp as SteamappUpsert);
+        setActivityWithFragment('editing', updatedSteamapp.app_id);
       })
       .catch(handleErr);
   };
 
   const openViewModal = (index: number) => {
-    const steamapp = steamapps[index];
     getSteamappDetails(index)
-      .then(() => setViewingSteamappIndex(index))
-      .then(() => setActivityWithFragment('viewing', steamapp.app_id))
+      .then(() => {
+        const updatedSteamapp = steamapps[index];
+        setViewingSteamappIndex(index);
+        setActivityWithFragment('viewing', updatedSteamapp.app_id);
+      })
       .catch(handleErr);
   };
 
