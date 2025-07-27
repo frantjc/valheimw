@@ -34,9 +34,9 @@ dev: $(KIND)
 		$(DOCKER) network connect sindri_default $(KIND_CLUSTER_NAME)-control-plane; \
 	fi
 	@$(KIND) get kubeconfig --name $(KIND_CLUSTER_NAME) --internal > dev/internal
-	@KUBECONFIG=./dev/internal $(DOCKER) compose up --build --detach stoker migrate
+	@KUBECONFIG=./dev/internal $(DOCKER) compose up --build --detach stoker migrate boiler
 	@$(GO) run ./cmd/kubectl-approve_steamapps --kubeconfig dev/config --all
-	@STOKER_URL=http://localhost:5050 $(YARN) $@
+	@STOKER_URL=http://localhost:5050 BOILER_URL=http://localhost:5000 $(YARN) $@
 
 .PHONY: manifests
 manifests: internal/stoker/stokercr/config/crd

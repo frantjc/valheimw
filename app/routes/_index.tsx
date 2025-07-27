@@ -36,9 +36,10 @@ export const meta: MetaFunction = () => {
 };
 
 export function loader(args: LoaderFunctionArgs) {
-  const host =
-    args.request.headers.get("Host") ||
-    `localhost:${process.env.PORT || "3000"}`;
+  const host = process.env.BOILER_URL
+    ? new URL(process.env.BOILER_URL).host
+    : args.request.headers.get("Host") ||
+      `localhost:${process.env.PORT || "3000"}`;
 
   return getSteamapps()
     .then(({ token, steamapps }) => {
@@ -72,14 +73,13 @@ export default function Index() {
   >();
 
   const handleErr = React.useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (err: any) => {
+    (err: unknown) => {
       if (err instanceof Error) {
         setErr(err);
       } else if (err instanceof Response) {
         setErr(new Error(`${err.status}: ${err.statusText}`));
       } else {
-        setErr(new Error(err));
+        setErr(new Error(`${err}`));
       }
     },
     [setErr],

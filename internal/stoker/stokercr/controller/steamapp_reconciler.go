@@ -150,6 +150,31 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
+	opts := &steamapp.BuildImageOpts{
+		BaseImageRef: sa.Spec.BaseImageRef,
+		AptPkgs:      sa.Spec.AptPkgs,
+		BetaPassword: betaPwd,
+		LaunchType:   sa.Spec.LaunchType,
+		PlatformType: steamcmd.PlatformType(sa.Spec.PlatformType),
+		Execs:        sa.Spec.Execs,
+		Entrypoint:   sa.Spec.Entrypoint,
+		Cmd:          sa.Spec.Cmd,
+	}
+
+	imageConfig, err := steamapp.GetImageConfig(ctx, sa.Spec.AppID, opts)
+	if err != nil {
+		sa.Status.Phase = v1alpha1.PhaseFailed
+		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
+	}
+
+	// Propagate the default values back to the Steamapp's spec.
+	sa.Spec.Cmd = imageConfig.Cmd
+	sa.Spec.Entrypoint = imageConfig.Entrypoint
+
+	if err := r.Update(ctx, sa); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if awaitingApproval {
 		r.Event(sa, corev1.EventTypeNormal, "AwaitingApproval", "Steamapp requires approval to build")
 		SetCondition(sa, metav1.Condition{
@@ -169,16 +194,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Reason: "ApprovalReceived",
 	})
 
-	if err := r.BuildImage(ctx, sa.Spec.AppID, xio.WriterCloser{Writer: io.Discard, Closer: xio.CloserFunc(func() error { return nil })}, &steamapp.GettableBuildImageOpts{
-		BaseImageRef: sa.Spec.BaseImageRef,
-		AptPkgs:      sa.Spec.AptPkgs,
-		BetaPassword: betaPwd,
-		LaunchType:   sa.Spec.LaunchType,
-		PlatformType: steamcmd.PlatformType(sa.Spec.PlatformType),
-		Execs:        sa.Spec.Execs,
-		Entrypoint:   sa.Spec.Entrypoint,
-		Cmd:          sa.Spec.Cmd,
-	}); err != nil {
+	if err := r.BuildImage(ctx, sa.Spec.AppID, xio.WriterCloser{Writer: io.Discard, Closer: xio.CloserFunc(func() error { return nil })}, opts); err != nil {
 		r.Eventf(sa, corev1.EventTypeWarning, "DidNotBuild", "Image did not build successfully: %v", err)
 		SetCondition(sa, metav1.Condition{
 			Type:    "Built",

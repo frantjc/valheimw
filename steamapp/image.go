@@ -182,6 +182,11 @@ func getImageConfig(ctx context.Context, appID int, opts *BuildImageOpts) (*spec
 	)
 }
 
+func GetImageConfig(ctx context.Context, appID int, opts ...BuildImageOpt) (*specs.ImageConfig, error) {
+	imageConfig, _, err := getImageConfig(ctx, appID, newBuildImageOpts(opts...))
+	return imageConfig, err
+}
+
 func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts) (*llb.Definition, error) {
 	arg, err := steamcmd.Args(nil,
 		steamcmd.ForceInstallDir(filepath.Join("/mnt", opts.Dir)),
