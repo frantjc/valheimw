@@ -80,9 +80,39 @@ export default function Index() {
     React.useState<Array<SteamappSummary | Steamapp>>(initialSteamapps);
   const [token, setToken] = React.useState(initialToken);
   const [err, setErr] = React.useState<Error>();
-  const [activity, setActivity] = React.useState<
-    "adding" | "editing" | "viewing"
-  >();
+
+  const [activity, setActivity] = React.useState<"adding" | "editing" | "viewing" | undefined>(undefined);
+  const [addForm, setAddForm] = React.useState<SteamappUpsert>(defaultAddForm);
+  const [editForm, setEditForm] = React.useState<SteamappUpsert>(defaultAddForm);
+  const [activityAppID, setActivityAppID] = React.useState<number | undefined>(undefined);
+
+  React.useEffect(() => {
+    function parseInitialFragment(): { activity: "adding" | "editing" | "viewing" | undefined; appId: number | undefined } {
+      const fragment = window.location.hash.slice(1);
+      
+      if (fragment === "add") {
+        return { activity: "adding" as const, appId: undefined };
+      } else if (fragment.startsWith("edit/")) {
+        const appId = parseInt(fragment.split('/')[1]);
+        if (!isNaN(appId) && appId >= 0) {
+          return { activity: "editing" as const, appId: appId };
+        }
+      } else if (fragment.startsWith("view/")) {
+        const appId = parseInt(fragment.split('/')[1]);
+        if (!isNaN(appId) && appId >= 0) {
+          return { activity: "viewing" as const, appId: appId };
+        }
+      }
+      
+      return { activity: undefined, appId: undefined };
+    }
+
+    const { activity: parsedActivity, appId } = parseInitialFragment();
+    if (parsedActivity) {
+      setActivity(parsedActivity);
+      setActivityAppID(appId);
+    }
+  }, []);
 
   const handleErr = React.useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -174,14 +204,27 @@ export default function Index() {
     }
   }, [prefetchIndex, getSteamappDetails, setDockerRunIndex, steamapps]);
 
-  const [viewingSteamappIndex, setViewingSteamappIndex] =
-    React.useState<number>(-1);
-
   React.useEffect(() => {
     if (err) {
       alert(`${err}.`);
     }
   }, [err]);
+
+  React.useEffect(() => {
+    if ((activity === 'editing' || activity === 'viewing') && activityAppID && steamapps.length > 0) {
+      const steamappIndex = steamapps.findIndex(s => s.app_id === activityAppID);
+      if (steamappIndex >= 0) {
+        getSteamappDetails(steamappIndex)
+          .then(() => {
+            if (activity === 'editing') {
+              const steamapp = steamapps[steamappIndex] as SteamappUpsert;
+              setEditForm(steamapp);
+            }
+          })
+          .catch(handleErr);
+      }
+    }
+  }, [steamapps, activityAppID, activity, getSteamappDetails, handleErr]);
 
   const steamapp =
     steamapps &&
@@ -216,63 +259,19 @@ export default function Index() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const [addForm, setAddForm] = React.useState<SteamappUpsert>(defaultAddForm);
-
-  const [editForm, setEditForm] = React.useState(addForm);
-
-  // fragment
-  React.useEffect(() => {
-    const handleHashChange = () => {
-      const fragment = window.location.hash.slice(1);
-
-      if (fragment === "add") {
-        setActivity("adding");
-      } else if (fragment.startsWith("edit/")) {
-        const appId = parseInt(fragment.split('/')[1]);
-        if (!isNaN(appId) && appId >= 0) {
-          const steamappIndex = steamapps.findIndex(s => s.app_id === appId);
-          if (steamappIndex >= 0) {
-            const steamapp = steamapps[steamappIndex];
-            getSteamappDetails(steamappIndex)
-              .then(() => setEditForm(steamapp as SteamappUpsert))
-              .then(() => setActivity('editing'))
-              .catch(handleErr);
-          }
-        }
-      } else if (fragment.startsWith("view/")) {
-        const appId = parseInt(fragment.split('/')[1]);
-        if (!isNaN(appId) && appId >= 0) {
-          const steamappIndex = steamapps.findIndex(s => s.app_id === appId);
-          if (steamappIndex >= 0) {
-            getSteamappDetails(steamappIndex)
-              .then(() => setViewingSteamappIndex(steamappIndex))
-              .then(() => setActivity('viewing'))
-              .catch(handleErr);
-          }
-        }
-      } else if (fragment === "") {
-        setActivity(undefined);
-      }
-    }
-
-    handleHashChange();
-
-    window.addEventListener('hashchange', handleHashChange);
-
-    return () => {
-      window.removeEventListener('hashchange', handleHashChange);
-    };
-  }, [steamapps, getSteamappDetails, handleErr])
-
   const setActivityWithFragment = (newActivity: typeof activity, appId?: number) => {
     if (newActivity === 'adding') {
       window.location.hash = '#add';
+      setActivityAppID(undefined);
     } else if (newActivity === 'editing' && appId) {
       window.location.hash = `#edit/${appId}`;
+      setActivityAppID(appId);
     } else if (newActivity === 'viewing' && appId) {
       window.location.hash = `#view/${appId}`;
+      setActivityAppID(appId);
     } else {
       window.location.hash = '';
+      setActivityAppID(undefined);
     }
     setActivity(newActivity);
   };
@@ -296,7 +295,6 @@ export default function Index() {
     getSteamappDetails(index)
       .then(() => {
         const updatedSteamapp = steamapps[index];
-        setViewingSteamappIndex(index);
         setActivityWithFragment('viewing', updatedSteamapp.app_id);
       })
       .catch(handleErr);
@@ -511,13 +509,15 @@ export default function Index() {
         onClose={closeModal}
       >
         <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[80vw]">
-          {steamapps.length > viewingSteamappIndex &&
-            viewingSteamappIndex >= 0 && (
+          {activity === "viewing" && activityAppID && (() => {
+            const viewingIndex = steamapps.findIndex(s => s.app_id === activityAppID);
+            return viewingIndex >= 0 && (
               <DockerfilePreview
                 className="pb-12"
-                steamapp={steamapps[viewingSteamappIndex] as Steamapp}
+                steamapp={steamapps[viewingIndex] as Steamapp}
               />
-            )}
+            );
+          })()}
         </div>
       </Modal>
     </div>
