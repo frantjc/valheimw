@@ -57,6 +57,19 @@ export function loader(args: LoaderFunctionArgs) {
 const defaultTag = "latest";
 const defaultBranch = "public";
 
+const defaultAddForm: SteamappUpsert = {
+  app_id: 0,
+  base_image: "docker.io/library/debian:stable-slim",
+  apt_packages: [],
+  launch_type: "",
+  platform_type: "linux",
+  execs: [],
+  entrypoint: [],
+  cmd: [],
+  branch: defaultBranch,
+  beta_password: "",
+};
+
 export default function Index() {
   const {
     host,
@@ -68,9 +81,47 @@ export default function Index() {
     React.useState<Array<SteamappSummary | Steamapp>>(initialSteamapps);
   const [token, setToken] = React.useState(initialToken);
   const [err, setErr] = React.useState<Error>();
+
   const [activity, setActivity] = React.useState<
-    "adding" | "editing" | "viewing"
-  >();
+    "adding" | "editing" | "viewing" | undefined
+  >(undefined);
+  const [addForm, setAddForm] = React.useState<SteamappUpsert>(defaultAddForm);
+  const [editForm, setEditForm] =
+    React.useState<SteamappUpsert>(defaultAddForm);
+  const [activityAppID, setActivityAppID] = React.useState<number | undefined>(
+    undefined,
+  );
+
+  React.useEffect(() => {
+    function parseInitialFragment(): {
+      activity: "adding" | "editing" | "viewing" | undefined;
+      appId: number | undefined;
+    } {
+      const fragment = window.location.hash.slice(1);
+
+      if (fragment === "add") {
+        return { activity: "adding" as const, appId: undefined };
+      } else if (fragment.startsWith("edit/")) {
+        const appId = parseInt(fragment.split("/")[1]);
+        if (!isNaN(appId) && appId >= 0) {
+          return { activity: "editing" as const, appId: appId };
+        }
+      } else if (fragment.startsWith("view/")) {
+        const appId = parseInt(fragment.split("/")[1]);
+        if (!isNaN(appId) && appId >= 0) {
+          return { activity: "viewing" as const, appId: appId };
+        }
+      }
+
+      return { activity: undefined, appId: undefined };
+    }
+
+    const { activity: parsedActivity, appId } = parseInitialFragment();
+    if (parsedActivity) {
+      setActivity(parsedActivity);
+      setActivityAppID(appId);
+    }
+  }, []);
 
   const handleErr = React.useCallback(
     (err: unknown) => {
@@ -161,14 +212,33 @@ export default function Index() {
     }
   }, [prefetchIndex, getSteamappDetails, setDockerRunIndex, steamapps]);
 
-  const [viewingSteamappIndex, setViewingSteamappIndex] =
-    React.useState<number>(-1);
-
   React.useEffect(() => {
     if (err) {
       alert(`${err}.`);
     }
   }, [err]);
+
+  React.useEffect(() => {
+    if (
+      (activity === "editing" || activity === "viewing") &&
+      activityAppID &&
+      steamapps.length > 0
+    ) {
+      const steamappIndex = steamapps.findIndex(
+        (s) => s.app_id === activityAppID,
+      );
+      if (steamappIndex >= 0) {
+        getSteamappDetails(steamappIndex)
+          .then(() => {
+            if (activity === "editing") {
+              const steamapp = steamapps[steamappIndex] as SteamappUpsert;
+              setEditForm(steamapp);
+            }
+          })
+          .catch(handleErr);
+      }
+    }
+  }, [steamapps, activityAppID, activity, getSteamappDetails, handleErr]);
 
   const steamapp =
     steamapps &&
@@ -203,20 +273,53 @@ export default function Index() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const [addForm, setAddForm] = React.useState<SteamappUpsert>({
-    app_id: 0,
-    base_image: "docker.io/library/debian:stable-slim",
-    apt_packages: [],
-    launch_type: "",
-    platform_type: "linux",
-    execs: [],
-    entrypoint: [],
-    cmd: [],
-    branch: "public",
-    beta_password: "",
-  });
+  const setActivityWithFragment = (
+    newActivity: typeof activity,
+    appId?: number,
+  ) => {
+    if (newActivity === "adding") {
+      window.location.hash = "#add";
+      setActivityAppID(undefined);
+    } else if (newActivity === "editing" && appId) {
+      window.location.hash = `#edit/${appId}`;
+      setActivityAppID(appId);
+    } else if (newActivity === "viewing" && appId) {
+      window.location.hash = `#view/${appId}`;
+      setActivityAppID(appId);
+    } else {
+      window.location.hash = "";
+      setActivityAppID(undefined);
+    }
+    setActivity(newActivity);
+  };
 
-  const [editForm, setEditForm] = React.useState(addForm);
+  const openAddModal = () => {
+    setAddForm(defaultAddForm);
+    setActivityWithFragment("adding");
+  };
+
+  const openEditModal = (index: number) => {
+    getSteamappDetails(index)
+      .then(() => {
+        const updatedSteamapp = steamapps[index];
+        setEditForm(updatedSteamapp as SteamappUpsert);
+        setActivityWithFragment("editing", updatedSteamapp.app_id);
+      })
+      .catch(handleErr);
+  };
+
+  const openViewModal = (index: number) => {
+    getSteamappDetails(index)
+      .then(() => {
+        const updatedSteamapp = steamapps[index];
+        setActivityWithFragment("viewing", updatedSteamapp.app_id);
+      })
+      .catch(handleErr);
+  };
+
+  const closeModal = () => {
+    setActivityWithFragment(undefined);
+  };
 
   return (
     <div className="flex flex-col gap-8 py-8">
@@ -307,7 +410,7 @@ export default function Index() {
               <tr>
                 <th className="p-2 border-gray-500 flex justify-center items-center">
                   <button
-                    onClick={() => setActivity("adding")}
+                    onClick={openAddModal}
                     className="hover:text-gray-500 p-2"
                   >
                     <IoMdAdd />
@@ -351,12 +454,7 @@ export default function Index() {
                     </td>
                     <td className="border-gray-500 text-center">
                       <button
-                        onClick={() =>
-                          getSteamappDetails(i)
-                            .then(() => setViewingSteamappIndex(i))
-                            .then(() => setActivity("viewing"))
-                            .catch(handleErr)
-                        }
+                        onClick={() => openViewModal(i)}
                         className="hover:text-gray-500 p-2"
                       >
                         <HiMagnifyingGlass />
@@ -364,14 +462,7 @@ export default function Index() {
                     </td>
                     <td className="border-gray-500 text-center">
                       <button
-                        onClick={() =>
-                          getSteamappDetails(i)
-                            .then(() =>
-                              setEditForm(steamapps[i] as SteamappUpsert),
-                            )
-                            .then(() => setActivity("editing"))
-                            .catch(handleErr)
-                        }
+                        onClick={() => openEditModal(i)}
                         className={`${(steamapp as Steamapp).locked ? "hover:cursor-not-allowed" : "hover:text-gray-500"} p-2`}
                         disabled={(steamapp as Steamapp).locked}
                       >
@@ -395,10 +486,7 @@ export default function Index() {
           )}
         </>
       )}
-      <Modal
-        open={activity === "adding"}
-        onClose={() => setActivity(undefined)}
-      >
+      <Modal open={activity === "adding"} onClose={closeModal}>
         <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[90vw]">
           <SteamappFormWithDockerfilePreview
             className="pb-12"
@@ -412,10 +500,7 @@ export default function Index() {
           />
         </div>
       </Modal>
-      <Modal
-        open={activity === "editing"}
-        onClose={() => setActivity(undefined)}
-      >
+      <Modal open={activity === "editing"} onClose={closeModal}>
         <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[90vw]">
           <SteamappFormWithDockerfilePreview
             editing
@@ -430,18 +515,23 @@ export default function Index() {
           />
         </div>
       </Modal>
-      <Modal
-        open={activity === "viewing"}
-        onClose={() => setActivity(undefined)}
-      >
+      <Modal open={activity === "viewing"} onClose={closeModal}>
         <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[80vw]">
-          {steamapps.length > viewingSteamappIndex &&
-            viewingSteamappIndex >= 0 && (
-              <DockerfilePreview
-                className="pb-12"
-                steamapp={steamapps[viewingSteamappIndex] as Steamapp}
-              />
-            )}
+          {activity === "viewing" &&
+            activityAppID &&
+            (() => {
+              const viewingIndex = steamapps.findIndex(
+                (s) => s.app_id === activityAppID,
+              );
+              return (
+                viewingIndex >= 0 && (
+                  <DockerfilePreview
+                    className="pb-12"
+                    steamapp={steamapps[viewingIndex] as Steamapp}
+                  />
+                )
+              );
+            })()}
         </div>
       </Modal>
     </div>
