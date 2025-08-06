@@ -6,10 +6,8 @@ import { HiMagnifyingGlass } from "react-icons/hi2";
 import { IoMdAdd } from "react-icons/io";
 import { MdExpandMore, MdOutlineEdit } from "react-icons/md";
 import {
-  getSteamapp,
   getSteamapps,
   Steamapp,
-  SteamappSummary,
   SteamappUpsert,
   upsertSteamapp,
 } from "~/client";
@@ -18,6 +16,7 @@ import {
   Modal,
   SteamappFormWithDockerfilePreview,
 } from "~/components";
+import { useErr, useSteamapps } from "~/hooks";
 
 export const meta: MetaFunction = () => {
   const title = "Sindri";
@@ -41,16 +40,38 @@ export function loader(args: LoaderFunctionArgs) {
     : args.request.headers.get("Host") ||
       `localhost:${process.env.PORT || "3000"}`;
 
+  const featureFlags = Object.entries(process.env).reduce(
+    (acc, [env, value]) => {
+      const featureFlagPrefix = "FEATURE_FLAG_";
+
+      if (env.startsWith(featureFlagPrefix)) {
+        const key = env
+          .slice(featureFlagPrefix.length)
+          .toLowerCase()
+          .replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+
+        return {
+          ...acc,
+          [key]: value ?? "",
+        };
+      }
+
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
+
   return getSteamapps()
     .then(({ token, steamapps }) => {
       return {
         host,
         steamapps,
         token,
+        featureFlags,
       };
     })
     .catch(() => {
-      return { host, steamapps: [], token: "" };
+      return { host, steamapps: [], token: "", featureFlags };
     });
 }
 
@@ -70,104 +91,88 @@ const defaultAddForm: SteamappUpsert = {
   beta_password: "",
 };
 
+function parseBool(value: string | undefined): boolean {
+  return ["1", "true", "yes"].includes(value ?? "");
+}
+
+const ActivityAdd = "add";
+const ActivityEdit = "edit";
+const ActivityView = "view";
+const Activities = [ActivityAdd, ActivityEdit, ActivityView] as const;
+type Activity = (typeof Activities)[number];
+
 export default function Index() {
   const {
     host,
     steamapps: initialSteamapps,
     token: initialToken,
+    featureFlags,
   } = useLoaderData<typeof loader>();
 
-  const [steamapps, setSteamapps] =
-    React.useState<Array<SteamappSummary | Steamapp>>(initialSteamapps);
-  const [token, setToken] = React.useState(initialToken);
-  const [err, setErr] = React.useState<Error>();
+  const handleErr = useErr();
 
-  const [activity, setActivity] = React.useState<
-    "adding" | "editing" | "viewing" | undefined
-  >(undefined);
-  const [addForm, setAddForm] = React.useState<SteamappUpsert>(defaultAddForm);
-  const [editForm, setEditForm] =
-    React.useState<SteamappUpsert>(defaultAddForm);
-  const [activityAppID, setActivityAppID] = React.useState<number | undefined>(
-    undefined,
-  );
+  const { steamapps, getSteamappDetails, getMoreSteamapps } = useSteamapps({
+    steamapps: initialSteamapps,
+    token: initialToken,
+  });
+
+  const [modal, setModal] = React.useState<{
+    activity: Activity;
+    appID?: number;
+    branch?: string;
+  }>();
+
+  const closeModal = React.useCallback(() => setModal(undefined), [setModal]);
 
   React.useEffect(() => {
-    function parseInitialFragment(): {
-      activity: "adding" | "editing" | "viewing" | undefined;
-      appId: number | undefined;
-    } {
-      const fragment = window.location.hash.slice(1);
+    const [initialActivity, rawInitialActivityAppID, initalBranch] =
+      window.location.hash.slice(1).split("/");
 
-      if (fragment === "add") {
-        return { activity: "adding" as const, appId: undefined };
-      } else if (fragment.startsWith("edit/")) {
-        const appId = parseInt(fragment.split("/")[1]);
-        if (!isNaN(appId) && appId >= 0) {
-          return { activity: "editing" as const, appId: appId };
+    switch (initialActivity) {
+      case ActivityEdit:
+      case ActivityView:
+        // eslint-disable-next-line no-case-declarations
+        const initialActivityAppID = parseInt(rawInitialActivityAppID);
+        if (initialActivityAppID) {
+          setModal({
+            activity: initialActivity,
+            appID: initialActivityAppID,
+            branch: initalBranch,
+          });
         }
-      } else if (fragment.startsWith("view/")) {
-        const appId = parseInt(fragment.split("/")[1]);
-        if (!isNaN(appId) && appId >= 0) {
-          return { activity: "viewing" as const, appId: appId };
-        }
-      }
-
-      return { activity: undefined, appId: undefined };
+        break;
+      case ActivityAdd:
+        setModal({ activity: initialActivity });
+        break;
     }
+  }, [setModal]);
 
-    const { activity: parsedActivity, appId } = parseInitialFragment();
-    if (parsedActivity) {
-      setActivity(parsedActivity);
-      setActivityAppID(appId);
-    }
-  }, []);
-
-  const handleErr = React.useCallback(
-    (err: unknown) => {
-      if (err instanceof Error) {
-        setErr(err);
-      } else if (err instanceof Response) {
-        setErr(new Error(`${err.status}: ${err.statusText}`));
-      } else {
-        setErr(new Error(`${err}`));
-      }
-    },
-    [setErr],
-  );
-
-  const getMoreSteamapps = React.useCallback(
-    (token?: string) => {
-      return getSteamapps({ token })
-        .then((res) => {
-          setSteamapps((s) => [
-            ...s,
-            ...res.steamapps.filter(
-              (app) =>
-                !s.some(
-                  (existing) =>
-                    existing.app_id === app.app_id &&
-                    existing.branch === app.branch,
-                ),
-            ),
-          ]);
-          setToken(res.token);
+  React.useEffect(() => {
+    if (modal?.appID) {
+      getSteamappDetails({ appID: modal.appID, branch: modal.branch })
+        .then((steamapp) => {
+          if (modal.activity === ActivityEdit) {
+            setEditForm(steamapp);
+          }
         })
         .catch(handleErr);
-    },
-    [setSteamapps, setToken, handleErr],
-  );
-
-  React.useEffect(() => {
-    if (steamapps.length === 0) {
-      getMoreSteamapps();
     }
-  }, [getMoreSteamapps, steamapps]);
+  }, [steamapps, modal, getSteamappDetails, handleErr]);
+
+  const [addForm, setAddForm] = React.useState<SteamappUpsert>(defaultAddForm);
+
+  const [editForm, setEditForm] =
+    React.useState<SteamappUpsert>(defaultAddForm);
 
   const [prefetchIndex, setPrefetchIndex] = React.useState(0);
 
   React.useEffect(() => {
-    if (steamapps.length && steamapps.length > 1 && !activity) {
+    if (
+      steamapps.length &&
+      steamapps.length > 1 &&
+      // The following condition is just to pause the "animation" when a modal is open.
+      !modal?.activity
+    ) {
       const timeout = setInterval(
         () => setPrefetchIndex((i) => (i + 1) % steamapps.length),
         2000,
@@ -175,234 +180,253 @@ export default function Index() {
 
       return () => clearTimeout(timeout);
     }
-  }, [steamapps, setPrefetchIndex, activity]);
-
-  const getSteamappDetails = React.useCallback(
-    (index: number) => {
-      const steamapp = steamapps[index];
-
-      if (steamapp && !(steamapp as Steamapp).base_image) {
-        return getSteamapp(steamapp.app_id, steamapp.branch).then((s) => {
-          setSteamapps((ss) => {
-            const newSteamapps = [...ss];
-            newSteamapps[index] = s;
-            return newSteamapps;
-          });
-
-          return s;
-        });
-      }
-
-      return Promise.resolve(steamapp as Steamapp);
-    },
-    [steamapps, setSteamapps],
-  );
+  }, [steamapps, setPrefetchIndex, modal]);
 
   const [dockerRunIndex, setDockerRunIndex] = React.useState(0);
 
   React.useEffect(() => {
     if (steamapps.length > prefetchIndex && prefetchIndex >= 0) {
-      getSteamappDetails(prefetchIndex)
+      getSteamappDetails({ index: prefetchIndex })
         .then(() => {
           setDockerRunIndex(prefetchIndex);
         })
         .catch(() => {
-          /**/
+          // Do not alert the user because this is a background process.
         });
     }
   }, [prefetchIndex, getSteamappDetails, setDockerRunIndex, steamapps]);
 
-  React.useEffect(() => {
-    if (err) {
-      alert(`${err}.`);
-    }
-  }, [err]);
-
-  React.useEffect(() => {
-    if (
-      (activity === "editing" || activity === "viewing") &&
-      activityAppID &&
-      steamapps.length > 0
-    ) {
-      const steamappIndex = steamapps.findIndex(
-        (s) => s.app_id === activityAppID,
-      );
-      if (steamappIndex >= 0) {
-        getSteamappDetails(steamappIndex)
-          .then(() => {
-            if (activity === "editing") {
-              const steamapp = steamapps[steamappIndex] as SteamappUpsert;
-              setEditForm(steamapp);
-            }
-          })
-          .catch(handleErr);
-      }
-    }
-  }, [steamapps, activityAppID, activity, getSteamappDetails, handleErr]);
+  const noBoiler = parseBool(featureFlags.noBoiler);
 
   const steamapp =
     steamapps &&
     steamapps.length > 0 &&
     (steamapps[dockerRunIndex] as Steamapp).base_image &&
     (steamapps[dockerRunIndex] as Steamapp);
-  const tag = (steamapp && steamapp.branch) || defaultBranch;
-  const branch = tag === defaultTag ? defaultBranch : tag;
-  const command =
-    !!steamapp &&
-    "docker run"
-      .concat(
-        steamapp.ports
-          ? steamapp.ports
-              .map((port) => ` -p ${port.port}:${port.port}`)
-              .join("")
-          : "",
-      )
-      .concat(` ${host}/${steamapp.app_id.toString()}:${tag}`);
+  const branch = (steamapp && steamapp.branch) || defaultBranch;
+  const tag = branch === defaultBranch ? "" : `:${branch}`;
+  const command = noBoiler
+    ? !!steamapp &&
+      `docker build --tag ${host}/${steamapp?.app_id.toString()}${tag} .`
+        .concat(" && docker run")
+        .concat(
+          steamapp.ports
+            ? steamapp.ports
+                .map((port) => ` -p ${port.port}:${port.port}`)
+                .join("")
+            : "",
+        )
+        .concat(` ${host}/${steamapp.app_id.toString()}${tag}`)
+    : !!steamapp &&
+      "docker run"
+        .concat(
+          steamapp.ports
+            ? steamapp.ports
+                .map((port) => ` -p ${port.port}:${port.port}`)
+                .join("")
+            : "",
+        )
+        .concat(` ${host}/${steamapp.app_id.toString()}${tag}`);
 
   const [copied, setCopied] = React.useState(false);
 
-  const handleCopy = () => {
-    if (!command) {
-      // This cannot happen.
-      handleErr(new Error("panic"));
-      return;
+  const handleCopy = React.useCallback(
+    (text: string) => {
+      return navigator.clipboard.writeText(text).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    },
+    [setCopied],
+  );
+
+  React.useEffect(() => {
+    let hash = "";
+
+    if (modal?.activity) {
+      hash += modal.activity;
     }
 
-    navigator.clipboard.writeText(command);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+    if (modal?.appID) {
+      hash += `/${modal.appID}`;
 
-  const setActivityWithFragment = (
-    newActivity: typeof activity,
-    appId?: number,
-  ) => {
-    if (newActivity === "adding") {
-      window.location.hash = "#add";
-      setActivityAppID(undefined);
-    } else if (newActivity === "editing" && appId) {
-      window.location.hash = `#edit/${appId}`;
-      setActivityAppID(appId);
-    } else if (newActivity === "viewing" && appId) {
-      window.location.hash = `#view/${appId}`;
-      setActivityAppID(appId);
-    } else {
-      window.location.hash = "";
-      setActivityAppID(undefined);
+      if (modal?.branch) {
+        hash += `/${modal.branch}`;
+      }
     }
-    setActivity(newActivity);
-  };
 
-  const openAddModal = () => {
-    setAddForm(defaultAddForm);
-    setActivityWithFragment("adding");
-  };
-
-  const openEditModal = (index: number) => {
-    getSteamappDetails(index)
-      .then(() => {
-        const updatedSteamapp = steamapps[index];
-        setEditForm(updatedSteamapp as SteamappUpsert);
-        setActivityWithFragment("editing", updatedSteamapp.app_id);
-      })
-      .catch(handleErr);
-  };
-
-  const openViewModal = (index: number) => {
-    getSteamappDetails(index)
-      .then(() => {
-        const updatedSteamapp = steamapps[index];
-        setActivityWithFragment("viewing", updatedSteamapp.app_id);
-      })
-      .catch(handleErr);
-  };
-
-  const closeModal = () => {
-    setActivityWithFragment(undefined);
-  };
+    if (hash || window.location.hash) {
+      window.location.hash = hash;
+    }
+  }, [modal]);
 
   return (
     <div className="flex flex-col gap-8 py-8">
-      {!!steamapp && (
-        <div className="flex flex-col gap-4">
-          <p className="text-3xl">Run the...</p>
-          <p className="text-xl">
+      {noBoiler ? (
+        <>
+          <p>
+            Sindri is a database of Dockerfiles to build container images with
+            Steamapps installed on them.
+          </p>
+          {!!steamapp && (
+            <>
+              <p>
+                Find your Steamapp below, click the
+                <button className="hover:cursor-default p-2">
+                  <HiMagnifyingGlass />
+                </button>
+                to preview and download its Dockerfile, open a terminal in the
+                download directory, and then run the...
+              </p>
+              <p className="text-xl">
+                <a
+                  className="font-bold hover:underline"
+                  href={`https://steamdb.info/app/${steamapp.app_id}/`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {steamapp.name}
+                </a>
+                {branch !== defaultBranch && (
+                  <span>&#39;s {branch} branch</span>
+                )}
+              </p>
+              <pre className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border border-gray-500">
+                <code className="font-mono text-white p-1 overflow-auto pr-4">
+                  <span className="pr-2 text-gray-500">$</span>
+                  {command}
+                </code>
+                {command && (
+                  <button
+                    onClick={() => handleCopy(command).catch(handleErr)}
+                    className="text-white hover:text-gray-500 p-2"
+                  >
+                    {copied ? <BsClipboardCheck /> : <BsClipboard />}
+                  </button>
+                )}
+              </pre>
+            </>
+          )}
+          <p>
+            Images are based on{" "}
+            <code className="font-mono bg-black rounded text-white p-1">
+              debian:stable-slim
+            </code>{" "}
+            and are nonroot for security purposes.
+          </p>
+          <p>
+            Steamapps commonly do not work out of the box, missing dependencies,
+            specifying an invalid entrypoint, or just generally not being
+            container-friendly. Sindri attemps to fix this by crowd-sourcing
+            configurations to apply to the images. To contribute such a
+            configuration, click the
+            <button
+              onClick={() => setModal({ activity: ActivityAdd })}
+              className="hover:text-gray-500 p-2"
+            >
+              <IoMdAdd />
+            </button>
+            button.
+          </p>
+          <p>
+            If you do not know your Steamapp&#39;s ID, find it on{" "}
             <a
               className="font-bold hover:underline"
-              href={`https://steamdb.info/app/${steamapp.app_id}/`}
+              href="https://steamdb.info/"
               target="_blank"
               rel="noopener noreferrer"
             >
-              {steamapp.name}
+              SteamDB
             </a>
-            {tag !== defaultTag && <span>&#39;s {branch} branch</span>}
+            .
           </p>
-          <pre className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border border-gray-500">
-            <code className="font-mono text-white p-1 overflow-auto pr-4">
-              <span className="pr-2 text-gray-500">$</span>
-              {command}
-            </code>
+        </>
+      ) : (
+        <>
+          {!!steamapp && (
+            <div className="flex flex-col gap-4">
+              <p className="text-3xl">Run the...</p>
+              <p className="text-xl">
+                <a
+                  className="font-bold hover:underline"
+                  href={`https://steamdb.info/app/${steamapp.app_id}/`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {steamapp.name}
+                </a>
+                {branch !== defaultBranch && (
+                  <span>&#39;s {branch} branch</span>
+                )}
+              </p>
+              <pre className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border border-gray-500">
+                <code className="font-mono text-white p-1 overflow-auto pr-4">
+                  <span className="pr-2 text-gray-500">$</span>
+                  {command}
+                </code>
+                {command && (
+                  <button
+                    onClick={() => handleCopy(command).catch(handleErr)}
+                    className="text-white hover:text-gray-500 p-2"
+                  >
+                    {copied ? <BsClipboardCheck /> : <BsClipboard />}
+                  </button>
+                )}
+              </pre>
+            </div>
+          )}
+          <p>
+            Sindri is a read-only container registry for images with Steamapps
+            installed on them.
+          </p>
+          <p>
+            Images are built on-demand, so the pulled Steamapp is always
+            up-to-date. To update, just pull the image again.
+          </p>
+          <p>
+            Images are based on{" "}
+            <code className="font-mono bg-black rounded text-white p-1">
+              debian:stable-slim
+            </code>{" "}
+            and are nonroot for security purposes.
+          </p>
+          <p>
+            Steamapps commonly do not work out of the box, missing dependencies,
+            specifying an invalid entrypoint, or just generally not being
+            container-friendly. Sindri attemps to fix this by crowd-sourcing
+            configurations to apply to the images before returning them. To
+            contribute such a configuration, click the
             <button
-              onClick={handleCopy}
-              className="text-white hover:text-gray-500 p-2"
+              onClick={() => setModal({ activity: ActivityAdd })}
+              className="hover:text-gray-500 p-2"
             >
-              {copied ? <BsClipboardCheck /> : <BsClipboard />}
+              <IoMdAdd />
             </button>
-          </pre>
-        </div>
+            button.
+          </p>
+          <p>
+            Image references are of the form{" "}
+            <code className="font-mono bg-black rounded text-white p-1">
+              {host}/{"<steamapp-id>:<steamapp-branch>"}
+            </code>
+            . If you do not know your Steamapp&#39;s ID, find it on{" "}
+            <a
+              className="font-bold hover:underline"
+              href="https://steamdb.info/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              SteamDB
+            </a>
+            . There is a special case for the default tag,{" "}
+            <code className="font-mono bg-black rounded text-white p-1">
+              :{defaultTag}
+            </code>
+            , which gets mapped to the default Steamapp branch, {defaultBranch}.
+            Supported Steamapps can be found below.
+          </p>
+        </>
       )}
-      <p>
-        Sindri is a read-only container registry for images with Steamapps
-        installed on them.
-      </p>
-      <p>
-        Images are based on{" "}
-        <code className="font-mono bg-black rounded text-white p-1">
-          debian:stable-slim
-        </code>{" "}
-        and are nonroot for security purposes.
-      </p>
-      <p>
-        Images are built on-demand, so the pulled Steamapp is always up-to-date.
-        To update, just pull the image again.
-      </p>
-      <p>
-        Steamapps commonly do not work out of the box, missing dependencies,
-        specifying an invalid entrypoint or just generally not being
-        container-friendly. Sindri attemps to fix this by crowd-sourcing
-        configurations to apply to the images before returning them. To
-        contribute such a configuration, check out Sindri&#39;s{" "}
-        <a
-          className="font-bold hover:underline"
-          href="/api/v1"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          API
-        </a>{" "}
-        or the add button below.
-      </p>
-      <p>
-        Image references are of the form{" "}
-        <code className="font-mono bg-black rounded text-white p-1">
-          {host}/{"<steamapp-id>:<steamapp-branch>"}
-        </code>
-        . If you do not know your Steamapp&#39;s ID, find it on{" "}
-        <a
-          className="font-bold hover:underline"
-          href="https://steamdb.info/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          SteamDB
-        </a>
-        . There is a special case for the default tag,{" "}
-        <code className="font-mono bg-black rounded text-white p-1">
-          :{defaultTag}
-        </code>
-        , which gets mapped to the default Steamapp branch, {defaultBranch}.
-        Supported Steamapps can be found below.
-      </p>
       {!!steamapps.length && (
         <>
           <table>
@@ -410,14 +434,16 @@ export default function Index() {
               <tr>
                 <th className="p-2 border-gray-500 flex justify-center items-center">
                   <button
-                    onClick={openAddModal}
+                    onClick={() => setModal({ activity: ActivityAdd })}
                     className="hover:text-gray-500 p-2"
                   >
                     <IoMdAdd />
                   </button>
                 </th>
                 <th className="border-gray-500 font-bold">Steamapp</th>
-                <th className="border-gray-500 font-bold">Image</th>
+                {!noBoiler && (
+                  <th className="border-gray-500 font-bold">Image</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -444,17 +470,27 @@ export default function Index() {
                         ? `'s ${steamapp.branch} branch`
                         : ""}
                     </td>
-                    <td className="border-gray-500 text-center">
-                      <code className="font-mono">
-                        {host}/{steamapp.app_id}
-                        {steamapp.branch
-                          ? `:${steamapp.branch}`
-                          : `:${defaultTag}`}
-                      </code>
-                    </td>
+                    {!noBoiler && (
+                      <td className="border-gray-500 text-center">
+                        <code className="font-mono">
+                          {host}/{steamapp.app_id}
+                          {steamapp.branch
+                            ? `:${steamapp.branch}`
+                            : `:${defaultTag}`}
+                        </code>
+                      </td>
+                    )}
                     <td className="border-gray-500 text-center">
                       <button
-                        onClick={() => openViewModal(i)}
+                        onClick={() =>
+                          getSteamappDetails({ index: i }).then((details) =>
+                            setModal({
+                              activity: ActivityView,
+                              appID: details.app_id,
+                              branch: details.branch,
+                            }),
+                          )
+                        }
                         className="hover:text-gray-500 p-2"
                       >
                         <HiMagnifyingGlass />
@@ -462,7 +498,15 @@ export default function Index() {
                     </td>
                     <td className="border-gray-500 text-center">
                       <button
-                        onClick={() => openEditModal(i)}
+                        onClick={() =>
+                          getSteamappDetails({ index: i }).then((details) =>
+                            setModal({
+                              activity: ActivityEdit,
+                              appID: details.app_id,
+                              branch: details.branch,
+                            }),
+                          )
+                        }
                         className={`${(steamapp as Steamapp).locked ? "hover:cursor-not-allowed" : "hover:text-gray-500"} p-2`}
                         disabled={(steamapp as Steamapp).locked}
                       >
@@ -474,10 +518,10 @@ export default function Index() {
               })}
             </tbody>
           </table>
-          {!!token && (
+          {!!getMoreSteamapps && (
             <div className="flex justify-center items-center">
               <button
-                onClick={() => getMoreSteamapps(token)}
+                onClick={getMoreSteamapps}
                 className="hover:text-gray-500 p-2"
               >
                 <MdExpandMore />
@@ -486,52 +530,41 @@ export default function Index() {
           )}
         </>
       )}
-      <Modal open={activity === "adding"} onClose={closeModal}>
+      <Modal open={modal?.activity === ActivityAdd} onClose={closeModal}>
         <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[90vw]">
           <SteamappFormWithDockerfilePreview
             className="pb-12"
             steamapp={addForm}
             onSubmit={(s) =>
-              upsertSteamapp(s)
-                .then(() => setActivity(undefined))
-                .catch(handleErr)
+              upsertSteamapp(s).then(closeModal).catch(handleErr)
             }
             onChange={setAddForm}
           />
         </div>
       </Modal>
-      <Modal open={activity === "editing"} onClose={closeModal}>
+      <Modal open={modal?.activity === ActivityEdit} onClose={closeModal}>
         <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[90vw]">
           <SteamappFormWithDockerfilePreview
             editing
             className="pb-12"
             steamapp={editForm}
             onSubmit={(s) =>
-              upsertSteamapp(s)
-                .then(() => setActivity(undefined))
-                .catch(handleErr)
+              upsertSteamapp(s).then(closeModal).catch(handleErr)
             }
             onChange={setEditForm}
           />
         </div>
       </Modal>
-      <Modal open={activity === "viewing"} onClose={closeModal}>
+      <Modal open={modal?.activity === ActivityView} onClose={closeModal}>
         <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[80vw]">
-          {activity === "viewing" &&
-            activityAppID &&
-            (() => {
-              const viewingIndex = steamapps.findIndex(
-                (s) => s.app_id === activityAppID,
-              );
-              return (
-                viewingIndex >= 0 && (
-                  <DockerfilePreview
-                    className="pb-12"
-                    steamapp={steamapps[viewingIndex] as Steamapp}
-                  />
-                )
-              );
-            })()}
+          {modal?.appID && (
+            <DockerfilePreview
+              className="pb-12"
+              steamapp={
+                steamapps.find((s) => s.app_id === modal?.appID) as Steamapp
+              }
+            />
+          )}
         </div>
       </Modal>
     </div>

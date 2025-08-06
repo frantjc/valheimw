@@ -26,12 +26,12 @@ export function SteamappForm({
   onSubmit,
   ...rest
 }: SteamappFormProps) {
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     onSubmit(steamapp);
   }
 
-  function validate(): Invalid[] {
+  function validate(steamapp: SteamappUpsert): Invalid[] {
     let inv: Invalid[] = [];
 
     if (steamapp.app_id <= 0) {
@@ -58,16 +58,13 @@ export function SteamappForm({
     return inv;
   }
 
-  function isFormValid() {
-    return !validate().length;
-  }
-
   function isBetaPasswordRequired() {
     const branch = steamapp?.branch?.trim();
     return !!branch && branch !== "public";
   }
 
-  const invalids = validate();
+  const invalids = validate(steamapp);
+  const isFormValid = !invalids.length;
 
   return (
     <div {...rest}>
@@ -166,9 +163,9 @@ export function SteamappForm({
         />
         <button
           type="submit"
-          disabled={!isFormValid()}
+          disabled={isFormValid}
           className={`flex justify-center items-center gap-2 p-2 w-32 mx-auto rounded border-2 transition-all duration-200 ${
-            !isFormValid()
+            !isFormValid
               ? "border-gray-400 text-gray-400 cursor-not-allowed"
               : "text-black dark:text-white border-black dark:border-white hover:border-gray-500 hover:text-gray-500"
           }`}
