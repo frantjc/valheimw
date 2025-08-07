@@ -1,4 +1,4 @@
-import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import React from "react";
 import { BsClipboard, BsClipboardCheck } from "react-icons/bs";
@@ -18,7 +18,7 @@ import {
 } from "~/components";
 import { useErr, useSteamapps } from "~/hooks";
 
-export const meta: MetaFunction = () => {
+export function meta() {
   const title = "Sindri";
   const description = "Read-only container registry for Steamapp images.";
 
@@ -32,46 +32,21 @@ export const meta: MetaFunction = () => {
     { property: "og:description", content: description },
     { property: "og:type", content: "website" },
   ];
-};
+}
 
-export function loader(args: LoaderFunctionArgs) {
-  const host = process.env.BOILER_URL
-    ? new URL(process.env.BOILER_URL).host
-    : args.request.headers.get("Host") ||
-      `localhost:${process.env.PORT || "3000"}`;
-
-  const featureFlags = Object.entries(process.env).reduce(
-    (acc, [env, value]) => {
-      const featureFlagPrefix = "FEATURE_FLAG_";
-
-      if (env.startsWith(featureFlagPrefix)) {
-        const key = env
-          .slice(featureFlagPrefix.length)
-          .toLowerCase()
-          .replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-
-        return {
-          ...acc,
-          [key]: value ?? "",
-        };
-      }
-
-      return acc;
-    },
-    {} as Record<string, string>,
-  );
+export function loader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url);
 
   return getSteamapps()
     .then(({ token, steamapps }) => {
       return {
-        host,
+        url,
         steamapps,
         token,
-        featureFlags,
       };
     })
     .catch(() => {
-      return { host, steamapps: [], token: "", featureFlags };
+      return { url, steamapps: [], token: "" };
     });
 }
 
@@ -91,10 +66,6 @@ const defaultAddForm: SteamappUpsert = {
   beta_password: "",
 };
 
-function parseBool(value: string | undefined): boolean {
-  return ["1", "true", "yes"].includes(value ?? "");
-}
-
 const ActivityAdd = "add";
 const ActivityEdit = "edit";
 const ActivityView = "view";
@@ -103,10 +74,9 @@ type Activity = (typeof Activities)[number];
 
 export default function Index() {
   const {
-    host,
+    url,
     steamapps: initialSteamapps,
     token: initialToken,
-    featureFlags,
   } = useLoaderData<typeof loader>();
 
   const handleErr = useErr();
@@ -159,6 +129,26 @@ export default function Index() {
     }
   }, [steamapps, modal, getSteamappDetails, handleErr]);
 
+  React.useEffect(() => {
+    let hash = "";
+
+    if (modal?.activity) {
+      hash += modal.activity;
+    }
+
+    if (modal?.appID) {
+      hash += `/${modal.appID}`;
+
+      if (modal?.branch) {
+        hash += `/${modal.branch}`;
+      }
+    }
+
+    if (hash || window.location.hash) {
+      window.location.hash = hash;
+    }
+  }, [modal]);
+
   const [addForm, setAddForm] = React.useState<SteamappUpsert>(defaultAddForm);
 
   const [editForm, setEditForm] =
@@ -196,7 +186,17 @@ export default function Index() {
     }
   }, [prefetchIndex, getSteamappDetails, setDockerRunIndex, steamapps]);
 
-  const noBoiler = parseBool(featureFlags.noBoiler);
+  const [canUseBoiler, setCanUseBoiler] = React.useState(true);
+
+  React.useEffect(() => {
+    fetch("/v2")
+      .then((res) => {
+        setCanUseBoiler(res.ok);
+      })
+      .catch(() => {
+        setCanUseBoiler(false);
+      });
+  }, [setCanUseBoiler]);
 
   const steamapp =
     steamapps &&
@@ -205,19 +205,8 @@ export default function Index() {
     (steamapps[dockerRunIndex] as Steamapp);
   const branch = (steamapp && steamapp.branch) || defaultBranch;
   const tag = branch === defaultBranch ? "" : `:${branch}`;
-  const command = noBoiler
+  const command = canUseBoiler
     ? !!steamapp &&
-      `docker build --tag ${host}/${steamapp?.app_id.toString()}${tag} .`
-        .concat(" && docker run")
-        .concat(
-          steamapp.ports
-            ? steamapp.ports
-                .map((port) => ` -p ${port.port}:${port.port}`)
-                .join("")
-            : "",
-        )
-        .concat(` ${host}/${steamapp.app_id.toString()}${tag}`)
-    : !!steamapp &&
       "docker run"
         .concat(
           steamapp.ports
@@ -226,7 +215,15 @@ export default function Index() {
                 .join("")
             : "",
         )
-        .concat(` ${host}/${steamapp.app_id.toString()}${tag}`);
+        .concat(` ${url.host}/${steamapp.app_id.toString()}${tag}`)
+    : !!steamapp &&
+      `curl ${new URL(
+        `/${steamapp.app_id
+          .toString()
+          .concat(branch === defaultBranch ? "" : `/${branch}`)
+          .concat("/run.sh")}`,
+        url,
+      )} | bash`;
 
   const [copied, setCopied] = React.useState(false);
 
@@ -240,193 +237,103 @@ export default function Index() {
     [setCopied],
   );
 
-  React.useEffect(() => {
-    let hash = "";
-
-    if (modal?.activity) {
-      hash += modal.activity;
-    }
-
-    if (modal?.appID) {
-      hash += `/${modal.appID}`;
-
-      if (modal?.branch) {
-        hash += `/${modal.branch}`;
-      }
-    }
-
-    if (hash || window.location.hash) {
-      window.location.hash = hash;
-    }
-  }, [modal]);
-
   return (
     <div className="flex flex-col gap-8 py-8">
-      {noBoiler ? (
-        <>
-          <p>
-            Sindri is a database of Dockerfiles to build container images with
-            Steamapps installed on them.
-          </p>
-          {!!steamapp && (
-            <>
-              <p>
-                Find your Steamapp below, click the
-                <button className="hover:cursor-default p-2">
-                  <HiMagnifyingGlass />
-                </button>
-                to preview and download its Dockerfile, open a terminal in the
-                download directory, and then run the...
-              </p>
-              <p className="text-xl">
-                <a
-                  className="font-bold hover:underline"
-                  href={`https://steamdb.info/app/${steamapp.app_id}/`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {steamapp.name}
-                </a>
-                {branch !== defaultBranch && (
-                  <span>&#39;s {branch} branch</span>
-                )}
-              </p>
-              <pre className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border border-gray-500">
-                <code className="font-mono text-white p-1 overflow-auto pr-4">
-                  <span className="pr-2 text-gray-500">$</span>
-                  {command}
-                </code>
-                {command && (
-                  <button
-                    onClick={() => handleCopy(command).catch(handleErr)}
-                    className="text-white hover:text-gray-500 p-2"
-                  >
-                    {copied ? <BsClipboardCheck /> : <BsClipboard />}
-                  </button>
-                )}
-              </pre>
-            </>
-          )}
-          <p>
-            Images are based on{" "}
-            <code className="font-mono bg-black rounded text-white p-1">
-              debian:stable-slim
-            </code>{" "}
-            and are nonroot for security purposes.
-          </p>
-          <p>
-            Steamapps commonly do not work out of the box, missing dependencies,
-            specifying an invalid entrypoint, or just generally not being
-            container-friendly. Sindri attemps to fix this by crowd-sourcing
-            configurations to apply to the images. To contribute such a
-            configuration, click the
-            <button
-              onClick={() => setModal({ activity: ActivityAdd })}
-              className="hover:text-gray-500 p-2"
-            >
-              <IoMdAdd />
-            </button>
-            button.
-          </p>
-          <p>
-            If you do not know your Steamapp&#39;s ID, find it on{" "}
+      {!!steamapp && (
+        <div className="flex flex-col gap-4">
+          <p className="text-3xl">Run the...</p>
+          <p className="text-xl">
             <a
               className="font-bold hover:underline"
-              href="https://steamdb.info/"
+              href={`https://steamdb.info/app/${steamapp.app_id}/`}
               target="_blank"
               rel="noopener noreferrer"
             >
-              SteamDB
+              {steamapp.name}
             </a>
-            .
+            {branch !== defaultBranch && <span>&#39;s {branch} branch</span>}
           </p>
-        </>
-      ) : (
-        <>
-          {!!steamapp && (
-            <div className="flex flex-col gap-4">
-              <p className="text-3xl">Run the...</p>
-              <p className="text-xl">
-                <a
-                  className="font-bold hover:underline"
-                  href={`https://steamdb.info/app/${steamapp.app_id}/`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {steamapp.name}
-                </a>
-                {branch !== defaultBranch && (
-                  <span>&#39;s {branch} branch</span>
-                )}
-              </p>
-              <pre className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border border-gray-500">
-                <code className="font-mono text-white p-1 overflow-auto pr-4">
-                  <span className="pr-2 text-gray-500">$</span>
-                  {command}
-                </code>
-                {command && (
-                  <button
-                    onClick={() => handleCopy(command).catch(handleErr)}
-                    className="text-white hover:text-gray-500 p-2"
-                  >
-                    {copied ? <BsClipboardCheck /> : <BsClipboard />}
-                  </button>
-                )}
-              </pre>
-            </div>
-          )}
-          <p>
-            Sindri is a read-only container registry for images with Steamapps
-            installed on them.
-          </p>
-          <p>
-            Images are built on-demand, so the pulled Steamapp is always
-            up-to-date. To update, just pull the image again.
-          </p>
-          <p>
-            Images are based on{" "}
-            <code className="font-mono bg-black rounded text-white p-1">
-              debian:stable-slim
-            </code>{" "}
-            and are nonroot for security purposes.
-          </p>
-          <p>
-            Steamapps commonly do not work out of the box, missing dependencies,
-            specifying an invalid entrypoint, or just generally not being
-            container-friendly. Sindri attemps to fix this by crowd-sourcing
-            configurations to apply to the images before returning them. To
-            contribute such a configuration, click the
-            <button
-              onClick={() => setModal({ activity: ActivityAdd })}
-              className="hover:text-gray-500 p-2"
-            >
-              <IoMdAdd />
-            </button>
-            button.
-          </p>
-          <p>
-            Image references are of the form{" "}
-            <code className="font-mono bg-black rounded text-white p-1">
-              {host}/{"<steamapp-id>:<steamapp-branch>"}
+          <pre className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border border-gray-500">
+            <code className="font-mono text-white p-1 overflow-auto pr-4">
+              <span className="pr-2 text-gray-500">$</span>
+              {command}
             </code>
-            . If you do not know your Steamapp&#39;s ID, find it on{" "}
-            <a
-              className="font-bold hover:underline"
-              href="https://steamdb.info/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              SteamDB
-            </a>
-            . There is a special case for the default tag,{" "}
-            <code className="font-mono bg-black rounded text-white p-1">
-              :{defaultTag}
-            </code>
-            , which gets mapped to the default Steamapp branch, {defaultBranch}.
-            Supported Steamapps can be found below.
-          </p>
-        </>
+            {command && (
+              <button
+                onClick={() => handleCopy(command).catch(handleErr)}
+                className="text-white hover:text-gray-500 p-2"
+              >
+                {copied ? <BsClipboardCheck /> : <BsClipboard />}
+              </button>
+            )}
+          </pre>
+        </div>
       )}
+      <p>
+        Sindri is a read-only container registry for images with Steamapps
+        installed on them.
+      </p>
+      {!canUseBoiler && (
+        <p className="text-sm border-t-4 border-blue-300 rounded-b bg-blue-300 bg-opacity-30 p-2">
+          You do not appear to have access to Sindri's container registry, but
+          you can still build your Steamapps' Dockerfiles from Sindri on your
+          own machine using the above command. If you think that this is
+          incorrect,{" "}
+          <button
+            className="hover:underline font-bold"
+            onClick={() => setCanUseBoiler(true)}
+          >
+            dismiss me
+          </button>
+          .
+        </p>
+      )}
+      <p>
+        Images are built on-demand, so the pulled Steamapp is always up-to-date.
+        To update, just pull the image again.
+      </p>
+      <p>
+        Images are based on{" "}
+        <code className="font-mono bg-black rounded text-white p-1">
+          debian:stable-slim
+        </code>{" "}
+        and are nonroot for security purposes.
+      </p>
+      <p>
+        Steamapps commonly do not work out of the box, missing dependencies,
+        specifying an invalid entrypoint, or just generally not being
+        container-friendly. Sindri attemps to fix this by crowd-sourcing
+        configurations to apply to the images before returning them. To
+        contribute such a configuration, click the
+        <button
+          onClick={() => setModal({ activity: ActivityAdd })}
+          className="hover:text-gray-500 p-2"
+        >
+          <IoMdAdd />
+        </button>
+        button.
+      </p>
+      <p>
+        Image references are of the form{" "}
+        <code className="font-mono bg-black rounded text-white p-1">
+          {url.host}/{"<steamapp-id>:<steamapp-branch>"}
+        </code>
+        . If you do not know your Steamapp&#39;s ID, find it on{" "}
+        <a
+          className="font-bold hover:underline"
+          href="https://steamdb.info/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          SteamDB
+        </a>
+        . There is a special case for the default tag,{" "}
+        <code className="font-mono bg-black rounded text-white p-1">
+          :{defaultTag}
+        </code>
+        , which gets mapped to the default Steamapp branch, {defaultBranch}.
+        Supported Steamapps can be found below.
+      </p>
       {!!steamapps.length && (
         <>
           <table>
@@ -441,9 +348,7 @@ export default function Index() {
                   </button>
                 </th>
                 <th className="border-gray-500 font-bold">Steamapp</th>
-                {!noBoiler && (
-                  <th className="border-gray-500 font-bold">Image</th>
-                )}
+                <th className="border-gray-500 font-bold">Image</th>
               </tr>
             </thead>
             <tbody>
@@ -470,16 +375,14 @@ export default function Index() {
                         ? `'s ${steamapp.branch} branch`
                         : ""}
                     </td>
-                    {!noBoiler && (
-                      <td className="border-gray-500 text-center">
-                        <code className="font-mono">
-                          {host}/{steamapp.app_id}
-                          {steamapp.branch
-                            ? `:${steamapp.branch}`
-                            : `:${defaultTag}`}
-                        </code>
-                      </td>
-                    )}
+                    <td className="border-gray-500 text-center">
+                      <code className="font-mono">
+                        {url.host}/{steamapp.app_id}
+                        {steamapp.branch
+                          ? `:${steamapp.branch}`
+                          : `:${defaultTag}`}
+                      </code>
+                    </td>
                     <td className="border-gray-500 text-center">
                       <button
                         onClick={() =>
