@@ -19,7 +19,7 @@ apply: manifests
 KIND_CLUSTER_NAME ?= sindri
 
 .PHONY: dev
-dev: $(KIND)
+dev: kind
 	@if ! $(KIND) get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
 		$(KIND) create cluster --config hack/kind.yml --kubeconfig dev/config --name $(KIND_CLUSTER_NAME); \
 	else \
