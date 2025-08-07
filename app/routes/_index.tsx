@@ -205,6 +205,7 @@ export default function Index() {
     (steamapps[dockerRunIndex] as Steamapp);
   const branch = (steamapp && steamapp.branch) || defaultBranch;
   const tag = branch === defaultBranch ? "" : `:${branch}`;
+  const ref = !!steamapp && `${url.host}/${steamapp.app_id.toString()}${tag}`;
   const command = canUseBoiler
     ? !!steamapp &&
       "docker run"
@@ -215,7 +216,7 @@ export default function Index() {
                 .join("")
             : "",
         )
-        .concat(` ${url.host}/${steamapp.app_id.toString()}${tag}`)
+        .concat(` ${ref}`)
     : !!steamapp &&
       `curl ${new URL(
         `/${steamapp.app_id
@@ -275,10 +276,10 @@ export default function Index() {
       </p>
       {!canUseBoiler && (
         <p className="text-sm border-t-4 border-blue-300 rounded-b bg-blue-300 bg-opacity-30 p-2">
-          You do not appear to have access to Sindri's container registry, but
-          you can still build your Steamapps' Dockerfiles from Sindri on your
-          own machine using the above command. If you think that this is
-          incorrect,{" "}
+          You do not appear to have access to Sindri&#39;s container registry,
+          but you can still build your Steamapp&#39;s Dockerfile from Sindri on
+          your own machine using the above command. If you think that this is
+          incorrect, you may{" "}
           <button
             className="hover:underline font-bold"
             onClick={() => setCanUseBoiler(true)}

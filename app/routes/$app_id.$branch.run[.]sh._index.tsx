@@ -1,7 +1,8 @@
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { getSteamapp } from "~/client";
+import { dockerfileFromSteamapp } from "~/lib";
 
-export function loader({ params }: LoaderFunctionArgs) {
+export function loader({ params, request }: LoaderFunctionArgs) {
   const { app_id: rawAppID, branch } = params;
 
   if (!rawAppID) {
@@ -10,27 +11,59 @@ export function loader({ params }: LoaderFunctionArgs) {
     });
   }
 
-  // TODO(frantjc): Source from Host header.
-  const scheme = "http";
-  const host = "localhost:3000";
-  const tag = `${host}/${rawAppID}${branch ? `:${branch}` : ""}`;
-
   const appID = parseInt(rawAppID, 10);
+  const url = new URL(request.url.split("/").slice(0, -1).join("/"));
+  const tag = branch ? `:${branch}` : "";
+  const ref = `${url.host}/${appID}${tag}`;
 
-  return getSteamapp(appID, branch).then((steamapp) => {
-    const script = [
-      "#!/bin/sh",
-      `docker build --file ${scheme}://${host}/${rawAppID}/${branch}/dockerfile --tag ${tag} .`,
-      `docker run ${tag}`,
-    ]
-      .join("\n")
-      .concat("\n");
+  return getSteamapp(appID, branch)
+    .then((steamapp) => {
+      // docker cannot connect to the same localhost as the user to access the Dockerfile,
+      // so we just inline it in the script.
+      if (url.hostname === "localhost") {
+        const dockerfile = dockerfileFromSteamapp(steamapp);
 
-    return new Response(script, {
-      headers: {
-        "Content-Disposition": "attachment; filename=run.sh",
-        "Content-Type": "text/plain",
-      },
+        return [
+          "#!/bin/sh",
+          `cat <<EOF | docker build -f- -t ${ref} .`,
+          dockerfile,
+          "EOF",
+          "docker run"
+            .concat(
+              steamapp.ports
+                ? steamapp.ports
+                    .map((port) => ` -p ${port.port}:${port.port}`)
+                    .join("")
+                : "",
+            )
+            .concat(` ${ref}`),
+        ]
+          .join("\n")
+          .concat("\n");
+      }
+
+      return [
+        "#!/bin/sh",
+        `docker build -f ${url}/dockerfile -t ${ref} .`,
+        "docker run"
+          .concat(
+            steamapp.ports
+              ? steamapp.ports
+                  .map((port) => ` -p ${port.port}:${port.port}`)
+                  .join("")
+              : "",
+          )
+          .concat(` ${ref}`),
+      ]
+        .join("\n")
+        .concat("\n");
+    })
+    .then((script) => {
+      return new Response(script, {
+        headers: {
+          "Content-Disposition": "attachment; filename=run.sh",
+          "Content-Type": "text/plain",
+        },
+      });
     });
-  });
 }
