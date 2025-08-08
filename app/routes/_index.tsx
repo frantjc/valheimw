@@ -1,7 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import React from "react";
-import { BsClipboard, BsClipboardCheck } from "react-icons/bs";
 import { HiMagnifyingGlass } from "react-icons/hi2";
 import { IoMdAdd } from "react-icons/io";
 import { MdExpandMore, MdOutlineEdit } from "react-icons/md";
@@ -15,8 +14,10 @@ import {
   DockerfilePreview,
   Modal,
   SteamappFormWithDockerfilePreview,
+  TerminalCommand,
 } from "~/components";
-import { useErr, useSteamapps } from "~/hooks";
+import { useError, useSteamapps } from "~/hooks";
+import { imageRef, runCommand } from "~/lib";
 
 export function meta() {
   const title = "Sindri";
@@ -79,7 +80,7 @@ export default function Index() {
     token: initialToken,
   } = useLoaderData<typeof loader>();
 
-  const handleErr = useErr();
+  const handleError = useError();
 
   const { steamapps, getSteamappDetails, getMoreSteamapps } = useSteamapps({
     steamapps: initialSteamapps,
@@ -125,9 +126,9 @@ export default function Index() {
             setEditForm(steamapp);
           }
         })
-        .catch(handleErr);
+        .catch(handleError);
     }
-  }, [steamapps, modal, getSteamappDetails, handleErr]);
+  }, [steamapps, modal, getSteamappDetails, handleError]);
 
   React.useEffect(() => {
     let hash = "";
@@ -154,15 +155,16 @@ export default function Index() {
   const [editForm, setEditForm] =
     React.useState<SteamappUpsert>(defaultAddForm);
 
+  const [animate, setAnimate] = React.useState(true);
+
+  React.useEffect(() => {
+    setAnimate(!modal?.activity);
+  }, [setAnimate, modal]);
+
   const [prefetchIndex, setPrefetchIndex] = React.useState(0);
 
   React.useEffect(() => {
-    if (
-      steamapps.length &&
-      steamapps.length > 1 &&
-      // The following condition is just to pause the "animation" when a modal is open.
-      !modal?.activity
-    ) {
+    if (steamapps.length && steamapps.length > 1 && animate) {
       const timeout = setInterval(
         () => setPrefetchIndex((i) => (i + 1) % steamapps.length),
         2000,
@@ -170,21 +172,19 @@ export default function Index() {
 
       return () => clearTimeout(timeout);
     }
-  }, [steamapps, setPrefetchIndex, modal]);
+  }, [steamapps, setPrefetchIndex, animate]);
 
-  const [dockerRunIndex, setDockerRunIndex] = React.useState(0);
+  const [sampleSteamapp, setSampleSteamapp] = React.useState<Steamapp>();
 
   React.useEffect(() => {
     if (steamapps.length > prefetchIndex && prefetchIndex >= 0) {
       getSteamappDetails({ index: prefetchIndex })
-        .then(() => {
-          setDockerRunIndex(prefetchIndex);
-        })
+        .then(setSampleSteamapp)
         .catch(() => {
           // Do not alert the user because this is a background process.
         });
     }
-  }, [prefetchIndex, getSteamappDetails, setDockerRunIndex, steamapps]);
+  }, [prefetchIndex, getSteamappDetails, setSampleSteamapp, steamapps]);
 
   const [canUseBoiler, setCanUseBoiler] = React.useState(true);
 
@@ -198,76 +198,35 @@ export default function Index() {
       });
   }, [setCanUseBoiler]);
 
-  const steamapp =
-    steamapps &&
-    steamapps.length > 0 &&
-    (steamapps[dockerRunIndex] as Steamapp).base_image &&
-    (steamapps[dockerRunIndex] as Steamapp);
-  const branch = (steamapp && steamapp.branch) || defaultBranch;
-  const tag = branch === defaultBranch ? "" : `:${branch}`;
-  const ref = !!steamapp && `${url.host}/${steamapp.app_id.toString()}${tag}`;
-  const command = canUseBoiler
-    ? !!steamapp &&
-      "docker run"
-        .concat(
-          steamapp.ports
-            ? steamapp.ports
-                .map((port) => ` -p ${port.port}:${port.port}`)
-                .join("")
-            : "",
-        )
-        .concat(` ${ref}`)
-    : !!steamapp &&
-      `curl ${new URL(
-        `/${steamapp.app_id
-          .toString()
-          .concat(branch === defaultBranch ? "" : `/${branch}`)
-          .concat("/run.sh")}`,
-        url,
-      )} | bash`;
-
-  const [copied, setCopied] = React.useState(false);
-
-  const handleCopy = React.useCallback(
-    (text: string) => {
-      return navigator.clipboard.writeText(text).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      });
-    },
-    [setCopied],
-  );
-
   return (
     <div className="flex flex-col gap-8 py-8">
-      {!!steamapp && (
+      {!!sampleSteamapp && (
         <div className="flex flex-col gap-4">
           <p className="text-3xl">Run the...</p>
           <p className="text-xl">
             <a
               className="font-bold hover:underline"
-              href={`https://steamdb.info/app/${steamapp.app_id}/`}
+              href={`https://steamdb.info/app/${sampleSteamapp.app_id}/`}
               target="_blank"
               rel="noopener noreferrer"
             >
-              {steamapp.name}
+              {sampleSteamapp.name}
             </a>
-            {branch !== defaultBranch && <span>&#39;s {branch} branch</span>}
-          </p>
-          <pre className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border border-gray-500">
-            <code className="font-mono text-white p-1 overflow-auto pr-4">
-              <span className="pr-2 text-gray-500">$</span>
-              {command}
-            </code>
-            {command && (
-              <button
-                onClick={() => handleCopy(command).catch(handleErr)}
-                className="text-white hover:text-gray-500 p-2"
-              >
-                {copied ? <BsClipboardCheck /> : <BsClipboard />}
-              </button>
+            {sampleSteamapp.branch !== defaultBranch && (
+              <span>&#39;s {sampleSteamapp.branch} branch</span>
             )}
-          </pre>
+          </p>
+          <TerminalCommand
+            onMouseEnter={() => setAnimate(false)}
+            onMouseLeave={() => setAnimate(true)}
+            command={runCommand({
+              steamapp: sampleSteamapp,
+              method: canUseBoiler ? "pull" : "build",
+              registry: url.host,
+              url,
+            })}
+            onError={handleError}
+          />
         </div>
       )}
       <p>
@@ -378,10 +337,7 @@ export default function Index() {
                     </td>
                     <td className="border-gray-500 text-center">
                       <code className="font-mono">
-                        {url.host}/{steamapp.app_id}
-                        {steamapp.branch
-                          ? `:${steamapp.branch}`
-                          : `:${defaultTag}`}
+                        {imageRef({ steamapp, registry: url.host })}
                       </code>
                     </td>
                     <td className="border-gray-500 text-center">
@@ -434,42 +390,60 @@ export default function Index() {
           )}
         </>
       )}
-      <Modal open={modal?.activity === ActivityAdd} onClose={closeModal}>
-        <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[90vw]">
-          <SteamappFormWithDockerfilePreview
-            className="pb-12"
-            steamapp={addForm}
-            onSubmit={(s) =>
-              upsertSteamapp(s).then(closeModal).catch(handleErr)
-            }
-            onChange={setAddForm}
-          />
-        </div>
+      <Modal
+        className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[90vw]"
+        open={modal?.activity === ActivityAdd}
+        onClose={closeModal}
+      >
+        <SteamappFormWithDockerfilePreview
+          className="pb-12"
+          steamapp={addForm}
+          onSubmit={(s) =>
+            upsertSteamapp(s).then(closeModal).catch(handleError)
+          }
+          onChange={setAddForm}
+        />
       </Modal>
-      <Modal open={modal?.activity === ActivityEdit} onClose={closeModal}>
-        <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[90vw]">
-          <SteamappFormWithDockerfilePreview
-            editing
-            className="pb-12"
-            steamapp={editForm}
-            onSubmit={(s) =>
-              upsertSteamapp(s).then(closeModal).catch(handleErr)
-            }
-            onChange={setEditForm}
-          />
-        </div>
+      <Modal
+        className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[90vw]"
+        open={modal?.activity === ActivityEdit}
+        onClose={closeModal}
+      >
+        <SteamappFormWithDockerfilePreview
+          editing
+          className="pb-12"
+          steamapp={editForm}
+          onSubmit={(s) =>
+            upsertSteamapp(s).then(closeModal).catch(handleError)
+          }
+          onChange={setEditForm}
+        />
       </Modal>
-      <Modal open={modal?.activity === ActivityView} onClose={closeModal}>
-        <div className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[80vw]">
-          {modal?.appID && (
+      <Modal
+        className="rounded bg-white dark:bg-gray-950 h-[80vh] w-[80vw]"
+        open={modal?.activity === ActivityView}
+        onClose={closeModal}
+      >
+        {modal?.appID && (
+          <div className="flex flex-col gap-8">
+            <TerminalCommand
+              command={runCommand({
+                steamapp: steamapps.find(
+                  (s) => s.app_id === modal?.appID,
+                ) as Steamapp,
+                method: canUseBoiler ? "pull" : "build",
+                registry: url.host,
+                url,
+              })}
+            />
             <DockerfilePreview
               className="pb-12"
               steamapp={
                 steamapps.find((s) => s.app_id === modal?.appID) as Steamapp
               }
             />
-          )}
-        </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

@@ -1,6 +1,6 @@
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { getSteamapp } from "~/client";
-import { dockerfileFromSteamapp } from "~/lib";
+import { imageRef, runScript } from "~/lib";
 
 export function loader({ params, request }: LoaderFunctionArgs) {
   const { app_id: rawAppID, branch } = params;
@@ -12,51 +12,18 @@ export function loader({ params, request }: LoaderFunctionArgs) {
   }
 
   const appID = parseInt(rawAppID, 10);
-  const url = new URL(request.url.split("/").slice(0, -1).join("/"));
-  const tag = branch ? `:${branch}` : "";
-  const ref = `${url.host}/${appID}${tag}`;
+  const url = new URL("/", request.url);
 
   return getSteamapp(appID, branch)
     .then((steamapp) => {
-      // docker cannot connect to the same localhost as the user to access the Dockerfile,
-      // so we just inline it in the script.
-      if (url.hostname === "localhost") {
-        const dockerfile = dockerfileFromSteamapp(steamapp);
-
-        return [
-          "#!/bin/sh",
-          `cat <<EOF | docker build -f- -t ${ref} .`,
-          dockerfile,
-          "EOF",
-          "docker run"
-            .concat(
-              steamapp.ports
-                ? steamapp.ports
-                    .map((port) => ` -p ${port.port}:${port.port}`)
-                    .join("")
-                : "",
-            )
-            .concat(` ${ref}`),
-        ]
-          .join("\n")
-          .concat("\n");
-      }
-
-      return [
-        "#!/bin/sh",
-        `docker build -f ${url}/dockerfile -t ${ref} .`,
-        "docker run"
-          .concat(
-            steamapp.ports
-              ? steamapp.ports
-                  .map((port) => ` -p ${port.port}:${port.port}`)
-                  .join("")
-              : "",
-          )
-          .concat(` ${ref}`),
-      ]
-        .join("\n")
-        .concat("\n");
+      return runScript({
+        steamapp,
+        // docker cannot connect to the same localhost as the user to access the Dockerfile,
+        // so we just inline it in the script in that case.
+        inline: url.hostname === "localhost",
+        ref: imageRef({ steamapp, registry: url.host }),
+        url,
+      });
     })
     .then((script) => {
       return new Response(script, {

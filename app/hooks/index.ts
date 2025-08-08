@@ -1,29 +1,29 @@
 import React from "react";
 import { getSteamapp, getSteamapps, Steamapp, SteamappSummary } from "~/client";
 
-export function useErr() {
-  const [err, setErr] = React.useState<Error>();
+export function useError() {
+  const [error, setError] = React.useState<Error>();
 
   React.useEffect(() => {
-    if (err) {
-      alert(`${err}.`);
+    if (error) {
+      alert(`${error}.`);
     }
-  }, [err]);
+  }, [error]);
 
-  const handleErr = React.useCallback(
+  const handleError = React.useCallback(
     (err: unknown) => {
       if (err instanceof Error) {
-        setErr(err);
+        setError(err);
       } else if (err instanceof Response) {
-        setErr(new Error(`${err.status}: ${err.statusText}`));
+        setError(new Error(`${err.status}: ${err.statusText}`));
       } else {
-        setErr(new Error(`${err}`));
+        setError(new Error(`${err}`));
       }
     },
-    [setErr],
+    [setError],
   );
 
-  return handleErr;
+  return handleError;
 }
 
 export type UseSteamappsOpts = {
