@@ -27,7 +27,6 @@ export function useError() {
 }
 
 export type UseSteamappsOpts = {
-  handleErr?: (err: unknown) => void;
   steamapps?: Array<SteamappSummary | Steamapp>;
   token?: string;
 };
