@@ -1,4 +1,5 @@
 import { IoMdClose } from "react-icons/io";
+import { DivIfProps } from "./div-if-props";
 
 export type ModalProps = React.PropsWithChildren<{
   open: boolean;
@@ -37,7 +38,7 @@ export function Modal({ open, onClose, children, ...rest }: ModalProps) {
           >
             <IoMdClose />
           </button>
-          <div {...rest}>{children}</div>
+          <DivIfProps {...rest}>{children}</DivIfProps>
         </div>
       )}
     </div>

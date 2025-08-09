@@ -1,5 +1,6 @@
 import React from "react";
 import { BsClipboard, BsClipboardCheck } from "react-icons/bs";
+import { DivIfProps } from "./div-if-props";
 
 export type TerminalCommandProps = {
   command: string;
@@ -22,7 +23,7 @@ export function TerminalCommand({ command, ...rest }: TerminalCommandProps) {
   );
 
   return (
-    <div {...rest}>
+    <DivIfProps {...rest}>
       <pre className="bg-black flex p-2 px-4 rounded items-center justify-between w-full border border-gray-500">
         <code className="font-mono text-white p-1 overflow-auto pr-4">
           <span className="pr-2 text-gray-500">$</span>
@@ -39,6 +40,6 @@ export function TerminalCommand({ command, ...rest }: TerminalCommandProps) {
           </button>
         )}
       </pre>
-    </div>
+    </DivIfProps>
   );
 }
