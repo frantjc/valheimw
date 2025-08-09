@@ -1,18 +1,21 @@
 import { IoMdClose } from "react-icons/io";
+import { DivIfProps } from "./div-if-props";
 
-export function Modal({
-  open,
-  onClose,
-  children,
-}: React.PropsWithChildren<{ open: boolean; onClose: () => void }>) {
+export type ModalProps = React.PropsWithChildren<{
+  open: boolean;
+  onClose: () => void;
+}> &
+  React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
+
+export function Modal({ open, onClose, children, ...rest }: ModalProps) {
   return (
     <div
-      className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 ${open ? "block" : "hidden"}`}
+      className={`fixed inset-0 flex items-center justify-center cursor-default bg-black bg-opacity-50 z-50 ${open ? "block" : "hidden"}`}
       onClick={onClose}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
-        if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
+        if (e.key === "Escape") {
           onClose();
         }
       }}
@@ -35,7 +38,7 @@ export function Modal({
           >
             <IoMdClose />
           </button>
-          {children}
+          <DivIfProps {...rest}>{children}</DivIfProps>
         </div>
       )}
     </div>

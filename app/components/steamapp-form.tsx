@@ -3,6 +3,7 @@ import { IoMdAdd, IoMdClose } from "react-icons/io";
 import { FiSend } from "react-icons/fi";
 import { SteamappUpsert } from "~/client";
 import { DockerfilePreview } from "./dockerfile-preview";
+import { DivIfProps } from "./div-if-props";
 
 type Invalid = {
   field: keyof SteamappUpsert;
@@ -26,12 +27,12 @@ export function SteamappForm({
   onSubmit,
   ...rest
 }: SteamappFormProps) {
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     onSubmit(steamapp);
   }
 
-  function validate(): Invalid[] {
+  function validate(steamapp: SteamappUpsert): Invalid[] {
     let inv: Invalid[] = [];
 
     if (steamapp.app_id <= 0) {
@@ -58,19 +59,16 @@ export function SteamappForm({
     return inv;
   }
 
-  function isFormValid() {
-    return !validate().length;
-  }
-
   function isBetaPasswordRequired() {
     const branch = steamapp?.branch?.trim();
     return !!branch && branch !== "public";
   }
 
-  const invalids = validate();
+  const invalids = validate(steamapp);
+  const isFormValid = !invalids.length;
 
   return (
-    <div {...rest}>
+    <DivIfProps {...rest}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <StringInput
           steamapp={steamapp}
@@ -166,18 +164,18 @@ export function SteamappForm({
         />
         <button
           type="submit"
-          disabled={!isFormValid()}
-          className={`flex justify-center items-center gap-2 p-2 w-32 mx-auto rounded border-2 transition-all duration-200 ${
-            !isFormValid()
+          disabled={isFormValid}
+          className={`flex justify-center items-center gap-2 p-2 w-32 mx-auto rounded border-2 ${
+            !isFormValid
               ? "border-gray-400 text-gray-400 cursor-not-allowed"
-              : "text-black dark:text-white border-black dark:border-white hover:border-gray-500 hover:text-gray-500"
+              : "text-black dark:text-white border-black dark:border-white hover:border-gray-500 hover:text-gray-500 cursor-pointer"
           }`}
         >
           <FiSend />
           Submit
         </button>
       </form>
-    </div>
+    </DivIfProps>
   );
 }
 
@@ -207,7 +205,7 @@ function StringInput({
   "onChange"
 >) {
   return (
-    <div {...rest}>
+    <DivIfProps {...rest}>
       <div className="flex flex-col gap-2">
         <label htmlFor={field} className="text-sm font-medium">
           {title}
@@ -236,7 +234,7 @@ function StringInput({
           </span>
         )}
       </div>
-    </div>
+    </DivIfProps>
   );
 }
 
@@ -277,7 +275,7 @@ function StringArrayInput({
   }
 
   return (
-    <div {...rest}>
+    <DivIfProps {...rest}>
       <div className="flex flex-col gap-2">
         <label htmlFor={field} className="text-sm font-medium">
           {title}
@@ -321,7 +319,7 @@ function StringArrayInput({
           </div>
         )}
       </div>
-    </div>
+    </DivIfProps>
   );
 }
 
@@ -333,7 +331,7 @@ export function SteamappFormWithDockerfilePreview({
   ...rest
 }: SteamappFormProps) {
   return (
-    <div {...rest}>
+    <DivIfProps {...rest}>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         <SteamappForm
           steamapp={steamapp}
@@ -343,6 +341,6 @@ export function SteamappFormWithDockerfilePreview({
         />
         <DockerfilePreview steamapp={steamapp} />
       </div>
-    </div>
+    </DivIfProps>
   );
 }

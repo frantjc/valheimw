@@ -117,6 +117,29 @@ try {
   /**/
 }
 
+try {
+  const boilerUrl = new URL(process.env.BOILER_URL);
+  const scheme = boilerUrl.protocol.slice(0, -1);
+  switch (scheme) {
+    case "http":
+    case "https":
+      app.all(
+        ["/v2", "/v2/*"],
+        proxy(boilerUrl.toString(), {
+          proxyReqOptDecorator: (proxyReqOpts) => {
+            proxyReqOpts.headers["Host"] = boilerUrl.hostname;
+            return proxyReqOpts;
+          },
+        }),
+      );
+      break;
+    default:
+      throw new Error(`unsupported scheme: ${scheme}`);
+  }
+} catch (_) {
+  /**/
+}
+
 // Handle asset requests.
 if (viteDevServer) {
   app.use(viteDevServer.middlewares);

@@ -3,6 +3,7 @@ import { BsClipboard, BsClipboardCheck } from "react-icons/bs";
 import { MdFileDownload, MdFileDownloadDone } from "react-icons/md";
 import { SteamappUpsert } from "~/client";
 import { dockerfileFromSteamapp } from "~/lib";
+import { DivIfProps } from "./div-if-props";
 
 export type DockerfilePreviewProps = {
   steamapp: SteamappUpsert;
@@ -62,7 +63,7 @@ export function DockerfilePreview({
   }
 
   return (
-    <div {...rest}>
+    <DivIfProps {...rest}>
       <div className="relative bg-black font-mono flex p-4 overflow-auto rounded border border-gray-500">
         <div className="text-right text-gray-500 pr-4 select-none">
           {dockerfile.split("\n").map((_, i) => (
@@ -107,6 +108,6 @@ export function DockerfilePreview({
           {copied ? <BsClipboardCheck /> : <BsClipboard />}
         </button>
       </div>
-    </div>
+    </DivIfProps>
   );
 }
