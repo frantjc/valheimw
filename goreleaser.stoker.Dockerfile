@@ -23,4 +23,3 @@ COPY stoker /usr/local/bin/
 COPY server.js package.json /app/
 COPY --from=remix /src/github.com/frantjc/sindri/build /app/build/
 COPY --from=remix /src/github.com/frantjc/sindri/node_modules /app/node_modules/
-COPY --from=remix /src/github.com/frantjc/sindri/public /app/public/

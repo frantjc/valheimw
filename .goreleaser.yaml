@@ -109,7 +109,6 @@ dockers:
       - --platform=linux/amd64
     extra_files:
       - app/
-      - public/
       - package.json
       - postcss.config.js
       - server.js
