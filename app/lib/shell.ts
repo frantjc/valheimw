@@ -46,8 +46,6 @@ export function runCommand({
         url,
       )} | bash`;
     case "pull":
-      const ref = imageRef({ steamapp, registry: registry! });
-
       return "docker run"
         .concat(
           steamapp.ports
@@ -56,7 +54,7 @@ export function runCommand({
                 .join("")
             : "",
         )
-        .concat(` ${ref}`);
+        .concat(` ${imageRef({ steamapp, registry: registry! })}`);
   }
 }
 

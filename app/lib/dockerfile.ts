@@ -1,4 +1,5 @@
 import { SteamappUpsert } from "~/client";
+import { defaultBranch } from "./shell";
 
 type Instruction =
   | "FROM"
@@ -70,7 +71,7 @@ const useradd = `useradd --system --gid ${user} --shell /bin/bash --create-home 
 const mount = "/mnt";
 
 export function dockerfileFromSteamapp(steamapp: SteamappUpsert): Dockerfile {
-  const isBeta = steamapp.branch && steamapp.branch !== "public";
+  const isBeta = steamapp.branch && steamapp.branch !== defaultBranch;
   const betaBranch = isBeta ? ` -beta ${steamapp.branch}` : "";
   const betaPassword = isBeta ? ` -betapassword ${steamapp.beta_password}` : "";
   const isWine =

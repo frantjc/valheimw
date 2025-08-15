@@ -358,7 +358,7 @@ func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts
 	if opts.User != "" {
 		state = state.
 			Run(shlexf("groupadd --system %s && useradd --system --gid %s --shell /bin/bash --create-home %s", opts.User, opts.User, opts.User)).
-			User(opts.User)
+			Root()
 
 		copyOpts = append(copyOpts, llb.WithUser(fmt.Sprintf("%s:%s", opts.User, opts.User)))
 	}
@@ -383,6 +383,10 @@ func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts
 		state = state.
 			Run(llb.Shlex(exec)).
 			Root()
+	}
+
+	if opts.User != "" {
+		state = state.User(opts.User)
 	}
 
 	return state.Marshal(ctx, llb.LinuxAmd64)
