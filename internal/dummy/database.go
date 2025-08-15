@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"path/filepath"
 
+	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/steamapp"
 	"github.com/frantjc/sindri/valheim"
 )
@@ -69,7 +70,7 @@ func (g *Database) GetBuildImageOpts(
 
 		return opts, nil
 	case 1963720:
-		// Core Keeper server.
+		// Core Keeper.
 		return &steamapp.GettableBuildImageOpts{
 			AptPkgs: []string{
 				"ca-certificates",
@@ -87,7 +88,7 @@ func (g *Database) GetBuildImageOpts(
 			Entrypoint: []string{filepath.Join(g.Dir, "_launch.sh"), "-logfile", "/dev/stdout"},
 		}, nil
 	case 2394010:
-		// Palworld server.
+		// Palworld.
 		return &steamapp.GettableBuildImageOpts{
 			AptPkgs: []string{
 				"ca-certificates",
@@ -96,8 +97,22 @@ func (g *Database) GetBuildImageOpts(
 			LaunchType: "default",
 		}, nil
 	case 1690800:
+		// Satisfactory.
 		return &steamapp.GettableBuildImageOpts{
 			LaunchType: "default",
+		}, nil
+	case 2857200:
+		// Abiotic Factor.
+		return &steamapp.GettableBuildImageOpts{
+			AptPkgs: []string{
+				"winehq-stable",
+			},
+			LaunchType:   "default",
+			PlatformType: steamcmd.PlatformTypeWindows,
+			Entrypoint: []string{
+				"wine", "/home/steam/AbioticFactor/Binaries/Win64/AbioticFactorServer-Win64-Shipping.exe",
+				"-log", "-newconsole", "-useperfthreads", "-NoAsyncLoadingThread",
+			},
 		}, nil
 	}
 

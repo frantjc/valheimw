@@ -8,8 +8,8 @@ require (
 	github.com/adrg/xdg v0.5.3
 	github.com/frantjc/go-ingress v0.3.0
 	github.com/frantjc/go-reproducible-builds v0.0.0-20241021140423-9651d3e86a85
-	github.com/frantjc/go-steamcmd v0.0.0-20250610160823-27a654624483
-	github.com/frantjc/x v0.0.0-20250610102853-b97418de6613
+	github.com/frantjc/go-steamcmd v0.0.0-20250814210827-114d014fdfee
+	github.com/frantjc/x v0.0.0-20250812130030-e7e2a3978c7c
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-logr/logr v1.4.3
 	github.com/go-openapi/spec v0.21.0
@@ -24,6 +24,7 @@ require (
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/timewasted/go-accept-headers v0.0.0-20130320203746-c78f304b1b09
 	gocloud.dev v0.43.0
+	golang.org/x/crypto v0.40.0
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
 	golang.org/x/sync v0.16.0
 	k8s.io/api v0.33.3
@@ -155,10 +156,9 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.37.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.7.0 // indirect
-	golang.org/x/crypto v0.40.0 // indirect
 	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/term v0.33.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/time v0.12.0 // indirect

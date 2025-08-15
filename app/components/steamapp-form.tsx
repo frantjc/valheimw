@@ -164,7 +164,7 @@ export function SteamappForm({
         />
         <button
           type="submit"
-          disabled={isFormValid}
+          disabled={!isFormValid}
           className={`flex justify-center items-center gap-2 p-2 w-32 mx-auto rounded border-2 ${
             !isFormValid
               ? "border-gray-400 text-gray-400 cursor-not-allowed"
@@ -332,7 +332,7 @@ export function SteamappFormWithDockerfilePreview({
 }: SteamappFormProps) {
   return (
     <DivIfProps {...rest}>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
         <SteamappForm
           steamapp={steamapp}
           editing={editing}

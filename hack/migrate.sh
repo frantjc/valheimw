@@ -85,3 +85,31 @@ wget $1/steamapps/1690800 \
         }
       ]
     }' -O-
+
+wget $1/steamapps/2857200 \
+    --header="Content-Type: application/json" \
+    --post-data='{
+      "launch_type": "default",
+      "apt_packages": [
+        "winehq-stable"
+      ],
+      "platform_type": "windows",
+      "ports": [
+        {
+          "port": 7777,
+          "protocols": ["TCP", "UDP"]
+        },
+        {
+          "port": 27015,
+          "protocols": ["TCP"]
+        }
+      ],
+      "entrypoint": [
+        "wine",
+        "/home/steam/AbioticFactor/Binaries/Win64/AbioticFactorServer-Win64-Shipping.exe",
+        "-log",
+        "-newconsole",
+        "-useperfthreads",
+        "-NoAsyncLoadingThread"
+      ]
+    }' -O-

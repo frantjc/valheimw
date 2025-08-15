@@ -1,20 +1,20 @@
 import { Steamapp } from "~/client";
 import { dockerfileFromSteamapp } from "./dockerfile";
 
-const defaultBranch = "public";
+export const defaultBranch = "public";
 
-type ImageRefOpts = {
+export type ImageRefOpts = {
   steamapp: Pick<Steamapp, "app_id" | "branch">;
   registry: string;
 };
 
 export function imageRef({ steamapp, registry }: ImageRefOpts): string {
   const branch = steamapp.branch || defaultBranch;
-  const tag = branch ? `:${branch}` : "";
+  const tag = branch && branch !== defaultBranch ? `:${branch}` : "";
   return `${registry}/${steamapp.app_id}${tag}`;
 }
 
-type RunCommandOpts =
+export type RunCommandOpts =
   | {
       steamapp: Pick<Steamapp, "app_id" | "branch" | "ports">;
       registry: string;
