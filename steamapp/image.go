@@ -2,11 +2,14 @@ package steamapp
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -14,14 +17,17 @@ import (
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/internal/appinfoutil"
+	xslices "github.com/frantjc/x/slices"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/client/llb"
 	"github.com/moby/buildkit/exporter/containerimage/exptypes"
 	"github.com/moby/buildkit/util/progress/progressui"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
+	"golang.org/x/crypto/openpgp/armor" //nolint:staticcheck // This is deprecated, but no alternatives found.
 	"golang.org/x/sync/errgroup"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -97,9 +103,9 @@ type ImageBuilder struct {
 const (
 	DefaultUser             = "steam"
 	DefaultDir              = "/home/" + DefaultUser
-	DefaultLaunchType       = "server"
-	DefaultBaseImageRef     = "docker.io/library/debian:stable-slim"
-	DefaultSteamcmdImageRef = "docker.io/steamcmd/steamcmd:latest"
+	DefaultLaunchType       = "default"
+	DefaultBaseImageRef     = "docker.io/library/debian@sha256:8810492a2dd16b7f59239c1e0cc1e56c1a1a5957d11f639776bd6798e795608b"
+	DefaultSteamcmdImageRef = "docker.io/steamcmd/steamcmd@sha256:6610496202dadc25bf3f89f5fde2416c4b23b8002284184ecce8f3eebfa0c74b"
 )
 
 func getImageConfig(ctx context.Context, appID int, opts *BuildImageOpts) (*specs.ImageConfig, int, error) {
@@ -187,9 +193,76 @@ func GetImageConfig(ctx context.Context, appID int, opts ...BuildImageOpt) (*spe
 	return imageConfig, err
 }
 
+func getFileContentsFromImage(ref, file string) ([]byte, error) {
+	pref, err := name.ParseReference(ref)
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := remote.Image(pref)
+	if err != nil {
+		return nil, err
+	}
+
+	file = path.Join("/", file)
+	tr := tar.NewReader(mutate.Extract(img))
+
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+
+		//nolint:gosec
+		if path.Join("/", hdr.Name) == file {
+			switch hdr.Typeflag {
+			case tar.TypeReg:
+				if _16kb := int64(16 * 1024); hdr.Size > _16kb {
+					return nil, fmt.Errorf("%s is too large", file)
+				}
+
+				buf := new(bytes.Buffer)
+
+				if _, err := io.Copy(buf, tr); err != nil {
+					return nil, err
+				}
+
+				return buf.Bytes(), nil
+			case tar.TypeLink, tar.TypeSymlink:
+				return getFileContentsFromImage(ref, hdr.Linkname)
+			default:
+				return nil, fmt.Errorf("%s is not a readable file", file)
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("%s not found in image", file)
+}
+
+func getVersionCodenameFromImage(ref string) (string, error) {
+	osRelease, err := getFileContentsFromImage(ref, "/etc/os-release")
+	if err != nil {
+		return "", err
+	}
+
+	return parseVersionCodenameFromOSRelease(string(osRelease))
+}
+
+func parseVersionCodenameFromOSRelease(osRelease string) (string, error) {
+	if matches := regexp.MustCompile(`(?m)^VERSION_CODENAME=(?:\"?)([^"\n]+)`).FindStringSubmatch(osRelease); len(matches) == 2 {
+		return matches[1], nil
+	}
+
+	return "", fmt.Errorf("VERSION_CODENAME not found")
+}
+
 func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts) (*llb.Definition, error) {
+	installDir := "/mnt"
+
 	arg, err := steamcmd.Args(nil,
-		steamcmd.ForceInstallDir(filepath.Join("/mnt", opts.Dir)),
+		steamcmd.ForceInstallDir(installDir),
 		steamcmd.Login{},
 		steamcmd.ForcePlatformType(opts.PlatformType),
 		steamcmd.AppUpdate{
@@ -205,32 +278,105 @@ func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts
 
 	state := llb.Image(opts.BaseImageRef)
 
+	if opts.PlatformType == steamcmd.PlatformTypeWindows && xslices.Some(opts.AptPkgs, func(pkg string, _ int) bool {
+		return slices.Contains([]string{"winehq-stable", "winehq-devel", "winehq-staging"}, pkg)
+	}) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://dl.winehq.org/wine-builds/winehq.key", nil)
+		if err != nil {
+			return nil, err
+		}
+
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer res.Body.Close()
+
+		block, err := armor.Decode(res.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		key, err := io.ReadAll(block.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		var (
+			id              = "debian"
+			versionCodename = "trixie"
+		)
+		if opts.BaseImageRef != DefaultBaseImageRef {
+			// TODO(frantjc): Can we do this with buildkit instead of go-containerregistry?
+			// As is, we pull the image twice and are not guaranteed the same image if the
+			// image ref doesn't use a sha.
+			versionCodename, err := getVersionCodenameFromImage(opts.BaseImageRef)
+			if err != nil {
+				return nil, err
+			}
+
+			switch versionCodename {
+			case "trixie", "bookworm", "bullseye":
+			case "plucky", "oracular", "noble", "jammy", "focal":
+				id = "ubuntu"
+			default:
+				return nil, fmt.Errorf("unknown VERSION_CODENAME %s", versionCodename)
+			}
+		}
+
+		req, err = http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("https://dl.winehq.org/wine-builds/%s/dists/%s/winehq-%s.sources", id, versionCodename, versionCodename), nil)
+		if err != nil {
+			return nil, err
+		}
+
+		res, err = http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer res.Body.Close()
+
+		sources, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		state = state.
+			Run(shlexf("apt-get update -y && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && apt-get clean && dpkg --add-architecture i386")).
+			Root().
+			File(llb.Mkfile("/etc/apt/keyrings/winehq-archive.key", 0644, key)).
+			File(llb.Mkfile(fmt.Sprintf("/etc/apt/sources.list.d/winehq-%s.sources", versionCodename), 0644, sources))
+	}
+
 	if len(opts.AptPkgs) > 0 {
 		state = state.
 			Run(shlexf("apt-get update -y && apt-get install -y --no-install-recommends %s && rm -rf /var/lib/apt/lists/* && apt-get clean", strings.Join(opts.AptPkgs, " "))).
 			Root()
 	}
 
-	steamcmdState := llb.Image(opts.SteamcmdImageRef)
+	copyOpts := []llb.CopyOption{&llb.CopyInfo{CopyDirContentsOnly: true}}
 
 	if opts.User != "" {
-		// This creates /home/steam, which the `steamcmd app_update` command
-		// below needs to exist when using [DefaultDir].
 		state = state.
 			Run(shlexf("groupadd --system %s && useradd --system --gid %s --shell /bin/bash --create-home %s", opts.User, opts.User, opts.User)).
 			Root()
 
-		steamcmdState = steamcmdState.
-			Run(shlexf("groupadd --system %s && useradd --system --gid %s --shell /bin/bash --create-home %s", opts.User, opts.User, opts.User)).
-			User(opts.User)
+		copyOpts = append(copyOpts, llb.WithUser(fmt.Sprintf("%s:%s", opts.User, opts.User)))
 	}
 
-	state = steamcmdState.
-		// `echo`ing the buildid here is to workaround
-		// buildkit cacheing the steamcmd app_update command
-		// when there has been a new build pushed to the branch.
-		Run(shlexf("echo %d && steamcmd %s", buildID, strings.Join(arg, " "))).
-		AddMount("/mnt", state).
+	state = state.
+		File(
+			llb.Copy(
+				llb.Image(opts.SteamcmdImageRef).
+					// `echo`ing the buildid here is to workaround
+					// buildkit cacheing the steamcmd app_update command
+					// when there has been a new build pushed to the branch.
+					Run(shlexf("echo %d && steamcmd %s", buildID, strings.Join(arg, " "))).
+					Root(),
+				installDir,
+				opts.Dir,
+				copyOpts...,
+			),
+		).
 		Dir(opts.Dir)
 
 	for _, exec := range opts.Execs {

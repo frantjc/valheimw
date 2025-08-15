@@ -17,7 +17,7 @@ import {
   TerminalCommand,
 } from "~/components";
 import { useError, useSteamapps } from "~/hooks";
-import { imageRef, runCommand } from "~/lib";
+import { defaultBranch, imageRef, runCommand } from "~/lib";
 
 export function meta() {
   const title = "Sindri";
@@ -50,9 +50,6 @@ export function loader({ request }: LoaderFunctionArgs) {
       return { url, steamapps: [], token: "" };
     });
 }
-
-const defaultTag = "latest";
-const defaultBranch = "public";
 
 const defaultAddForm: SteamappUpsert = {
   app_id: 0,
@@ -289,7 +286,7 @@ export default function Index() {
         </a>
         . There is a special case for the default tag,{" "}
         <code className="font-mono bg-black rounded text-white p-1">
-          :{defaultTag}
+          :latest
         </code>
         , which gets mapped to the default Steamapp branch, {defaultBranch}.
         Supported Steamapps can be found below.

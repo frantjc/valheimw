@@ -1,9 +1,11 @@
 import { SteamappUpsert } from "~/client";
+import { defaultBranch } from "./shell";
 
 type Instruction =
   | "FROM"
   | "RUN"
   | "COPY"
+  | "ADD"
   | "USER"
   | "ENTRYPOINT"
   | "CMD"
@@ -33,6 +35,8 @@ class Directive {
         return `USER ${this.args.join(" ")}`;
       case "COPY":
         return `COPY ${this.args.join(" ")}`;
+      case "ADD":
+        return `ADD ${this.args.join(" ")}`;
       case "ENTRYPOINT":
         return `ENTRYPOINT [${this.args.map((arg) => `"${arg}"`).join(", ")}]`;
       case "CMD":
@@ -67,30 +71,67 @@ const useradd = `useradd --system --gid ${user} --shell /bin/bash --create-home 
 const mount = "/mnt";
 
 export function dockerfileFromSteamapp(steamapp: SteamappUpsert): Dockerfile {
-  const isBeta = steamapp.branch && steamapp.branch !== "public";
+  const isBeta = steamapp.branch && steamapp.branch !== defaultBranch;
   const betaBranch = isBeta ? ` -beta ${steamapp.branch}` : "";
   const betaPassword = isBeta ? ` -betapassword ${steamapp.beta_password}` : "";
+  const isWine =
+    steamapp.platform_type === "windows" &&
+    steamapp.apt_packages.some((pkg) =>
+      ["winehq-stable", "winehq-devel", "winehq-staging"].includes(pkg),
+    );
+  let baseImage = steamapp.base_image || "debian:stable-slim";
+  if (baseImage.startsWith("docker.io/library/")) {
+    baseImage = baseImage.slice(18);
+  } else if (baseImage.startsWith("docker.io/")) {
+    baseImage = baseImage.slice(10);
+  }
 
   return new Dockerfile(
     new Directive("SYNTAX", "docker/dockerfile:1"),
     new Directive("FROM", "steamcmd/steamcmd", "AS", "steamcmd"),
     new Directive(
       "RUN",
-      groupadd,
-      useradd,
       "steamcmd \\\n" +
-        `\t\t+force_install_dir ${mount} \\\n` +
-        `\t\t+login anonymous \\\n` +
-        `\t\t@sSteamCmdForcePlatformType ${steamapp.platform_type} \\\n` +
-        `\t\t+app_update ${steamapp.app_id || 0}${betaBranch}${betaPassword} \\\n` +
-        `\t\t+quit`,
+        `\t+force_install_dir ${mount} \\\n` +
+        `\t+login anonymous \\\n` +
+        `\t+@sSteamCmdForcePlatformType ${steamapp.platform_type} \\\n` +
+        `\t+app_update ${steamapp.app_id || 0}${betaBranch}${betaPassword} \\\n` +
+        `\t+quit`,
     ),
-    new Directive(
-      "FROM",
-      steamapp.base_image?.startsWith("docker.io/library/")
-        ? steamapp.base_image.slice(18)
-        : steamapp.base_image || "debian:stable-slim",
-    ),
+    ...(isWine
+      ? [
+          new Directive("FROM", "debian:stable-slim", "AS", "wine"),
+          new Directive(
+            "ADD",
+            "https://dl.winehq.org/wine-builds/winehq.key",
+            "/tmp/",
+          ),
+          new Directive(
+            "ADD",
+            "https://dl.winehq.org/wine-builds/debian/dists/trixie/winehq-trixie.sources",
+            "/mnt/sources.list.d/",
+          ),
+          new Directive(
+            "RUN",
+            "apt-get update -y",
+            "apt-get install -y --no-install-recommends \\\n\t\tgnupg",
+            "mkdir -p /mnt/keyrings",
+            "cat /tmp/winehq.key | gpg --dearmor -o /mnt/keyrings/winehq-archive.key -",
+          ),
+        ]
+      : []),
+    new Directive("FROM", baseImage),
+    ...(isWine
+      ? [
+          new Directive(
+            "RUN",
+            "apt-get update -y",
+            "apt-get install -y --no-install-recommends \\\n\t\tca-certificates",
+            "dpkg --add-architecture i386",
+          ),
+          new Directive("COPY", "--from=wine", "/mnt", "/etc/apt"),
+        ]
+      : []),
     new Directive(
       "RUN",
       ...[groupadd, useradd]

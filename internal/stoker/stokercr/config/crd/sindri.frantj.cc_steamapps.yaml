@@ -81,7 +81,7 @@ spec:
                     type: string
                   type: array
                 launchType:
-                  default: server
+                  default: default
                   type: string
                 platformType:
                   default: linux

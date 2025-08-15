@@ -22,7 +22,7 @@ type SteamappSpecImageOpts struct {
 	Branch string `json:"branch,omitempty"`
 	// +kubebuilder:validation:Optional
 	BetaPassword string `json:"betaPassword,omitempty"`
-	// +kubebuilder:default="server"
+	// +kubebuilder:default="default"
 	LaunchType string `json:"launchType,omitempty"`
 	// +kubebuilder:default="linux"
 	// +kubebuilder:validation:Enum=linux;windows;macos
