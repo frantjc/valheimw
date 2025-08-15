@@ -91,14 +91,12 @@ export function dockerfileFromSteamapp(steamapp: SteamappUpsert): Dockerfile {
     new Directive("FROM", "steamcmd/steamcmd", "AS", "steamcmd"),
     new Directive(
       "RUN",
-      groupadd,
-      useradd,
       "steamcmd \\\n" +
-        `\t\t+force_install_dir ${mount} \\\n` +
-        `\t\t+login anonymous \\\n` +
-        `\t\t+@sSteamCmdForcePlatformType ${steamapp.platform_type} \\\n` +
-        `\t\t+app_update ${steamapp.app_id || 0}${betaBranch}${betaPassword} \\\n` +
-        `\t\t+quit`,
+        `\t+force_install_dir ${mount} \\\n` +
+        `\t+login anonymous \\\n` +
+        `\t+@sSteamCmdForcePlatformType ${steamapp.platform_type} \\\n` +
+        `\t+app_update ${steamapp.app_id || 0}${betaBranch}${betaPassword} \\\n` +
+        `\t+quit`,
     ),
     ...(isWine
       ? [

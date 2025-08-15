@@ -1,14 +1,12 @@
 # syntax=docker/dockerfile:1
 
 FROM steamcmd/steamcmd AS steamcmd
-RUN groupadd --system steam \
-	&& useradd --system --gid steam --shell /bin/bash --create-home steam \
-	&& steamcmd \
-		+force_install_dir /mnt \
-		+login anonymous \
-		+@sSteamCmdForcePlatformType windows \
-		+app_update 2857200 \
-		+quit
+RUN steamcmd \
+	+force_install_dir /mnt \
+	+login anonymous \
+	+@sSteamCmdForcePlatformType windows \
+	+app_update 2857200 \
+	+quit
 
 FROM debian:stable-slim AS wine
 ADD https://dl.winehq.org/wine-builds/winehq.key /tmp/

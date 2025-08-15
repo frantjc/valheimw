@@ -1,14 +1,12 @@
 # syntax=docker/dockerfile:1
 
 FROM steamcmd/steamcmd AS steamcmd
-RUN groupadd --system steam \
-	&& useradd --system --gid steam --shell /bin/bash --create-home steam \
-	&& steamcmd \
-		+force_install_dir /mnt \
-		+login anonymous \
-		+@sSteamCmdForcePlatformType linux \
-		+app_update 896660 \
-		+quit
+RUN steamcmd \
+	+force_install_dir /mnt \
+	+login anonymous \
+	+@sSteamCmdForcePlatformType linux \
+	+app_update 896660 \
+	+quit
 
 FROM debian:stable-slim
 RUN groupadd --system steam \
