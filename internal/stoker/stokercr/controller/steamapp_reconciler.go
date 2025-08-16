@@ -244,11 +244,11 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	vulnerabilities := make([]v1alpha1.Vulnerability, len(vulns))
 	for i, vuln := range vulns {
 		vulnerabilities[i] = v1alpha1.Vulnerability{
-			ID:          vuln.ID,
-			PackageID:   vuln.PackageID,
-			Title:       vuln.Title,
-			Status:      vuln.Status.String(),
-			Severity:    vuln.Severity.String(),
+			ID:        vuln.ID,
+			PackageID: vuln.PackageID,
+			Title:     vuln.Title,
+			Status:    vuln.Status.String(),
+			Severity:  vuln.Severity.String(),
 		}
 	}
 
