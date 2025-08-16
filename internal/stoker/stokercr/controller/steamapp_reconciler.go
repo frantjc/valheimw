@@ -1,9 +1,9 @@
 package controller
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"net/url"
 	"slices"
 	"strconv"
@@ -34,6 +34,7 @@ type SteamappReconciler struct {
 	client.Client
 	record.EventRecorder
 	*steamapp.ImageBuilder
+	Scanner stokercr.ImageScanner
 }
 
 // +kubebuilder:rbac:groups=sindri.frantj.cc,resources=steamapps,verbs=get;list;watch;create;update;patch;delete
@@ -194,7 +195,13 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Reason: "ApprovalReceived",
 	})
 
-	if err := r.BuildImage(ctx, sa.Spec.AppID, xio.WriterCloser{Writer: io.Discard, Closer: xio.CloserFunc(func() error { return nil })}, opts); err != nil {
+	var imageBuf bytes.Buffer
+	if err := r.BuildImage(
+		ctx,
+		sa.Spec.AppID,
+		xio.WriterCloser{Writer: &imageBuf, Closer: xio.CloserFunc(func() error { return nil })},
+		opts,
+	); err != nil {
 		r.Eventf(sa, corev1.EventTypeWarning, "DidNotBuild", "Image did not build successfully: %v", err)
 		SetCondition(sa, metav1.Condition{
 			Type:    "Built",
@@ -213,6 +220,39 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Reason: "BuildSucceeded",
 	})
 	sa.Status.Phase = v1alpha1.PhaseReady
+
+	vulns, err := r.Scanner.Scan(ctx, imageBuf)
+	if err != nil {
+		r.Eventf(sa, corev1.EventTypeWarning, "ScanFailed", "Vulnerability scan failed: %v", err)
+		SetCondition(sa, metav1.Condition{
+			Type:    "Scanned",
+			Status:  metav1.ConditionFalse,
+			Reason:  "ScanFailed",
+			Message: err.Error(),
+		})
+
+		return ctrl.Result{}, r.Client.Status().Update(ctx, sa) // Fail here?
+	}
+
+	r.Eventf(sa, corev1.EventTypeNormal, "Scanned", "Vulnerability scan completed with %d vulnerabilities found", len(vulns))
+	SetCondition(sa, metav1.Condition{
+		Type:   "Scanned",
+		Status: metav1.ConditionTrue,
+		Reason: "ScanSucceeded",
+	})
+
+	vulnerabilities := make([]v1alpha1.Vulnerability, len(vulns))
+	for i, vuln := range vulns {
+		vulnerabilities[i] = v1alpha1.Vulnerability{
+			ID:          vuln.ID,
+			PackageID:   vuln.PackageID,
+			Title:       vuln.Title,
+			Status:      vuln.Status.String(),
+			Severity:    vuln.Severity.String(),
+		}
+	}
+
+	sa.Status.Vulnerabilities = vulnerabilities
 
 	return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 }

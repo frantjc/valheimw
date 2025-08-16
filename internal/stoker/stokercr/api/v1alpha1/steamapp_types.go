@@ -73,6 +73,20 @@ const (
 	PhasePaused  = "Paused"
 )
 
+// Vulnerability represents a security vulnerability found in the image
+type Vulnerability struct {
+	// +kubebuilder:validation:Required
+	ID string `json:"id"`
+	// +kubebuilder:validation:Optional
+	PackageID string `json:"packageId,omitempty"`
+	// +kubebuilder:validation:Optional
+	Title string `json:"title,omitempty"`
+	// +kubebuilder:validation:Optional
+	Status string `json:"status,omitempty"`
+	// +kubebuilder:validation:Optional
+	Severity string `json:"severity,omitempty"`
+}
+
 // SteamappStatus defines the observed state of Steamapp.
 type SteamappStatus struct {
 	// +kubebuilder:default="Pending"
@@ -84,6 +98,8 @@ type SteamappStatus struct {
 	Name string `json:"name,omitempty"`
 	// +kubebuilder:validation:Optional
 	IconURL string `json:"icon,omitempty"`
+	// +kubebuilder:validation:Optional
+	Vulnerabilities []Vulnerability `json:"vulnerabilities,omitempty"`
 }
 
 // +kubebuilder:object:root=true

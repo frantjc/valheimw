@@ -17,6 +17,7 @@ import (
 	"github.com/frantjc/sindri/internal/stoker"
 	"github.com/frantjc/sindri/internal/stoker/stokercr"
 	"github.com/frantjc/sindri/internal/stoker/stokercr/controller"
+	"github.com/frantjc/sindri/internal/stoker/stokercr/scanners"
 	"github.com/frantjc/sindri/steamapp"
 	"github.com/go-openapi/spec"
 	"github.com/moby/buildkit/client"
@@ -224,8 +225,14 @@ func NewStoker() *cobra.Command {
 					return err
 				}
 
+				scanner, err := scanners.NewTrivy(ctx)
+				if err != nil {
+					return err
+				}
+
 				reconciler := &controller.SteamappReconciler{
 					ImageBuilder: &steamapp.ImageBuilder{},
+					Scanner:      scanner,
 				}
 
 				reconciler.ImageBuilder.Client, err = client.New(ctx, buildkitd)
