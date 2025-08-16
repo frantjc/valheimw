@@ -145,7 +145,7 @@ func (s trivy) scanFile(ctx context.Context, p string) ([]stokercr.Vuln, error) 
 				Title:       v.Title,
 				Description: v.Description,
 				Severity:    stokercr.NewSeverity(v.Severity),
-				Status:      stokercr.VulnStatus(v.Status),
+				Status:      stokercr.NewStatus(v.Status.String()),
 			})
 		}
 	}
