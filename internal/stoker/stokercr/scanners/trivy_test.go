@@ -15,7 +15,7 @@ func TestTrivy_Scan(t *testing.T) {
 	scanner, err := NewTrivy(ctx)
 	assert.NoError(t, err)
 
-	vulns, err := scanner.scanFile(ctx, "resources/stoker.tar")
+	vulns, err := scanner.scanFile(ctx, "resources/debian.tar")
 	assert.NoError(t, err)
-	assert.Len(t, vulns, 94)
+	assert.Len(t, vulns, 51)
 }

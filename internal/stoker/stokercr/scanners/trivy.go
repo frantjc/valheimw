@@ -7,20 +7,22 @@ import (
 	"os"
 	"time"
 
-	"github.com/aquasecurity/trivy/pkg/cache"
 	"github.com/aquasecurity/trivy/pkg/commands/artifact"
 	"github.com/aquasecurity/trivy/pkg/commands/operation"
 	"github.com/aquasecurity/trivy/pkg/db"
 	fanaltypes "github.com/aquasecurity/trivy/pkg/fanal/types"
 	"github.com/aquasecurity/trivy/pkg/flag"
 	"github.com/aquasecurity/trivy/pkg/types"
+	"github.com/frantjc/sindri/internal/cache"
 	"github.com/frantjc/sindri/internal/stoker/stokercr"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/uuid"
 )
 
 type trivy struct {
-	runner artifact.Runner
+	runner   artifact.Runner
+	dbRepos  []name.Reference
+	cacheDir string
 }
 
 type TrivyOptions struct {
@@ -58,10 +60,12 @@ func NewTrivy(ctx context.Context, opts ...TrivyOption) (*trivy, error) {
 		dbRepos = append(dbRepos, ref)
 	}
 
+	cacheDir := fmt.Sprintf("%s/trivy", cache.Dir)
+
 	if err := operation.DownloadDB(
 		ctx,
 		"dev",
-		cache.DefaultDir(),
+		cacheDir,
 		dbRepos,
 		false,
 		false,
@@ -70,36 +74,29 @@ func NewTrivy(ctx context.Context, opts ...TrivyOption) (*trivy, error) {
 		return nil, fmt.Errorf("failed to download Trivy DB: %w", err)
 	}
 
-	if err := db.Init(db.Dir(cache.DefaultDir())); err != nil {
+	if err := db.Init(db.Dir(cacheDir)); err != nil {
 		return nil, fmt.Errorf("failed to initialize Trivy DB: %w", err)
 	}
 
 	runner, err := artifact.NewRunner(
 		ctx,
-		flag.Options{
-			GlobalOptions: flag.GlobalOptions{
-				CacheDir: cache.DefaultDir(),
-				Quiet:    true,
-				Debug:    false,
-				Timeout:  5 * time.Minute,
-			},
-			DBOptions: flag.DBOptions{
-				SkipDBUpdate:   false,
-				DownloadDBOnly: false,
-				DBRepositories: dbRepos,
-			},
-		},
+		flag.Options{},
 		artifact.TargetContainerImage,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Trivy runner: %w", err)
 	}
 
-	return &trivy{runner}, nil
+	return &trivy{runner, dbRepos, cacheDir}, nil
 }
 
 func (s trivy) Scan(ctx context.Context, b bytes.Buffer) ([]stokercr.Vuln, error) {
-	p := fmt.Sprintf("%s/sindri/image-%s.tar", cache.DefaultDir(), uuid.New())
+	d := fmt.Sprintf("%s/sindri", s.cacheDir)
+	p := fmt.Sprintf("%s/image-%s.tar", d, uuid.New())
+
+	if err := os.MkdirAll(d, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create directory for image tar: %w", err)
+	}
 
 	if err := os.WriteFile(p, b.Bytes(), 0644); err != nil {
 		return nil, fmt.Errorf("failed to write image tar: %w", err)
@@ -111,6 +108,17 @@ func (s trivy) Scan(ctx context.Context, b bytes.Buffer) ([]stokercr.Vuln, error
 
 func (s trivy) scanFile(ctx context.Context, p string) ([]stokercr.Vuln, error) {
 	rep, err := s.runner.ScanImage(ctx, flag.Options{
+		GlobalOptions: flag.GlobalOptions{
+			CacheDir: s.cacheDir,
+			Quiet:    true,
+			Debug:    false,
+			Timeout:  5 * time.Minute,
+		},
+		DBOptions: flag.DBOptions{
+			SkipDBUpdate:   false,
+			DownloadDBOnly: false,
+			DBRepositories: s.dbRepos,
+		},
 		ScanOptions: flag.ScanOptions{
 			Target:   p,
 			Scanners: types.Scanners{types.VulnerabilityScanner},
