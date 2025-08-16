@@ -55,6 +55,9 @@ func NewStatus(status string) VulnStatus {
 }
 
 func (s VulnStatus) String() string {
+	if int(s) < 0 || int(s) >= len(StatusNames) {
+		return StatusNames[StatusUnknown]
+	}
 	return StatusNames[s]
 }
 
