@@ -6,7 +6,7 @@
 dist/
 
 # dev
-dev/
+dev/*
 !dev/buildkitd.toml
 
 # macOS
