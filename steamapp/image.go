@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -98,6 +99,7 @@ type BuildImageOpt interface {
 
 type ImageBuilder struct {
 	*client.Client
+	Mirror *url.URL
 }
 
 const (
@@ -108,13 +110,48 @@ const (
 	DefaultSteamcmdImageRef = "docker.io/steamcmd/steamcmd@sha256:6610496202dadc25bf3f89f5fde2416c4b23b8002284184ecce8f3eebfa0c74b"
 )
 
-func getImageConfig(ctx context.Context, appID int, opts *BuildImageOpts) (*specs.ImageConfig, int, error) {
+type mirrorTransport struct {
+	*url.URL
+	RoundTripper http.RoundTripper
+}
+
+func (t *mirrorTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if t.RoundTripper == nil {
+		t.RoundTripper = http.DefaultTransport
+	}
+
+	if req.URL.Path == "/v2" || req.URL.Path == "/v2/" || !strings.HasPrefix(req.URL.Path, "/v2") {
+		return t.RoundTripper.RoundTrip(req)
+	}
+
+	_req := req.Clone(req.Context())
+	_req.URL = t.JoinPath("/")
+	// FIXME(frantjc): Had weird behavior with using req.URL.Path which led to the URL path's leading slash being
+	// omitted from the HTTP request (e.g. GET v2/library/debian/manifests/...), so resorted to this.
+	_req.URL.Opaque = req.URL.Path
+	namespace := req.Host
+	if strings.HasSuffix(namespace, ".docker.io") {
+		namespace = "docker.io"
+	}
+	_req.URL.RawQuery = fmt.Sprintf("ns=%s", namespace)
+	return t.RoundTripper.RoundTrip(_req)
+}
+
+func (a *ImageBuilder) transport() http.RoundTripper {
+	if a.Mirror == nil {
+		return http.DefaultTransport
+	}
+
+	return &mirrorTransport{URL: a.Mirror}
+}
+
+func (a *ImageBuilder) getImageConfig(ctx context.Context, appID int, opts *BuildImageOpts) (*specs.ImageConfig, int, error) {
 	ref, err := name.ParseReference(opts.BaseImageRef)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	img, err := remote.Image(ref, remote.WithContext(ctx))
+	img, err := remote.Image(ref, remote.WithContext(ctx), remote.WithTransport(a.transport()))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -188,18 +225,18 @@ func getImageConfig(ctx context.Context, appID int, opts *BuildImageOpts) (*spec
 	)
 }
 
-func GetImageConfig(ctx context.Context, appID int, opts ...BuildImageOpt) (*specs.ImageConfig, error) {
-	imageConfig, _, err := getImageConfig(ctx, appID, newBuildImageOpts(opts...))
+func (a *ImageBuilder) GetImageConfig(ctx context.Context, appID int, opts ...BuildImageOpt) (*specs.ImageConfig, error) {
+	imageConfig, _, err := a.getImageConfig(ctx, appID, newBuildImageOpts(opts...))
 	return imageConfig, err
 }
 
-func getFileContentsFromImage(ref, file string) ([]byte, error) {
+func (a *ImageBuilder) getFileContentsFromImage(ctx context.Context, ref, file string) ([]byte, error) {
 	pref, err := name.ParseReference(ref)
 	if err != nil {
 		return nil, err
 	}
 
-	img, err := remote.Image(pref)
+	img, err := remote.Image(pref, remote.WithContext(ctx), remote.WithTransport(a.transport()))
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +268,7 @@ func getFileContentsFromImage(ref, file string) ([]byte, error) {
 
 				return buf.Bytes(), nil
 			case tar.TypeLink, tar.TypeSymlink:
-				return getFileContentsFromImage(ref, hdr.Linkname)
+				return a.getFileContentsFromImage(ctx, ref, hdr.Linkname)
 			default:
 				return nil, fmt.Errorf("%s is not a readable file", file)
 			}
@@ -241,16 +278,16 @@ func getFileContentsFromImage(ref, file string) ([]byte, error) {
 	return nil, fmt.Errorf("%s not found in image", file)
 }
 
-func getVersionCodenameFromImage(ref string) (string, error) {
-	osRelease, err := getFileContentsFromImage(ref, "/etc/os-release")
+func (a *ImageBuilder) getVersionCodenameFromImage(ctx context.Context, ref string) (string, error) {
+	osRelease, err := a.getFileContentsFromImage(ctx, ref, "/etc/os-release")
 	if err != nil {
 		return "", err
 	}
 
-	return parseVersionCodenameFromOSRelease(string(osRelease))
+	return a.parseVersionCodenameFromOSRelease(string(osRelease))
 }
 
-func parseVersionCodenameFromOSRelease(osRelease string) (string, error) {
+func (a *ImageBuilder) parseVersionCodenameFromOSRelease(osRelease string) (string, error) {
 	if matches := regexp.MustCompile(`(?m)^VERSION_CODENAME=(?:\"?)([^"\n]+)`).FindStringSubmatch(osRelease); len(matches) == 2 {
 		return matches[1], nil
 	}
@@ -258,7 +295,7 @@ func parseVersionCodenameFromOSRelease(osRelease string) (string, error) {
 	return "", fmt.Errorf("VERSION_CODENAME not found")
 }
 
-func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts) (*llb.Definition, error) {
+func (a *ImageBuilder) getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts) (*llb.Definition, error) {
 	installDir := "/mnt"
 
 	arg, err := steamcmd.Args(nil,
@@ -276,7 +313,7 @@ func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts
 		return nil, err
 	}
 
-	state := llb.Image(opts.BaseImageRef)
+	state := llb.Image(opts.BaseImageRef, llb.WithExportCache())
 
 	if opts.PlatformType == steamcmd.PlatformTypeWindows && xslices.Some(opts.AptPkgs, func(pkg string, _ int) bool {
 		return slices.Contains([]string{"winehq-stable", "winehq-devel", "winehq-staging"}, pkg)
@@ -310,7 +347,7 @@ func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts
 			// TODO(frantjc): Can we do this with buildkit instead of go-containerregistry?
 			// As is, we pull the image twice and are not guaranteed the same image if the
 			// image ref doesn't use a sha.
-			versionCodename, err := getVersionCodenameFromImage(opts.BaseImageRef)
+			versionCodename, err := a.getVersionCodenameFromImage(ctx, opts.BaseImageRef)
 			if err != nil {
 				return nil, err
 			}
@@ -392,8 +429,8 @@ func getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts
 	return state.Marshal(ctx, llb.LinuxAmd64)
 }
 
-func getSolveOpt(ctx context.Context, appID int, exportType string, output io.WriteCloser, opts *BuildImageOpts) (*client.SolveOpt, int, error) {
-	icfg, buildID, err := getImageConfig(ctx, appID, opts)
+func (a *ImageBuilder) getSolveOpt(ctx context.Context, appID int, exportType string, output io.WriteCloser, opts *BuildImageOpts) (*client.SolveOpt, int, error) {
+	icfg, buildID, err := a.getImageConfig(ctx, appID, opts)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -500,12 +537,12 @@ func (a *ImageBuilder) BuildImage(ctx context.Context, appID int, output io.Writ
 		o = newBuildImageOpts(opts...)
 	)
 
-	solvOpt, buildID, err := getSolveOpt(ctx, appID, client.ExporterDocker, output, o)
+	solvOpt, buildID, err := a.getSolveOpt(ctx, appID, client.ExporterDocker, output, o)
 	if err != nil {
 		return err
 	}
 
-	def, err := getDefinition(ctx, appID, buildID, o)
+	def, err := a.getDefinition(ctx, appID, buildID, o)
 	if err != nil {
 		return err
 	}

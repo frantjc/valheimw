@@ -82,7 +82,7 @@ internal/stoker/swagger.json: swag
 .PHONY: swagger
 swagger: internal/stoker/swagger.json
 
-LOCALBIN ?= $(shell pwd)/bin
+LOCALBIN ?= $(shell pwd)/dev/bin
 $(LOCALBIN):
 	@mkdir -p $(LOCALBIN)
 

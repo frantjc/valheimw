@@ -161,7 +161,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Cmd:          sa.Spec.Cmd,
 	}
 
-	imageConfig, err := steamapp.GetImageConfig(ctx, sa.Spec.AppID, opts)
+	imageConfig, err := r.GetImageConfig(ctx, sa.Spec.AppID, opts)
 	if err != nil {
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)

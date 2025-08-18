@@ -77,6 +77,7 @@ func NewStoker() *cobra.Command {
 		}
 		db        = &stokercr.Database{}
 		buildkitd string
+		mirror    string
 		cmd       = &cobra.Command{
 			Use: "stoker",
 			RunE: func(cmd *cobra.Command, args []string) error {
@@ -228,6 +229,12 @@ func NewStoker() *cobra.Command {
 					ImageBuilder: &steamapp.ImageBuilder{},
 				}
 
+				if mirror != "" {
+					if reconciler.Mirror, err = url.Parse(mirror); err != nil {
+						return err
+					}
+				}
+
 				reconciler.ImageBuilder.Client, err = client.New(ctx, buildkitd)
 				if err != nil {
 					return err
@@ -297,6 +304,7 @@ func NewStoker() *cobra.Command {
 	cmd.Flags().IntVarP(&addr, "addr", "a", 5050, "Port for stoker to listen on")
 	cmd.Flags().StringVarP(&opts.Path, "path", "p", "", "Base URL path for stoker")
 	cmd.Flags().StringVar(&buildkitd, "buildkitd", appdefaults.Address, "BuildKitd URL for stoker")
+	cmd.Flags().StringVar(&mirror, "mirror", "", "Container registry mirror URL for boiler")
 	cmd.Flags().StringVarP(&db.Namespace, "namespace", "n", stokercr.DefaultNamespace, "Namespace for stoker")
 
 	return cmd

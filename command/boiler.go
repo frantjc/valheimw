@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"time"
 
@@ -26,6 +27,7 @@ func NewBoiler() *cobra.Command {
 		buildkitd string
 		bucket    string
 		db        string
+		mirror    string
 		cmd       = &cobra.Command{
 			Use: "boiler",
 			RunE: func(cmd *cobra.Command, _ []string) error {
@@ -60,6 +62,12 @@ func NewBoiler() *cobra.Command {
 					return err
 				}
 
+				if mirror != "" {
+					if registry.ImageBuilder.Mirror, err = url.Parse(mirror); err != nil {
+						return err
+					}
+				}
+
 				registry.Database, err = steamapp.OpenDatabase(ctx, db)
 				if err != nil {
 					return err
@@ -88,6 +96,7 @@ func NewBoiler() *cobra.Command {
 	cmd.Flags().StringVar(&buildkitd, "buildkitd", appdefaults.Address, "BuildKitd URL for boiler")
 	cmd.Flags().StringVar(&bucket, "bucket", fmt.Sprintf("file://%s?create_dir=1&no_tmp_dir=1", filepath.Join(cache.Dir, "boiler")), "Bucket URL for boiler")
 	cmd.Flags().StringVar(&db, "db", fmt.Sprintf("%s://%s", dummy.Scheme, steamapp.DefaultDir), "Database URL for boiler")
+	cmd.Flags().StringVar(&mirror, "mirror", "", "Container registry mirror URL for boiler")
 
 	return cmd
 }
