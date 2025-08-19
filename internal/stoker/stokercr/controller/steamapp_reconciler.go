@@ -216,7 +216,7 @@ func (r *SteamappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	if err := ctrl.NewControllerManagedBy(mgr).
 		Named("boiler").
-		For(&v1alpha1.Steamapp{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&v1alpha1.Steamapp{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}))).
 		Complete(r); err != nil {
 		return err
 	}
