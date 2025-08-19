@@ -69,6 +69,12 @@ func (p *PullRegistry) headManifest(ctx context.Context, name string, reference 
 	return nil
 }
 
+func jsonDecoderStrict(r io.Reader) *json.Decoder {
+	d := json.NewDecoder(r)
+	d.DisallowUnknownFields()
+	return d
+}
+
 func (p *PullRegistry) getManifest(ctx context.Context, name string, reference string) ([]byte, digest.Digest, string, error) {
 	log := logutil.SloggerFrom(ctx)
 
@@ -100,7 +106,7 @@ func (p *PullRegistry) getManifest(ctx context.Context, name string, reference s
 			buf      = new(bytes.Buffer)
 		)
 
-		if err = json.NewDecoder(io.TeeReader(rc, buf)).Decode(manifest); err != nil {
+		if err = jsonDecoderStrict(io.TeeReader(rc, buf)).Decode(manifest); err != nil {
 			return nil, "", "", err
 		}
 
@@ -142,8 +148,7 @@ func (p *PullRegistry) getManifest(ctx context.Context, name string, reference s
 	if err != nil {
 		return nil, "", "", err
 	}
-	go func() {
-		<-ctx.Done()
+	defer func() {
 		_ = p.Bucket.Delete(context.WithoutCancel(ctx), key)
 	}()
 	defer wc.Close()
@@ -163,12 +168,6 @@ func (p *PullRegistry) getManifest(ctx context.Context, name string, reference s
 
 	eg.Go(func() error {
 		key := filepath.Join(name, "manifests", dig.String())
-
-		if ok, err := p.Bucket.Exists(egctx, key); ok {
-			return nil
-		} else if err != nil {
-			return err
-		}
 
 		log.Debug("cacheing manifest in bucket", "key", key)
 

@@ -532,10 +532,11 @@ func (a *ImageBuilder) getImageManifest(ctx context.Context, appID int, opts ...
 				return err
 			}
 
-			if err := json.NewDecoder(io.TeeReader(tr, buf)).Decode(manifest); err == nil {
+			if err := jsonDecoderStrict(io.TeeReader(tr, buf)).Decode(manifest); err == nil {
 				return errManifestFound
 			}
 
+			manifest = &v1.Manifest{}
 			buf.Reset()
 		}
 
