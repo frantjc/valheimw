@@ -30,7 +30,7 @@ class Directive {
       case "FROM":
         return `FROM ${this.args.join(" ")}`;
       case "RUN":
-        return `RUN ${this.args.join(" \\\n\t&& ")}`;
+        return `RUN ${this.args.join(" \\\n  && ")}`;
       case "USER":
         return `USER ${this.args.join(" ")}`;
       case "COPY":
@@ -92,11 +92,11 @@ export function dockerfileFromSteamapp(steamapp: SteamappUpsert): Dockerfile {
     new Directive(
       "RUN",
       "steamcmd \\\n" +
-        `\t+force_install_dir ${mount} \\\n` +
-        `\t+login anonymous \\\n` +
-        `\t+@sSteamCmdForcePlatformType ${steamapp.platform_type} \\\n` +
-        `\t+app_update ${steamapp.app_id || 0}${betaBranch}${betaPassword} \\\n` +
-        `\t+quit`,
+        `  +force_install_dir ${mount} \\\n` +
+        `  +login anonymous \\\n` +
+        `  +@sSteamCmdForcePlatformType ${steamapp.platform_type} \\\n` +
+        `  +app_update ${steamapp.app_id || 0}${betaBranch}${betaPassword} \\\n` +
+        `  +quit`,
     ),
     ...(isWine
       ? [
@@ -114,7 +114,7 @@ export function dockerfileFromSteamapp(steamapp: SteamappUpsert): Dockerfile {
           new Directive(
             "RUN",
             "apt-get update -y",
-            "apt-get install -y --no-install-recommends \\\n\t\tgnupg",
+            "apt-get install -y --no-install-recommends \\\n    gnupg",
             "mkdir -p /mnt/keyrings",
             "cat /tmp/winehq.key | gpg --dearmor -o /mnt/keyrings/winehq-archive.key -",
           ),
@@ -126,7 +126,7 @@ export function dockerfileFromSteamapp(steamapp: SteamappUpsert): Dockerfile {
           new Directive(
             "RUN",
             "apt-get update -y",
-            "apt-get install -y --no-install-recommends \\\n\t\tca-certificates",
+            "apt-get install -y --no-install-recommends \\\n    ca-certificates",
             "dpkg --add-architecture i386",
           ),
           new Directive("COPY", "--from=wine", "/mnt", "/etc/apt"),
@@ -141,7 +141,7 @@ export function dockerfileFromSteamapp(steamapp: SteamappUpsert): Dockerfile {
                 "apt-get update -y",
                 "apt-get install -y --no-install-recommends \\\n" +
                   steamapp.apt_packages
-                    .map((pkg) => `\t\t${pkg}`)
+                    .map((pkg) => `    ${pkg}`)
                     .join(" \\\n"),
                 "rm -rf /var/lib/apt/lists/*",
                 "apt-get clean",
