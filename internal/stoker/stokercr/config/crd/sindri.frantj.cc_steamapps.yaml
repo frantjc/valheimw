@@ -61,7 +61,7 @@ spec:
                     type: string
                   type: array
                 baseImage:
-                  default: docker.io/library/debian:stable-slim
+                  default: docker.io/library/debian@sha256:8810492a2dd16b7f59239c1e0cc1e56c1a1a5957d11f639776bd6798e795608b
                   type: string
                 betaPassword:
                   type: string

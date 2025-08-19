@@ -18,6 +18,7 @@ import (
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/internal/appinfoutil"
+	"github.com/frantjc/sindri/internal/logutil"
 	xslices "github.com/frantjc/x/slices"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -30,7 +31,6 @@ import (
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/crypto/openpgp/armor" //nolint:staticcheck // This is deprecated, but no alternatives found.
 	"golang.org/x/sync/errgroup"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type BuildImageOpts struct {
@@ -116,6 +116,8 @@ type mirrorTransport struct {
 }
 
 func (t *mirrorTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	log := logutil.SloggerFrom(req.Context())
+
 	if t.RoundTripper == nil {
 		t.RoundTripper = http.DefaultTransport
 	}
@@ -134,6 +136,9 @@ func (t *mirrorTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		namespace = "docker.io"
 	}
 	_req.URL.RawQuery = fmt.Sprintf("ns=%s", namespace)
+
+	log.Debug("mirroring request", "url", req.URL.String(), "mirror", _req.URL.String())
+
 	return t.RoundTripper.RoundTrip(_req)
 }
 
@@ -146,6 +151,10 @@ func (a *ImageBuilder) transport() http.RoundTripper {
 }
 
 func (a *ImageBuilder) getImageConfig(ctx context.Context, appID int, opts *BuildImageOpts) (*specs.ImageConfig, int, error) {
+	log := logutil.SloggerFrom(ctx).With("ref", opts.BaseImageRef, "appID", appID)
+
+	log.Debug("getting image config")
+
 	ref, err := name.ParseReference(opts.BaseImageRef)
 	if err != nil {
 		return nil, 0, err
@@ -296,6 +305,10 @@ func (a *ImageBuilder) parseVersionCodenameFromOSRelease(osRelease string) (stri
 }
 
 func (a *ImageBuilder) getDefinition(ctx context.Context, appID, buildID int, opts *BuildImageOpts) (*llb.Definition, error) {
+	log := logutil.SloggerFrom(ctx).With("buildID", buildID, "appID", appID)
+
+	log.Debug("getting llb definition")
+
 	installDir := "/mnt"
 
 	arg, err := steamcmd.Args(nil,
@@ -313,11 +326,13 @@ func (a *ImageBuilder) getDefinition(ctx context.Context, appID, buildID int, op
 		return nil, err
 	}
 
-	state := llb.Image(opts.BaseImageRef, llb.WithExportCache())
+	state := llb.Image(opts.BaseImageRef)
 
 	if opts.PlatformType == steamcmd.PlatformTypeWindows && xslices.Some(opts.AptPkgs, func(pkg string, _ int) bool {
 		return slices.Contains([]string{"winehq-stable", "winehq-devel", "winehq-staging"}, pkg)
 	}) {
+		log.Debug("adding wine prereqs to llb definition")
+
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://dl.winehq.org/wine-builds/winehq.key", nil)
 		if err != nil {
 			return nil, err
@@ -490,13 +505,16 @@ var (
 	errManifestFound = errors.New("manifest found")
 )
 
-func getImageManifest(ctx context.Context, appID int, a *ImageBuilder, opts ...BuildImageOpt) (*v1.Manifest, error) {
+func (a *ImageBuilder) getImageManifest(ctx context.Context, appID int, opts ...BuildImageOpt) ([]byte, *v1.Manifest, error) {
 	var (
-		_        = log.FromContext(ctx)
+		log      = logutil.SloggerFrom(ctx).With("appID", appID)
 		pr, pw   = io.Pipe()
+		buf      = new(bytes.Buffer)
 		manifest = &v1.Manifest{}
 	)
 	defer pr.Close()
+
+	log.Debug("getting just the image manifest")
 
 	eg, ctx := errgroup.WithContext(ctx)
 
@@ -514,26 +532,28 @@ func getImageManifest(ctx context.Context, appID int, a *ImageBuilder, opts ...B
 				return err
 			}
 
-			if err := json.NewDecoder(tr).Decode(manifest); err == nil {
+			if err := json.NewDecoder(io.TeeReader(tr, buf)).Decode(manifest); err == nil {
 				return errManifestFound
 			}
+
+			buf.Reset()
 		}
 
 		return fmt.Errorf("manifest not found")
 	})
 
 	if err := eg.Wait(); errors.Is(err, errManifestFound) {
-		return manifest, nil
+		return buf.Bytes(), manifest, nil
 	} else if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return nil, fmt.Errorf("manifest not found")
+	return nil, nil, fmt.Errorf("manifest not found")
 }
 
 func (a *ImageBuilder) BuildImage(ctx context.Context, appID int, output io.WriteCloser, opts ...BuildImageOpt) error {
 	var (
-		_ = log.FromContext(ctx)
+		_ = logutil.SloggerFrom(ctx)
 		o = newBuildImageOpts(opts...)
 	)
 

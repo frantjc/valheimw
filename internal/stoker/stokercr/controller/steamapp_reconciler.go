@@ -14,7 +14,6 @@ import (
 	"github.com/frantjc/sindri/internal/stoker/stokercr/api/v1alpha1"
 	"github.com/frantjc/sindri/steamapp"
 	xio "github.com/frantjc/x/io"
-	xslices "github.com/frantjc/x/slices"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +22,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -56,12 +54,6 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 
 		return ctrl.Result{}, err
-	}
-
-	if len(sa.Status.Conditions) > 0 && xslices.Every(sa.Status.Conditions, func(condition metav1.Condition, _ int) bool {
-		return condition.Status == metav1.ConditionTrue && condition.ObservedGeneration == sa.Generation
-	}) {
-		return ctrl.Result{}, nil
 	}
 
 	sa.Status.Phase = v1alpha1.PhasePending
@@ -224,28 +216,7 @@ func (r *SteamappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	if err := ctrl.NewControllerManagedBy(mgr).
 		Named("boiler").
-		For(&v1alpha1.Steamapp{}, builder.WithPredicates(predicate.Funcs{
-			UpdateFunc: func(e event.UpdateEvent) bool {
-				if annotations := e.ObjectNew.GetAnnotations(); annotations != nil {
-					if approved, _ := strconv.ParseBool(annotations[stokercr.AnnotationApproved]); approved {
-						if sa, ok := e.ObjectNew.(*v1alpha1.Steamapp); ok {
-							return e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration() || sa.Status.Phase == v1alpha1.PhasePaused
-						}
-					}
-				}
-
-				return false
-			},
-			CreateFunc: func(_ event.CreateEvent) bool {
-				return true
-			},
-			DeleteFunc: func(_ event.DeleteEvent) bool {
-				return false
-			},
-			GenericFunc: func(_ event.GenericEvent) bool {
-				return false
-			},
-		})).
+		For(&v1alpha1.Steamapp{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r); err != nil {
 		return err
 	}
@@ -353,20 +324,22 @@ func SetCondition(conditionsAware ConditionsAware, condition metav1.Condition) {
 		conditions = []metav1.Condition{}
 	}
 
+	condition.ObservedGeneration = conditionsAware.GetGeneration()
+
 	for i, c := range conditions {
 		if c.Type == condition.Type {
 			if c.Message != condition.Message || c.Reason != condition.Reason || c.Status != condition.Status {
 				condition.LastTransitionTime = metav1.Now()
-				condition.ObservedGeneration = conditionsAware.GetGeneration()
-				conditions[i] = condition
-				conditionsAware.SetConditions(conditions)
+			} else {
+				condition.LastTransitionTime = c.LastTransitionTime
 			}
+			conditions[i] = condition
+			conditionsAware.SetConditions(conditions)
 			return
 		}
 	}
 
 	condition.LastTransitionTime = metav1.Now()
-	condition.ObservedGeneration = conditionsAware.GetGeneration()
 	conditions = append(conditions, condition)
 	conditionsAware.SetConditions(conditions)
 }

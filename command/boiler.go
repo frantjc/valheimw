@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/frantjc/sindri/contreg"
 	"github.com/frantjc/sindri/internal/cache"
 	"github.com/frantjc/sindri/internal/dummy"
 	"github.com/frantjc/sindri/internal/logutil"
@@ -39,7 +38,7 @@ func NewBoiler() *cobra.Command {
 					}
 					srv = &http.Server{
 						ReadHeaderTimeout: time.Second * 5,
-						Handler:           contreg.NewPullHandler(registry),
+						Handler:           registry.Handler(),
 						BaseContext: func(_ net.Listener) context.Context {
 							return cmd.Context()
 						},

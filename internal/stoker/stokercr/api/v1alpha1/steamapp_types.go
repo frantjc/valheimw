@@ -14,7 +14,7 @@ func (s *Steamapp) SetConditions(conditions []metav1.Condition) {
 }
 
 type SteamappSpecImageOpts struct {
-	// +kubebuilder:default="docker.io/library/debian:stable-slim"
+	// +kubebuilder:default="docker.io/library/debian@sha256:8810492a2dd16b7f59239c1e0cc1e56c1a1a5957d11f639776bd6798e795608b"
 	BaseImageRef string `json:"baseImage,omitempty"`
 	// +kubebuilder:validation:Optional
 	AptPkgs []string `json:"aptPackages,omitempty"`

@@ -7,7 +7,6 @@ toolchain go1.24.2
 require (
 	github.com/adrg/xdg v0.5.3
 	github.com/frantjc/go-ingress v0.3.0
-	github.com/frantjc/go-reproducible-builds v0.0.0-20241021140423-9651d3e86a85
 	github.com/frantjc/go-steamcmd v0.0.0-20250814210827-114d014fdfee
 	github.com/frantjc/x v0.0.0-20250812130030-e7e2a3978c7c
 	github.com/go-chi/chi v4.1.2+incompatible

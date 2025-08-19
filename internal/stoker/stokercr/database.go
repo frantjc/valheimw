@@ -23,11 +23,9 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -200,12 +198,7 @@ func (d *Database) SetupWithManager(mgr ctrl.Manager) error {
 
 	if err := ctrl.NewControllerManagedBy(mgr).
 		Named("stoker").
-		For(&v1alpha1.Steamapp{}, builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-			if sa, ok := obj.(*v1alpha1.Steamapp); ok {
-				return sa.Status.Phase == v1alpha1.PhaseReady
-			}
-			return false
-		}))).
+		For(&v1alpha1.Steamapp{}).
 		Complete(d); err != nil {
 		return err
 	}

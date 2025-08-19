@@ -156,8 +156,6 @@ github.com/frantjc/go-encoding-vdf v0.0.0-20250505052333-4ba0456e21d7 h1:gETpIky
 github.com/frantjc/go-encoding-vdf v0.0.0-20250505052333-4ba0456e21d7/go.mod h1:PTLkpVRA5rbM+1/QW7BqqgNG0z0DuzUc+uonsCLajJ8=
 github.com/frantjc/go-ingress v0.3.0 h1:TtQ+b8nOeiUnLXBCBxM6VAKAsYCj6ahNHJ9KR9zewks=
 github.com/frantjc/go-ingress v0.3.0/go.mod h1:+OiXfXH9Dh3ETg0XFa7YCOvwI+DkRzj4HWiH2DHXTJo=
-github.com/frantjc/go-reproducible-builds v0.0.0-20241021140423-9651d3e86a85 h1:7IN4exvYdunKQACelEvSSqfD0LOEKE7k0ktCoJIST5g=
-github.com/frantjc/go-reproducible-builds v0.0.0-20241021140423-9651d3e86a85/go.mod h1:S/4KZSEVb6q7WxGx1Z/kBzlJaiuTUzWQaRoxRBfxB0w=
 github.com/frantjc/go-steamcmd v0.0.0-20250814210827-114d014fdfee h1:9SHnZunx0CRJ82ZLpLgwmLA2f1WJlyfXRZQg8c+zduU=
 github.com/frantjc/go-steamcmd v0.0.0-20250814210827-114d014fdfee/go.mod h1:x/i0gLx8uDuHx5YikM3eFA+ISYJwtmYuqhzd3/6vIpI=
 github.com/frantjc/x v0.0.0-20250812130030-e7e2a3978c7c h1:aIBlB401l3mD0sauaO17aoG/leHgY/KyT2iREbgEqw4=
