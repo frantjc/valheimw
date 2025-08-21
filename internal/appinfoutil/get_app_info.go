@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/frantjc/go-steamcmd"
+	"github.com/frantjc/sindri/internal/logutil"
 )
 
 type GetAppInfoOpts struct {
@@ -23,7 +24,10 @@ func WithLogin(username, password, steamGuardCode string) GetAppInfoOpt {
 }
 
 func GetAppInfo(ctx context.Context, appID int, opts ...GetAppInfoOpt) (*steamcmd.AppInfo, error) {
+	log := logutil.SloggerFrom(ctx).With("appID", appID)
+
 	if appInfo, found := steamcmd.GetAppInfo(appID); found {
+		log.Debug("app info cached in memory")
 		return appInfo, nil
 	}
 
@@ -38,6 +42,8 @@ func GetAppInfo(ctx context.Context, appID int, opts ...GetAppInfoOpt) (*steamcm
 	for _, opt := range opts {
 		opt(o)
 	}
+
+	log.Debug("starting steamcmd to app_info_print")
 
 	prompt, err := steamcmd.Start(ctx, o.login, steamcmd.AppInfoRequest(appID))
 	if err != nil {

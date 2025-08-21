@@ -9,12 +9,22 @@ services:
       - --mod=SpikeHimself/XPortal
       - --mod=ValheimModding/Jotunn/2.23.2
     volumes:
-      - ./cache:/root/.cache
+      - ./dev/cache:/root/.cache
     environment:
       VALHEIM_PASSWORD: hellothere
     ports:
       - 2456:2456/udp
       - 8080:8080
+  mirror:
+    image: mcronce/oci-registry:v0.4.5
+    command:
+      - --listen=0.0.0.0:6000
+      - filesystem
+      - --root=/data
+    volumes:
+      - ./dev/cache/sindri/mirror:/data
+    ports:
+      - 6000:6000
   buildkitd:
     image: moby/buildkit
     privileged: true
@@ -22,21 +32,26 @@ services:
       - 1234:1234
     command:
       - --debug
-      - --addr
-      - tcp://0.0.0.0:1234
+      - --addr=tcp://0.0.0.0:1234
+      - --config=/etc/buildkit/buildkitd.toml
+    volumes:
+      - ./dev/buildkitd.toml:/etc/buildkit/buildkitd.toml:ro
+    depends_on:
+      - mirror
   stoker:
     build:
       context: .
       args:
         tool: stoker
     command:
-      - -vv
+      - -vvv
       - --path=/api/v1
       - --webhook-secure=false
       - --buildkitd=tcp://buildkitd:1234
+      - --mirror=http://mirror:6000/
     volumes:
-      - ./cache:/root/.cache
-      - ${KUBECONFIG:-~/.kube/config}:/root/.kube/config
+      - ./dev/cache:/root/.cache
+      - ${KUBECONFIG:-~/.kube/config}:/root/.kube/config:ro
     ports:
       - 5050:5050
     depends_on:
@@ -54,17 +69,18 @@ services:
       args:
         tool: boiler
     command:
-      - -vv
+      - -vvv
       - --buildkitd=tcp://buildkitd:1234
       - --db=stokercr://
+      - --mirror=http://mirror:6000/
     volumes:
-      - ./cache:/root/.cache
-      - ${KUBECONFIG:-~/.kube/config}:/root/.kube/config
+      - ./dev/cache:/root/.cache
+      - ${KUBECONFIG:-~/.kube/config}:/root/.kube/config:ro
     ports:
       - 5000:5000
     depends_on:
-      - buildkitd
       - stoker
+      - buildkitd
   valheim:
     image: localhost:5000/896660
     command:

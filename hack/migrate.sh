@@ -107,8 +107,6 @@ wget $1/steamapps/2857200 \
       "entrypoint": [
         "wine",
         "/home/steam/AbioticFactor/Binaries/Win64/AbioticFactorServer-Win64-Shipping.exe",
-        "-log",
-        "-newconsole",
         "-useperfthreads",
         "-NoAsyncLoadingThread"
       ]

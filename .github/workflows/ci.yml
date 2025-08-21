@@ -64,18 +64,26 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Run docker pull Valheim server
+      - name: Run docker pull Valheim
         run: |
           docker pull localhost:5000/896660
-      - name: Run docker pull Core Keeper server
+          docker rmi localhost:5000/896660
+      - name: Run docker pull Core Keeper
         run: |
           docker pull localhost:5000/1963720
-      - name: Run docker pull Palworld server
+          docker rmi localhost:5000/1963720
+      - name: Run docker pull Palworld
         run: |
           docker pull localhost:5000/2394010
-      - name: Run docker pull Satisfactory server
+          docker rmi localhost:5000/2394010
+      - name: Run docker pull Satisfactory
         run: |
           docker pull localhost:5000/1690800
+          docker rmi localhost:5000/1690800
+      - name: Run docker pull Abiotic Factor
+        run: |
+          docker pull localhost:5000/2857200
+          docker rmi localhost:5000/2857200
       - uses: frantjc/actions/ghcr-delete-images@v1
         continue-on-error: true
         with:

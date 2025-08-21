@@ -111,7 +111,7 @@ func (g *Database) GetBuildImageOpts(
 			PlatformType: steamcmd.PlatformTypeWindows,
 			Entrypoint: []string{
 				"wine", "/home/steam/AbioticFactor/Binaries/Win64/AbioticFactorServer-Win64-Shipping.exe",
-				"-log", "-newconsole", "-useperfthreads", "-NoAsyncLoadingThread",
+				"-useperfthreads", "-NoAsyncLoadingThread",
 			},
 		}, nil
 	}
