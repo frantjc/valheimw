@@ -1,10 +1,10 @@
 package controller
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"slices"
 	"strconv"
 
@@ -15,6 +15,7 @@ import (
 	"github.com/frantjc/sindri/steamapp"
 	xio "github.com/frantjc/x/io"
 	xslices "github.com/frantjc/x/slices"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +35,7 @@ type SteamappReconciler struct {
 	client.Client
 	record.EventRecorder
 	*steamapp.ImageBuilder
-	Scanner stokercr.ImageScanner
+	Scanner ImageScanner
 }
 
 // +kubebuilder:rbac:groups=sindri.frantj.cc,resources=steamapps,verbs=get;list;watch;create;update;patch;delete
@@ -195,64 +196,68 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Reason: "ApprovalReceived",
 	})
 
-	var imageBuf bytes.Buffer
-	if err := r.BuildImage(
-		ctx,
-		sa.Spec.AppID,
-		xio.WriterCloser{Writer: &imageBuf, Closer: xio.CloserFunc(func() error { return nil })},
-		opts,
-	); err != nil {
-		r.Eventf(sa, corev1.EventTypeWarning, "DidNotBuild", "Image did not build successfully: %v", err)
-		SetCondition(sa, metav1.Condition{
-			Type:    "Built",
-			Status:  metav1.ConditionFalse,
-			Reason:  "BuildFailed",
-			Message: err.Error(),
-		})
+	// Build and scan image in parallel.
+	pr, pw, err := os.Pipe()
+	if err != nil {
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
-	r.Event(sa, corev1.EventTypeNormal, "Built", "Image successfully built")
-	SetCondition(sa, metav1.Condition{
-		Type:   "Built",
-		Status: metav1.ConditionTrue,
-		Reason: "BuildSucceeded",
-	})
-	sa.Status.Phase = v1alpha1.PhaseReady
+	eg, ctx := errgroup.WithContext(ctx)
 
-	vulns, err := r.Scanner.Scan(ctx, imageBuf)
-	if err != nil {
-		r.Eventf(sa, corev1.EventTypeWarning, "ScanFailed", "Vulnerability scan failed: %v", err)
+	eg.Go(func() error {
+		if err := r.BuildImage(
+			ctx,
+			sa.Spec.AppID,
+			xio.WriterCloser{Writer: pw, Closer: xio.CloserFunc(func() error { return nil })},
+			opts,
+		); err != nil {
+			r.Eventf(sa, corev1.EventTypeWarning, "DidNotBuild", "Image did not build successfully: %v", err)
+			SetCondition(sa, metav1.Condition{
+				Type:    "Built",
+				Status:  metav1.ConditionFalse,
+				Reason:  "BuildFailed",
+				Message: err.Error(),
+			})
+			sa.Status.Phase = v1alpha1.PhaseFailed
+			return err
+		}
+
+		r.Event(sa, corev1.EventTypeNormal, "Built", "Image successfully built")
 		SetCondition(sa, metav1.Condition{
-			Type:    "Scanned",
-			Status:  metav1.ConditionFalse,
-			Reason:  "ScanFailed",
-			Message: err.Error(),
+			Type:   "Built",
+			Status: metav1.ConditionTrue,
+			Reason: "BuildSucceeded",
 		})
 
-		return ctrl.Result{}, r.Client.Status().Update(ctx, sa) // Fail here?
-	}
-
-	r.Eventf(sa, corev1.EventTypeNormal, "Scanned", "Vulnerability scan completed with %d vulnerabilities found", len(vulns))
-	SetCondition(sa, metav1.Condition{
-		Type:   "Scanned",
-		Status: metav1.ConditionTrue,
-		Reason: "ScanSucceeded",
+		return nil
 	})
 
-	vulnerabilities := make([]v1alpha1.Vulnerability, len(vulns))
-	for i, vuln := range vulns {
-		vulnerabilities[i] = v1alpha1.Vulnerability{
-			ID:        vuln.ID,
-			PackageID: vuln.PackageID,
-			Title:     vuln.Title,
-			Status:    vuln.Status.String(),
-			Severity:  vuln.Severity.String(),
+	eg.Go(func() error {
+		vulns, err := r.Scanner.Scan(ctx, pr)
+		if err != nil {
+			r.Eventf(sa, corev1.EventTypeWarning, "ScanFailed", "Vulnerability scan failed: %v", err)
+			SetCondition(sa, metav1.Condition{
+				Type:    "Scanned",
+				Status:  metav1.ConditionFalse,
+				Reason:  "ScanFailed",
+				Message: err.Error(),
+			})
+
+			return err
 		}
+
+		sa.Status.Vulnerabilities = vulns
+
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
+		sa.Status.Phase = v1alpha1.PhaseFailed
+		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
-	sa.Status.Vulnerabilities = vulnerabilities
+	sa.Status.Phase = v1alpha1.PhaseReady
 
 	return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 }
