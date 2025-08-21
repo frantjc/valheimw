@@ -233,7 +233,7 @@ func NewStoker() *cobra.Command {
 
 				reconciler := &controller.SteamappReconciler{
 					ImageBuilder: &steamapp.ImageBuilder{},
-					Scanner:      scanner,
+					ImageScanner: scanner,
 				}
 
 				if mirror != "" {

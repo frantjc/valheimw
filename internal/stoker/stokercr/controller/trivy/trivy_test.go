@@ -1,20 +1,34 @@
 package trivy_test
 
-// import (
-// 	"context"
-// 	"testing"
+import (
+	"io"
+	"os"
+	"testing"
 
-// 	"github.com/frantjc/sindri/internal/stoker/stokercr/controller/trivy"
-// 	"github.com/stretchr/testify/assert"
-// )
+	"github.com/frantjc/sindri/internal/stoker/stokercr/controller/trivy"
+	testdata "github.com/frantjc/sindri/testdata/stoker"
+	"github.com/stretchr/testify/assert"
+)
 
-// func TestTrivy_Scan(t *testing.T) {
-// 	ctx := context.Background()
+func TestScanner_Scan(t *testing.T) {
+	ctx := t.Context()
 
-// 	scanner, err := trivy.NewTrivy(ctx)
-// 	assert.NoError(t, err)
+	scanner, err := trivy.NewScanner(ctx)
+	assert.NoError(t, err)
 
-// 	vulns, err := scanner.Scan(ctx, "resources/debian.tar")
-// 	assert.NoError(t, err)
-// 	assert.Len(t, vulns, 51)
-// }
+	f, err := os.CreateTemp(t.TempDir(), "*.tar")
+	assert.NoError(t, err)
+	t.Cleanup(func() {
+		_ = f.Close()
+	})
+
+	_, err = f.Write(testdata.Alpine)
+	assert.NoError(t, err)
+
+	_, err = f.Seek(0, io.SeekStart)
+	assert.NoError(t, err)
+
+	vulns, err := scanner.Scan(ctx, f)
+	assert.NoError(t, err)
+	assert.Greater(t, len(vulns), 0)
+}

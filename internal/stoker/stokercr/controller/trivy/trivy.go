@@ -59,6 +59,7 @@ func NewScanner(ctx context.Context, opts ...ScannerOpt) (*Scanner, error) {
 			"ghcr.io/aquasecurity/trivy-db:2",
 			"mirror.gcr.io/aquasec/trivy-db:2",
 		},
+		CacheDir: filepath.Join(cache.Dir, "trivy"),
 	}
 
 	for _, opt := range opts {
@@ -74,12 +75,10 @@ func NewScanner(ctx context.Context, opts ...ScannerOpt) (*Scanner, error) {
 		repoRefs = append(repoRefs, ref)
 	}
 
-	cacheDir := filepath.Join(cache.Dir, "trivy")
-
 	if err := operation.DownloadDB(
 		ctx,
 		"dev",
-		cacheDir,
+		o.CacheDir,
 		repoRefs,
 		false,
 		false,
@@ -88,7 +87,7 @@ func NewScanner(ctx context.Context, opts ...ScannerOpt) (*Scanner, error) {
 		return nil, fmt.Errorf("download trivy db: %w", err)
 	}
 
-	if err := db.Init(db.Dir(cacheDir)); err != nil {
+	if err := db.Init(db.Dir(o.CacheDir)); err != nil {
 		return nil, fmt.Errorf("initialize trivy db: %w", err)
 	}
 
@@ -101,16 +100,17 @@ func NewScanner(ctx context.Context, opts ...ScannerOpt) (*Scanner, error) {
 		return nil, fmt.Errorf("create trivy runner: %w", err)
 	}
 
-	return &Scanner{repoRefs, cacheDir, runner}, nil
+	return &Scanner{repoRefs, o.CacheDir, runner}, nil
 }
 
 func (s *Scanner) Scan(ctx context.Context, r io.Reader) ([]v1alpha1.Vulnerability, error) {
 	log := logutil.SloggerFrom(ctx)
 
 	if f, ok := r.(*os.File); ok {
-		log.Debug("skipping intermediate file write", "file", f.Name())
-
-		return s.scanFile(ctx, f.Name())
+		if fi, err := f.Stat(); err == nil && fi.Mode().IsRegular() {
+			log.Debug("skipping intermediate file write", "reader", f.Name())
+			return s.scanFile(ctx, f.Name())
+		}
 	}
 
 	if err := os.MkdirAll(s.CacheDir, 0755); err != nil {

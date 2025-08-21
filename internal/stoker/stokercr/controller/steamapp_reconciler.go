@@ -3,13 +3,14 @@ package controller
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/url"
-	"os"
 	"slices"
 	"strconv"
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/internal/appinfoutil"
+	"github.com/frantjc/sindri/internal/logutil"
 	"github.com/frantjc/sindri/internal/stoker/stokercr"
 	"github.com/frantjc/sindri/internal/stoker/stokercr/api/v1alpha1"
 	"github.com/frantjc/sindri/steamapp"
@@ -23,7 +24,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -33,7 +33,7 @@ type SteamappReconciler struct {
 	client.Client
 	record.EventRecorder
 	*steamapp.ImageBuilder
-	Scanner ImageScanner
+	ImageScanner
 }
 
 // +kubebuilder:rbac:groups=sindri.frantj.cc,resources=steamapps,verbs=get;list;watch;create;update;patch;delete
@@ -44,7 +44,7 @@ type SteamappReconciler struct {
 // move the current state of the cluster closer to the desired state.
 func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var (
-		log = log.FromContext(ctx)
+		log = logutil.SloggerFrom(ctx)
 		sa  = &v1alpha1.Steamapp{}
 	)
 
@@ -189,11 +189,7 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	})
 
 	// Build and scan image in parallel.
-	pr, pw, err := os.Pipe()
-	if err != nil {
-		sa.Status.Phase = v1alpha1.PhaseFailed
-		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
-	}
+	pr, pw := io.Pipe()
 
 	eg, ctx := errgroup.WithContext(ctx)
 
@@ -225,24 +221,26 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return nil
 	})
 
-	eg.Go(func() error {
-		vulns, err := r.Scanner.Scan(ctx, pr)
-		if err != nil {
-			r.Eventf(sa, corev1.EventTypeWarning, "ScanFailed", "Vulnerability scan failed: %v", err)
-			SetCondition(sa, metav1.Condition{
-				Type:    "Scanned",
-				Status:  metav1.ConditionFalse,
-				Reason:  "ScanFailed",
-				Message: err.Error(),
-			})
+	if r.ImageScanner != nil {
+		eg.Go(func() error {
+			vulns, err := r.Scan(ctx, pr)
+			if err != nil {
+				r.Eventf(sa, corev1.EventTypeWarning, "ScanFailed", "Vulnerability scan failed: %v", err)
+				SetCondition(sa, metav1.Condition{
+					Type:    "Scanned",
+					Status:  metav1.ConditionFalse,
+					Reason:  "ScanFailed",
+					Message: err.Error(),
+				})
 
-			return err
-		}
+				return err
+			}
 
-		sa.Status.Vulnerabilities = vulns
+			sa.Status.Vulnerabilities = vulns
 
-		return nil
-	})
+			return nil
+		})
+	}
 
 	if err := eg.Wait(); err != nil {
 		sa.Status.Phase = v1alpha1.PhaseFailed

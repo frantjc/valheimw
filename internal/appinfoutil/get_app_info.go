@@ -8,18 +8,28 @@ import (
 )
 
 type GetAppInfoOpts struct {
-	login steamcmd.Login
+	Login steamcmd.Login
 }
 
-type GetAppInfoOpt func(*GetAppInfoOpts)
+func (o *GetAppInfoOpts) Apply(opts *GetAppInfoOpts) {
+	if o != nil {
+		if opts != nil {
+			opts.Login = o.Login
+		}
+	}
+}
+
+type GetAppInfoOpt interface {
+	Apply(*GetAppInfoOpts)
+}
 
 func WithLogin(username, password, steamGuardCode string) GetAppInfoOpt {
-	return func(o *GetAppInfoOpts) {
-		o.login = steamcmd.Login{
+	return &GetAppInfoOpts{
+		Login: steamcmd.Login{
 			Username:       username,
 			Password:       password,
 			SteamGuardCode: steamGuardCode,
-		}
+		},
 	}
 }
 
@@ -40,12 +50,12 @@ func GetAppInfo(ctx context.Context, appID int, opts ...GetAppInfoOpt) (*steamcm
 	defer close(appInfoC)
 
 	for _, opt := range opts {
-		opt(o)
+		opt.Apply(o)
 	}
 
 	log.Debug("starting steamcmd to app_info_print")
 
-	prompt, err := steamcmd.Start(ctx, o.login, steamcmd.AppInfoRequest(appID))
+	prompt, err := steamcmd.Start(ctx, o.Login, steamcmd.AppInfoRequest(appID))
 	if err != nil {
 		return nil, err
 	}
