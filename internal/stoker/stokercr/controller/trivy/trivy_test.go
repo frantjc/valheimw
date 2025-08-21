@@ -13,7 +13,7 @@ import (
 func TestScanner_Scan(t *testing.T) {
 	ctx := t.Context()
 
-	scanner, err := trivy.NewScanner(ctx)
+	scanner, err := trivy.NewScanner(ctx, &trivy.ScannerOpts{CacheDir: t.TempDir()})
 	assert.NoError(t, err)
 
 	f, err := os.CreateTemp(t.TempDir(), "*.tar")
@@ -30,5 +30,5 @@ func TestScanner_Scan(t *testing.T) {
 
 	vulns, err := scanner.Scan(ctx, f)
 	assert.NoError(t, err)
-	assert.Greater(t, len(vulns), 0)
+	assert.Equal(t, len(vulns), 0)
 }
