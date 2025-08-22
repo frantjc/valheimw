@@ -14,14 +14,14 @@ YARN ?= yarn
 
 .PHONY: apply
 apply: manifests
-	@$(KUBECTL) apply -f internal/stoker/stokercr/config/crd
+	@$(KUBECTL) apply -f internal/config/crd
 
 KIND_CLUSTER_NAME ?= sindri
 
 .PHONY: dev
 dev: kind
 	@if ! $(KIND) get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
-		$(KIND) create cluster --config hack/kind.yml --kubeconfig dev/config --name $(KIND_CLUSTER_NAME); \
+		$(KIND) create cluster --config dev/kind.yml --kubeconfig dev/config --name $(KIND_CLUSTER_NAME); \
 	else \
 		$(KIND) get kubeconfig --name $(KIND_CLUSTER_NAME) > dev/config; \
 	fi
@@ -39,10 +39,10 @@ dev: kind
 	@STOKER_URL=http://localhost:5050 BOILER_URL=http://localhost:5000 $(YARN) $@
 
 .PHONY: manifests
-manifests: internal/stoker/stokercr/config/crd
+manifests: internal/config/crd
 
-.PHONY: internal/stoker/stokercr/config/crd
-internal/stoker/stokercr/config/crd: controller-gen
+.PHONY: internal/config/crd
+internal/config/crd: controller-gen
 	@$(CONTROLLER_GEN) crd webhook paths="./..." output:crd:artifacts:config=$@
 
 .PHONY: config
@@ -50,7 +50,7 @@ config: manifests
 
 .PHONY: generate
 generate: controller-gen
-	@$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	@$(CONTROLLER_GEN) paths="./..."
 
 .PHONY: node_modules node_modules/
 node_modules node_modules/:

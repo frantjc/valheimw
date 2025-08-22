@@ -15,9 +15,9 @@ import (
 	fanaltypes "github.com/aquasecurity/trivy/pkg/fanal/types"
 	"github.com/aquasecurity/trivy/pkg/flag"
 	"github.com/aquasecurity/trivy/pkg/types"
+	"github.com/frantjc/sindri/internal/api/v1alpha1"
 	"github.com/frantjc/sindri/internal/cache"
 	"github.com/frantjc/sindri/internal/logutil"
-	"github.com/frantjc/sindri/internal/stoker/stokercr/api/v1alpha1"
 	"github.com/google/go-containerregistry/pkg/name"
 )
 

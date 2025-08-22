@@ -9,10 +9,10 @@ import (
 	"strconv"
 
 	"github.com/frantjc/go-steamcmd"
+	"github.com/frantjc/sindri/internal/api/v1alpha1"
 	"github.com/frantjc/sindri/internal/appinfoutil"
 	"github.com/frantjc/sindri/internal/logutil"
 	"github.com/frantjc/sindri/internal/stoker/stokercr"
-	"github.com/frantjc/sindri/internal/stoker/stokercr/api/v1alpha1"
 	"github.com/frantjc/sindri/steamapp"
 	xio "github.com/frantjc/x/io"
 	"golang.org/x/sync/errgroup"
@@ -36,7 +36,7 @@ type SteamappReconciler struct {
 	ImageScanner
 }
 
-// +kubebuilder:rbac:groups=sindri.frantj.cc,resources=steamapps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=sindri.frantj.cc,resources=steamapps,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=sindri.frantj.cc,resources=steamapps/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=sindri.frantj.cc,resources=steamapps/finalizers,verbs=update
 

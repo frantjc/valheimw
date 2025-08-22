@@ -15,9 +15,9 @@ import (
 
 	"github.com/frantjc/sindri/internal/logutil"
 	"github.com/frantjc/sindri/internal/stoker"
+	"github.com/frantjc/sindri/internal/stoker/controller"
+	"github.com/frantjc/sindri/internal/stoker/controller/trivy"
 	"github.com/frantjc/sindri/internal/stoker/stokercr"
-	"github.com/frantjc/sindri/internal/stoker/stokercr/controller"
-	"github.com/frantjc/sindri/internal/stoker/stokercr/controller/trivy"
 	"github.com/frantjc/sindri/steamapp"
 	"github.com/go-openapi/spec"
 	"github.com/moby/buildkit/client"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/frantjc/sindri/internal/stoker/stokercr/api/v1alpha1"
+	"github.com/frantjc/sindri/internal/api/v1alpha1"
 )
 
 type ImageScanner interface {

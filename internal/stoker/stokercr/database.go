@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/frantjc/go-steamcmd"
+	"github.com/frantjc/sindri/internal/api/v1alpha1"
 	"github.com/frantjc/sindri/internal/httputil"
 	"github.com/frantjc/sindri/internal/stoker"
-	"github.com/frantjc/sindri/internal/stoker/stokercr/api/v1alpha1"
 	"github.com/frantjc/sindri/steamapp"
 	xslices "github.com/frantjc/x/slices"
 	corev1 "k8s.io/api/core/v1"
