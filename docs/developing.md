@@ -39,7 +39,7 @@ The Boiler service is only necessary if you intend to `docker pull` a Steamapp i
 After its first run, you'll need to approve the Steamapps, otherwise Stoker won't return them. This manual step exists to avoid running arbitrary code without validation during the build process.
 
 ```sh
-go run ./cmd/kubectl-approve_steamapps --all
+go run ./cmd/kubectl-steamapps approve --all
 ```
 
 If you're developing the frontend, you can bring it up with hot-reloading, too:

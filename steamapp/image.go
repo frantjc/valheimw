@@ -49,6 +49,8 @@ type BuildImageOpts struct {
 	User       string
 	Entrypoint []string
 	Cmd        []string
+
+	Log io.Writer
 }
 
 func (o *BuildImageOpts) Apply(opts *BuildImageOpts) {
@@ -91,6 +93,9 @@ func (o *BuildImageOpts) Apply(opts *BuildImageOpts) {
 	if len(o.Cmd) > 0 {
 		opts.Cmd = o.Cmd
 	}
+	if o.Log != nil {
+		opts.Log = o.Log
+	}
 }
 
 type BuildImageOpt interface {
@@ -128,9 +133,7 @@ func (t *mirrorTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	_req := req.Clone(req.Context())
 	_req.URL = t.JoinPath("/")
-	// FIXME(frantjc): Had weird behavior with using req.URL.Path which led to the URL path's leading slash being
-	// omitted from the HTTP request (e.g. GET v2/library/debian/manifests/...), so resorted to this.
-	_req.URL.Opaque = req.URL.Path
+	_req.URL.Path = req.URL.Path
 	namespace := req.Host
 	if strings.HasSuffix(namespace, ".docker.io") {
 		namespace = "docker.io"
@@ -139,7 +142,13 @@ func (t *mirrorTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	log.Debug("mirroring request", "url", req.URL.String(), "mirror", _req.URL.String())
 
-	return t.RoundTripper.RoundTrip(_req)
+	if res, err := t.RoundTripper.RoundTrip(_req); err == nil {
+		return res, nil
+	}
+
+	log.Debug("mirror failed, falling back to original request", "url", req.URL.String(), "mirror", _req.URL.String())
+
+	return t.RoundTripper.RoundTrip(req)
 }
 
 func (a *ImageBuilder) transport() http.RoundTripper {
@@ -484,6 +493,7 @@ func newBuildImageOpts(opts ...BuildImageOpt) *BuildImageOpts {
 		LaunchType:       DefaultLaunchType,
 		PlatformType:     steamcmd.PlatformTypeLinux,
 		User:             DefaultUser,
+		Log:              io.Discard,
 	}
 
 	for _, opt := range opts {
@@ -590,7 +600,7 @@ func (a *ImageBuilder) BuildImage(ctx context.Context, appID int, output io.Writ
 	})
 
 	eg.Go(func() error {
-		d, err := progressui.NewDisplay(io.Discard, progressui.AutoMode)
+		d, err := progressui.NewDisplay(o.Log, progressui.AutoMode)
 		if err != nil {
 			return err
 		}

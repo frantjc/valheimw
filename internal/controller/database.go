@@ -1,4 +1,4 @@
-package stokercr
+package controller
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/frantjc/go-steamcmd"
+	"github.com/frantjc/sindri/internal/api"
 	"github.com/frantjc/sindri/internal/api/v1alpha1"
 	"github.com/frantjc/sindri/internal/httputil"
 	"github.com/frantjc/sindri/internal/stoker"
@@ -19,27 +20,16 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
-
-func NewScheme() (*runtime.Scheme, error) {
-	scheme := runtime.NewScheme()
-	schemeBuilder := runtime.NewSchemeBuilder(v1alpha1.AddToScheme, clientgoscheme.AddToScheme)
-	return scheme, schemeBuilder.AddToScheme(scheme)
-}
 
 type databaseURLOpener struct{}
 
-const (
-	DefaultNamespace = "sindri-system"
-)
+const DefaultNamespace = "sindri-system"
 
 // OpenDatabase implements steamapp.DatabaseURLOpener.
 func (o *databaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamapp.Database, error) {
@@ -61,7 +51,7 @@ func (o *databaseURLOpener) OpenDatabase(_ context.Context, u *url.URL) (steamap
 		return nil, err
 	}
 
-	scheme, err := NewScheme()
+	scheme, err := api.NewScheme()
 	if err != nil {
 		return nil, err
 	}
@@ -196,56 +186,10 @@ func (d *Database) SetupWithManager(mgr ctrl.Manager) error {
 	d.Client = mgr.GetClient()
 	d.Reader = mgr.GetAPIReader()
 
-	if err := ctrl.NewControllerManagedBy(mgr).
+	return ctrl.NewControllerManagedBy(mgr).
 		Named("stoker").
 		For(&v1alpha1.Steamapp{}).
-		Complete(d); err != nil {
-		return err
-	}
-
-	return nil
-	// ctrl.NewWebhookManagedBy(mgr).
-	// 	For(&v1alpha1.Steamapp{}).
-	// 	WithValidator(d).
-	// 	Complete()
-}
-
-func (d *Database) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	_, ok := obj.(*v1alpha1.Steamapp)
-	if !ok {
-		return nil, fmt.Errorf("expected a Steamapp object but got %T", obj)
-	}
-
-	return nil, nil
-}
-
-func (d *Database) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	_, ok := newObj.(*v1alpha1.Steamapp)
-	if !ok {
-		return nil, fmt.Errorf("expected a Steamapp object but got %T", newObj)
-	}
-
-	osa, ok := oldObj.(*v1alpha1.Steamapp)
-	if !ok {
-		return nil, fmt.Errorf("expected a Steamapp object but got %T", oldObj)
-	}
-
-	if osa.Annotations != nil {
-		if locked, _ := strconv.ParseBool(osa.Annotations[AnnotationLocked]); locked {
-			return nil, fmt.Errorf("cannot update locked Steamapp")
-		}
-	}
-
-	return nil, nil
-}
-
-func (d *Database) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	_, ok := obj.(*v1alpha1.Steamapp)
-	if !ok {
-		return nil, fmt.Errorf("expected a Steamapp object but got %T", obj)
-	}
-
-	return nil, nil
+		Complete(d)
 }
 
 var _ stoker.Database = &Database{}

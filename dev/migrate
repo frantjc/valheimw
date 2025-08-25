@@ -111,3 +111,23 @@ wget $1/steamapps/2857200 \
         "-NoAsyncLoadingThread"
       ]
     }' -O-
+
+wget $1/steamapps/728470 \
+    --header="Content-Type: application/json" \
+    --post-data='{
+      "launch_type": "default",
+      "apt_packages": [
+        "winehq-stable"
+      ],
+      "platform_type": "windows"
+    }' -O-
+
+wget $1/steamapps/2278520 \
+    --header="Content-Type: application/json" \
+    --post-data='{
+      "launch_type": "default",
+      "apt_packages": [
+        "winehq-stable"
+      ],
+      "platform_type": "windows"
+    }' -O-

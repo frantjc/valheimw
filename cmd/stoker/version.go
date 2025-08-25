@@ -7,7 +7,7 @@ import (
 
 // GoReleaser sets these.
 var (
-	version = "3.3.5"
+	version = "3.5.2"
 	commit  = ""
 	date    = ""
 	builtBy = ""

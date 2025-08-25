@@ -19,7 +19,7 @@ apply: manifests
 KIND_CLUSTER_NAME ?= sindri
 
 .PHONY: dev
-dev: kind
+dev: kind kubectl-steamapps
 	@if ! $(KIND) get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
 		$(KIND) create cluster --config dev/kind.yml --kubeconfig dev/config --name $(KIND_CLUSTER_NAME); \
 	else \
@@ -35,7 +35,7 @@ dev: kind
 	fi
 	@$(KIND) get kubeconfig --name $(KIND_CLUSTER_NAME) --internal > dev/internal
 	@KUBECONFIG=./dev/internal $(DOCKER) compose up --build --detach stoker migrate boiler --remove-orphans
-	@$(GO) run ./cmd/kubectl-approve_steamapps --kubeconfig dev/config --all
+	@dev/kubectl steamapps approve --kubeconfig dev/config --all
 	@STOKER_URL=http://localhost:5050 BOILER_URL=http://localhost:5000 $(YARN) $@
 
 .PHONY: manifests
@@ -85,6 +85,19 @@ swagger: internal/stoker/swagger.json
 LOCALBIN ?= $(shell pwd)/dev/bin
 $(LOCALBIN):
 	@mkdir -p $(LOCALBIN)
+
+KUBECTL_STEAMAPPS ?= $(LOCALBIN)/kubectl-steamapps
+
+.PHONY: kubectl-steamapps
+kubectl-steamapps: $(KUBECTL_STEAMAPPS)
+$(KUBECTL_STEAMAPPS): $(LOCALBIN)
+	@$(GO) build -o $(KUBECTL_STEAMAPPS) ./cmd/kubectl-steamapps
+	@$(call link,$(LOCALBIN)/kubectl-steamapp,$(KUBECTL_STEAMAPPS))
+	@$(call link,$(LOCALBIN)/kubectl-sa,$(KUBECTL_STEAMAPPS))
+
+define link
+@test $(1) || ln -s $(2) $(1)
+endef
 
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint

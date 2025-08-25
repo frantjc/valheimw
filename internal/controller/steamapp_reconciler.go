@@ -1,31 +1,30 @@
 package controller
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
-	"slices"
 	"strconv"
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/internal/api/v1alpha1"
 	"github.com/frantjc/sindri/internal/appinfoutil"
 	"github.com/frantjc/sindri/internal/logutil"
-	"github.com/frantjc/sindri/internal/stoker/stokercr"
 	"github.com/frantjc/sindri/steamapp"
 	xio "github.com/frantjc/x/io"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // SteamappReconciler reconciles a Steamapp object.
@@ -39,6 +38,9 @@ type SteamappReconciler struct {
 // +kubebuilder:rbac:groups=sindri.frantj.cc,resources=steamapps,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=sindri.frantj.cc,resources=steamapps/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=sindri.frantj.cc,resources=steamapps/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;patch
+
+const LogKey = "buildkitd.log"
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -108,6 +110,13 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
+	r.Eventf(sa, corev1.EventTypeNormal, "BranchFound", "Branch %s found", sa.Spec.Branch)
+	SetCondition(sa, metav1.Condition{
+		Type:   "Branch",
+		Status: metav1.ConditionTrue,
+		Reason: "BranchFound",
+	})
+
 	betaPwd := sa.Spec.BetaPassword
 
 	if branch.PwdRequired && betaPwd == "" {
@@ -139,34 +148,52 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	awaitingApproval := true
 
 	if sa.Annotations != nil {
-		if approved, _ := strconv.ParseBool(sa.Annotations[stokercr.AnnotationApproved]); approved {
+		if approved, _ := strconv.ParseBool(sa.Annotations[AnnotationApproved]); approved {
 			awaitingApproval = false
 		}
 	}
 
-	opts := &steamapp.BuildImageOpts{
-		BaseImageRef: sa.Spec.BaseImageRef,
-		AptPkgs:      sa.Spec.AptPkgs,
-		BetaPassword: betaPwd,
-		LaunchType:   sa.Spec.LaunchType,
-		PlatformType: steamcmd.PlatformType(sa.Spec.PlatformType),
-		Execs:        sa.Spec.Execs,
-		Entrypoint:   sa.Spec.Entrypoint,
-		Cmd:          sa.Spec.Cmd,
-	}
+	var (
+		buf  = new(bytes.Buffer)
+		opts = &steamapp.BuildImageOpts{
+			BaseImageRef: sa.Spec.BaseImageRef,
+			AptPkgs:      sa.Spec.AptPkgs,
+			BetaPassword: betaPwd,
+			LaunchType:   sa.Spec.LaunchType,
+			PlatformType: steamcmd.PlatformType(sa.Spec.PlatformType),
+			Execs:        sa.Spec.Execs,
+			Entrypoint:   sa.Spec.Entrypoint,
+			Cmd:          sa.Spec.Cmd,
+			Log:          buf,
+		}
+	)
 
 	imageConfig, err := r.GetImageConfig(ctx, sa.Spec.AppID, opts)
 	if err != nil {
+		r.Eventf(sa, corev1.EventTypeWarning, "ImageConfigFailed", "Could not get image config: %v", err)
+		SetCondition(sa, metav1.Condition{
+			Type:    "ImageConfig",
+			Status:  metav1.ConditionFalse,
+			Reason:  "ImageConfigFailed",
+			Message: err.Error(),
+		})
 		sa.Status.Phase = v1alpha1.PhaseFailed
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
+
+	r.Eventf(sa, corev1.EventTypeNormal, "ImageConfigSucceeded", "Got image config")
+	SetCondition(sa, metav1.Condition{
+		Type:   "ImageConfig",
+		Status: metav1.ConditionTrue,
+		Reason: "ImageConfigSucceeded",
+	})
 
 	// Propagate the default values back to the Steamapp's spec.
 	sa.Spec.Cmd = imageConfig.Cmd
 	sa.Spec.Entrypoint = imageConfig.Entrypoint
 
 	if err := r.Update(ctx, sa); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
 	if awaitingApproval {
@@ -175,27 +202,35 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			Type:    "Approved",
 			Status:  metav1.ConditionFalse,
 			Reason:  "PendingApproval",
-			Message: fmt.Sprintf("Approval not given via annotation %s", stokercr.AnnotationApproved),
+			Message: fmt.Sprintf("Approval not given via annotation %s", AnnotationApproved),
 		})
 		sa.Status.Phase = v1alpha1.PhasePaused
 		return ctrl.Result{}, r.Client.Status().Update(ctx, sa)
 	}
 
-	r.Eventf(sa, corev1.EventTypeNormal, "Building", "Attempting image build with approval: %s", sa.Annotations[stokercr.AnnotationApproved])
+	r.Eventf(sa, corev1.EventTypeNormal, "Building", "Attempting image build with approval: %s", sa.Annotations[AnnotationApproved])
 	SetCondition(sa, metav1.Condition{
 		Type:   "Approved",
 		Status: metav1.ConditionTrue,
 		Reason: "ApprovalReceived",
 	})
 
-	// Build and scan image in parallel.
-	pr, pw := io.Pipe()
+	var (
+		pr io.Reader
+		pw io.WriteCloser = &xio.WriterCloser{Writer: io.Discard, Closer: xio.CloserFunc(func() error { return nil })}
+	)
+	if r.ImageScanner != nil {
+		// Build and scan image in parallel.
+		pr, pw = io.Pipe()
+	}
 
-	eg, ctx := errgroup.WithContext(ctx)
+	eg, egctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
+		var errs error
+
 		if err := r.BuildImage(
-			ctx,
+			egctx,
 			sa.Spec.AppID,
 			xio.WriterCloser{Writer: pw, Closer: xio.CloserFunc(func() error { return nil })},
 			opts,
@@ -207,9 +242,12 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				Reason:  "BuildFailed",
 				Message: err.Error(),
 			})
-			sa.Status.Phase = v1alpha1.PhaseFailed
-			return err
+
+			errs = errors.Join(errs, err)
 		}
+
+		// Close this so that the scan can begin ASAP.
+		errs = errors.Join(errs, pw.Close())
 
 		r.Event(sa, corev1.EventTypeNormal, "Built", "Image successfully built")
 		SetCondition(sa, metav1.Condition{
@@ -218,14 +256,39 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			Reason: "BuildSucceeded",
 		})
 
-		return nil
+		var (
+			cm = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      sa.Name,
+					Namespace: sa.Namespace,
+				},
+				Data: map[string]string{
+					LogKey: buf.String(),
+				},
+			}
+		)
+
+		if err := controllerutil.SetControllerReference(sa, cm, r.Scheme()); err != nil {
+			return errors.Join(errs, err)
+		}
+
+		if _, err := controllerutil.CreateOrPatch(ctx, r, cm, func() error {
+			cm.Data = map[string]string{
+				LogKey: buf.String(),
+			}
+			return controllerutil.SetControllerReference(sa, cm, r.Scheme())
+		}); err != nil {
+			return errors.Join(errs, err)
+		}
+
+		return errs
 	})
 
 	if r.ImageScanner != nil {
 		eg.Go(func() error {
-			vulns, err := r.Scan(ctx, pr)
+			vulns, err := r.Scan(egctx, pr)
 			if err != nil {
-				r.Eventf(sa, corev1.EventTypeWarning, "ScanFailed", "Vulnerability scan failed: %v", err)
+				r.Eventf(sa, corev1.EventTypeWarning, "ScanFailed", "Image scan failed: %v", err)
 				SetCondition(sa, metav1.Condition{
 					Type:    "Scanned",
 					Status:  metav1.ConditionFalse,
@@ -235,6 +298,13 @@ func (r *SteamappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 				return err
 			}
+
+			r.Event(sa, corev1.EventTypeNormal, "ScanFinished", "Image scan finished")
+			SetCondition(sa, metav1.Condition{
+				Type:   "Scanned",
+				Status: metav1.ConditionTrue,
+				Reason: "ScanFinished",
+			})
 
 			sa.Status.Vulnerabilities = vulns
 
@@ -265,94 +335,6 @@ func (r *SteamappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return nil
-	// ctrl.NewWebhookManagedBy(mgr).
-	// 	For(&v1alpha1.Steamapp{}).
-	// 	WithDefaulter(r).
-	// 	WithValidator(r).
-	// 	Complete()
-}
-
-func (r *SteamappReconciler) Default(_ context.Context, obj runtime.Object) error {
-	sa, ok := obj.(*v1alpha1.Steamapp)
-	if !ok {
-		return fmt.Errorf("expected a Steamapp object but got %T", obj)
-	}
-
-	if sa.Status.Phase == "" {
-		sa.Status.Phase = v1alpha1.PhasePending
-	}
-
-	if sa.Spec.Branch == "" {
-		sa.Spec.Branch = steamapp.DefaultBranchName
-	}
-
-	if sa.Spec.LaunchType == "" {
-		sa.Spec.LaunchType = steamapp.DefaultLaunchType
-	}
-
-	if sa.Spec.PlatformType == "" {
-		sa.Spec.PlatformType = steamcmd.PlatformTypeLinux.String()
-	}
-
-	if sa.Spec.BaseImageRef == "" {
-		sa.Spec.BaseImageRef = steamapp.DefaultBaseImageRef
-	}
-
-	return nil
-}
-
-func (r *SteamappReconciler) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	sa, ok := obj.(*v1alpha1.Steamapp)
-	if !ok {
-		return nil, fmt.Errorf("expected a Steamapp object but got %T", obj)
-	}
-
-	if !slices.Contains(
-		[]steamcmd.PlatformType{
-			steamcmd.PlatformTypeLinux,
-			steamcmd.PlatformTypeWindows,
-			steamcmd.PlatformTypeMacOS,
-		},
-		steamcmd.PlatformType(sa.Spec.PlatformType),
-	) {
-		return nil, fmt.Errorf("unsupported platform type %s", sa.Spec.PlatformType)
-	}
-
-	return nil, nil
-}
-
-func (r *SteamappReconciler) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	_, ok := oldObj.(*v1alpha1.Steamapp)
-	if !ok {
-		return nil, fmt.Errorf("expected a Steamapp object but got %T", oldObj)
-	}
-
-	sa, ok := newObj.(*v1alpha1.Steamapp)
-	if !ok {
-		return nil, fmt.Errorf("expected a Steamapp object but got %T", newObj)
-	}
-
-	if !slices.Contains(
-		[]steamcmd.PlatformType{
-			steamcmd.PlatformTypeLinux,
-			steamcmd.PlatformTypeWindows,
-			steamcmd.PlatformTypeMacOS,
-		},
-		steamcmd.PlatformType(sa.Spec.PlatformType),
-	) {
-		return nil, fmt.Errorf("unsupported platform type %s", sa.Spec.PlatformType)
-	}
-
-	return nil, nil
-}
-
-func (r *SteamappReconciler) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	_, ok := obj.(*v1alpha1.Steamapp)
-	if !ok {
-		return nil, fmt.Errorf("expected a Steamapp object but got %T", obj)
-	}
-
-	return nil, nil
 }
 
 type ConditionsAware interface {

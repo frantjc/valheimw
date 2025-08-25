@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/frantjc/sindri/internal/stoker/controller/trivy"
+	"github.com/frantjc/sindri/internal/controller/trivy"
 	testdata "github.com/frantjc/sindri/testdata/stoker"
 	"github.com/stretchr/testify/assert"
 )

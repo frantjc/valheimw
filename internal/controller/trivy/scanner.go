@@ -124,6 +124,8 @@ func (s *Scanner) Scan(ctx context.Context, r io.Reader) ([]v1alpha1.Vulnerabili
 	defer f.Close()
 	defer os.Remove(f.Name())
 
+	log.Debug("writing image to intermediate file", "name", f.Name())
+
 	if _, err = io.Copy(f, r); err != nil {
 		return nil, err
 	}
@@ -137,7 +139,7 @@ func (s *Scanner) scanFile(ctx context.Context, p string) ([]v1alpha1.Vulnerabil
 		debug = log.Enabled(ctx, slog.LevelDebug)
 	)
 
-	log.Debug("calling trivy image scanner")
+	log.Debug("begin trivy image scan")
 
 	rep, err := s.runner.ScanImage(ctx, flag.Options{
 		GlobalOptions: flag.GlobalOptions{

@@ -9,7 +9,7 @@
     "lint": "eslint --fix --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "cross-env NODE_ENV=production node ./server.js",
     "typecheck": "tsc",
-    "test": "vitest",
+    "test": "vitest --run",
     "fmt": "prettier --write ."
   },
   "dependencies": {

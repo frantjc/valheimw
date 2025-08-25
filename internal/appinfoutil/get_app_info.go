@@ -2,6 +2,7 @@ package appinfoutil
 
 import (
 	"context"
+	"sync"
 
 	"github.com/frantjc/go-steamcmd"
 	"github.com/frantjc/sindri/internal/logutil"
@@ -33,53 +34,53 @@ func WithLogin(username, password, steamGuardCode string) GetAppInfoOpt {
 	}
 }
 
-func GetAppInfo(ctx context.Context, appID int, opts ...GetAppInfoOpt) (*steamcmd.AppInfo, error) {
-	log := logutil.SloggerFrom(ctx).With("appID", appID)
+var (
+	mu     sync.Mutex
+	prompt *steamcmd.Prompt
+)
 
-	if appInfo, found := steamcmd.GetAppInfo(appID); found {
-		log.Debug("app info cached in memory")
-		return appInfo, nil
-	}
+func GetAppInfo(ctx context.Context, appID int, opts ...GetAppInfoOpt) (*steamcmd.AppInfo, error) {
+	mu.Lock()
+	defer mu.Unlock()
 
 	var (
-		o        = &GetAppInfoOpts{}
-		errC     = make(chan error, 1)
-		appInfoC = make(chan *steamcmd.AppInfo, 1)
+		_   = logutil.SloggerFrom(ctx).With("appID", appID)
+		o   = &GetAppInfoOpts{}
+		err error
 	)
-	defer close(errC)
-	defer close(appInfoC)
 
 	for _, opt := range opts {
 		opt.Apply(o)
 	}
 
-	log.Debug("starting steamcmd to app_info_print")
-
-	prompt, err := steamcmd.Start(ctx, o.Login, steamcmd.AppInfoRequest(appID))
-	if err != nil {
-		return nil, err
-	}
-	defer prompt.Close()
-
-	go func() {
-		for {
-			appInfo, found := steamcmd.GetAppInfo(appID)
-			if found {
-				appInfoC <- appInfo
-				return
-			}
-
-			if err = prompt.Run(ctx, steamcmd.AppInfoPrint(appID)); err != nil {
-				errC <- err
-				return
-			}
+	if prompt == nil {
+		if prompt, err = steamcmd.Start(ctx); err != nil {
+			return nil, err
 		}
-	}()
-
-	select {
-	case err := <-errC:
-		return nil, err
-	case appInfo := <-appInfoC:
-		return appInfo, nil
 	}
+
+	if err = prompt.Run(ctx, o.Login, steamcmd.AppInfoRequest(appID), steamcmd.AppInfoPrint(appID)); err != nil {
+		return nil, err
+	}
+
+	for {
+		if appInfo, found := steamcmd.GetAppInfo(appID); found {
+			return appInfo, nil
+		}
+
+		if err = prompt.Run(ctx, steamcmd.AppInfoPrint(appID)); err != nil {
+			return nil, err
+		}
+	}
+}
+
+func Close() error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if prompt != nil {
+		return prompt.Close()
+	}
+
+	return nil
 }

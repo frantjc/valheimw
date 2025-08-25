@@ -7,13 +7,13 @@ import (
 
 // GoReleaser sets these.
 var (
-	version = "3.3.5"
+	version = "3.5.2"
 	commit  = ""
 	date    = ""
 	builtBy = ""
 )
 
-// SemVer returns the semantic version of `kubectl-approve_steamapps` as
+// SemVer returns the semantic version of `kubectl-steamapps` as
 // built from GoReleaser ldflags and debug build info.
 func SemVer() string {
 	semver := version
