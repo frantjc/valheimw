@@ -72,14 +72,6 @@ jobs:
         run: |
           docker pull localhost:5000/1963720
           docker rmi localhost:5000/1963720
-      - name: Run docker pull Palworld
-        run: |
-          docker pull localhost:5000/2394010
-          docker rmi localhost:5000/2394010
-      - name: Run docker pull Satisfactory
-        run: |
-          docker pull localhost:5000/1690800
-          docker rmi localhost:5000/1690800
       - name: Run docker pull Abiotic Factor
         run: |
           docker pull localhost:5000/2857200

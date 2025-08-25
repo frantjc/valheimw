@@ -1,0 +1,16 @@
+#!/bin/sh
+
+docker pull localhost:5000/896660
+docker rmi localhost:5000/896660
+
+docker pull localhost:5000/1963720
+docker rmi localhost:5000/1963720
+
+docker pull localhost:5000/2394010
+docker rmi localhost:5000/2394010
+
+docker pull localhost:5000/1690800
+docker rmi localhost:5000/1690800
+
+docker pull localhost:5000/2857200
+docker rmi localhost:5000/2857200
