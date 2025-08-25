@@ -186,37 +186,6 @@ func (p *PullRegistry) getManifest(ctx context.Context, name string, reference s
 		return wc.Close()
 	})
 
-	eg.Go(func() error {
-		key := filepath.Join(name, "blobs", manifest.Config.Digest.String())
-
-		if ok, err := p.Bucket.Exists(egctx, key); ok {
-			return nil
-		} else if err != nil {
-			return err
-		}
-
-		log.Debug("cacheing config blob in bucket", "key", key)
-
-		cfgfb, err := image.RawConfigFile()
-		if err != nil {
-			return err
-		}
-
-		wc, err := p.Bucket.NewWriter(egctx, key, &blob.WriterOptions{
-			ContentType: "application/json",
-		})
-		if err != nil {
-			return err
-		}
-		defer wc.Close()
-
-		if _, err := wc.Write(cfgfb); err != nil {
-			return err
-		}
-
-		return wc.Close()
-	})
-
 	layers, err := image.Layers()
 	if err != nil {
 		return nil, "", "", err
