@@ -64,7 +64,7 @@ export function DockerfilePreview({
 
   return (
     <DivIfProps {...rest}>
-      <div className="relative bg-black font-mono flex p-4 overflow-auto rounded border border-gray-500">
+      <div className="relative bg-black font-mono flex p-4 overflow-auto rounded border border-gray-500 cursor-text">
         <div className="text-right text-gray-500 pr-4 select-none">
           {dockerfile.split("\n").map((_, i) => (
             <div key={i} className="h-5">
@@ -80,15 +80,15 @@ export function DockerfilePreview({
               </div>
             ) : (
               <div key={i} className="h-5">
-                {line.split(" ").map((word, j) =>
-                  word.match(/^[A-Z]+$/) ? (
+                {line.split(" ").map((word, j, arr) => {
+                  return word.match(/^[A-Z]+$/) && j === 0 ? (
                     <span key={j} className="text-pink-600">
                       {word}{" "}
                     </span>
                   ) : (
-                    `${word} `
-                  ),
-                )}
+                    `${word}${j === arr.length - 1 ? "" : " "}`
+                  );
+                })}
               </div>
             ),
           )}

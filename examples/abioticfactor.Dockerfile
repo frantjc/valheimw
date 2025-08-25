@@ -32,4 +32,4 @@ RUN groupadd --system steam \
 	&& apt-get clean
 USER steam
 COPY --from=steamcmd --chown=steam:steam /mnt /home/steam
-ENTRYPOINT ["wine", "/home/steam/AbioticFactor/Binaries/Win64/AbioticFactorServer-Win64-Shipping.exe", "-log", "-newconsole", "-useperfthreads", "-NoAsyncLoadingThread"]
+ENTRYPOINT ["wine", "/home/steam/AbioticFactor/Binaries/Win64/AbioticFactorServer-Win64-Shipping.exe", "-useperfthreads", "-NoAsyncLoadingThread"]

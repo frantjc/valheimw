@@ -2,14 +2,15 @@
 .idea/
 .vscode/
 
-# make
-bin/
-
 # goreleaser
 dist/
 
-# docker-compose
-cache/
+# dev
+dev/cache
+dev/bin
+dev/config
+dev/internal
+.env
 
 # macOS
 .DS_Store
@@ -20,6 +21,3 @@ node_modules/
 # mkdocs
 site/
 gh-pages/
-
-dev/
-.env

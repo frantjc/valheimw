@@ -21,14 +21,14 @@ func SloggerInto(ctx context.Context, log *slog.Logger) context.Context {
 func SloggerFrom(ctx context.Context) *slog.Logger {
 	v := ctx.Value(contextKey{})
 	if v == nil {
-		return slog.New(slog.DiscardHandler)
+		return slog.New(logr.ToSlogHandler(log.FromContext(ctx)))
 	}
 
 	switch v := v.(type) {
 	case *slog.Logger:
 		return v
 	default:
-		return slog.New(slog.DiscardHandler)
+		return slog.New(logr.ToSlogHandler(log.FromContext(ctx)))
 	}
 }
 

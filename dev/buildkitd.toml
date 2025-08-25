@@ -1,0 +1,5 @@
+[registry."docker.io"]
+  mirrors = ["mirror:6000"]
+
+[registry."mirror:6000"]
+  http = true

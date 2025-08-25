@@ -13,11 +13,11 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/frantjc/sindri/internal/api"
+	"github.com/frantjc/sindri/internal/controller"
+	"github.com/frantjc/sindri/internal/controller/trivy"
 	"github.com/frantjc/sindri/internal/logutil"
 	"github.com/frantjc/sindri/internal/stoker"
-	"github.com/frantjc/sindri/internal/stoker/stokercr"
-	"github.com/frantjc/sindri/internal/stoker/stokercr/controller"
-	"github.com/frantjc/sindri/internal/stoker/stokercr/scanners"
 	"github.com/frantjc/sindri/steamapp"
 	"github.com/go-openapi/spec"
 	"github.com/moby/buildkit/client"
@@ -76,8 +76,9 @@ func NewStoker() *cobra.Command {
 			Swagger:     true,
 			SwaggerOpts: []func(*spec.Swagger){},
 		}
-		db        = &stokercr.Database{}
+		db        = &controller.Database{}
 		buildkitd string
+		mirror    string
 		cmd       = &cobra.Command{
 			Use: "stoker",
 			RunE: func(cmd *cobra.Command, args []string) error {
@@ -163,7 +164,7 @@ func NewStoker() *cobra.Command {
 					})
 				}
 
-				scheme, err := stokercr.NewScheme()
+				scheme, err := api.NewScheme()
 				if err != nil {
 					return err
 				}
@@ -225,14 +226,20 @@ func NewStoker() *cobra.Command {
 					return err
 				}
 
-				scanner, err := scanners.NewTrivy(ctx)
+				scanner, err := trivy.NewScanner(ctx)
 				if err != nil {
 					return err
 				}
 
 				reconciler := &controller.SteamappReconciler{
 					ImageBuilder: &steamapp.ImageBuilder{},
-					Scanner:      scanner,
+					ImageScanner: scanner,
+				}
+
+				if mirror != "" {
+					if reconciler.Mirror, err = url.Parse(mirror); err != nil {
+						return err
+					}
 				}
 
 				reconciler.ImageBuilder.Client, err = client.New(ctx, buildkitd)
@@ -304,7 +311,8 @@ func NewStoker() *cobra.Command {
 	cmd.Flags().IntVarP(&addr, "addr", "a", 5050, "Port for stoker to listen on")
 	cmd.Flags().StringVarP(&opts.Path, "path", "p", "", "Base URL path for stoker")
 	cmd.Flags().StringVar(&buildkitd, "buildkitd", appdefaults.Address, "BuildKitd URL for stoker")
-	cmd.Flags().StringVarP(&db.Namespace, "namespace", "n", stokercr.DefaultNamespace, "Namespace for stoker")
+	cmd.Flags().StringVar(&mirror, "mirror", "", "Container registry mirror URL for stoker")
+	cmd.Flags().StringVarP(&db.Namespace, "namespace", "n", controller.DefaultNamespace, "Namespace for stoker")
 
 	return cmd
 }
