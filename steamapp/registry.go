@@ -314,18 +314,17 @@ func (p *PullRegistry) getBlob(ctx context.Context, name string, digest string) 
 
 	log.Debug("checking bucket for digest reference", "key", key)
 
-	if attr, err := p.Bucket.Attributes(ctx, key); err == nil {
-		rc, err := p.Bucket.NewReader(ctx, key, nil)
-		if err != nil {
-			return nil, "", err
-		}
-
-		return rc, attr.ContentType, nil
-	} else if err != nil {
+	attr, err := p.Bucket.Attributes(ctx, key)
+	if err != nil {
 		return nil, "", err
 	}
 
-	return nil, "", fmt.Errorf("blob not found: %s@%s", name, digest)
+	rc, err := p.Bucket.NewReader(ctx, key, nil)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return rc, attr.ContentType, nil
 }
 
 const (
