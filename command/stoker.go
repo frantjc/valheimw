@@ -242,6 +242,12 @@ func NewStoker() *cobra.Command {
 					}
 				}
 
+				if mirror != "" {
+					if reconciler.Mirror, err = url.Parse(mirror); err != nil {
+						return err
+					}
+				}
+
 				reconciler.ImageBuilder.Client, err = client.New(ctx, buildkitd)
 				if err != nil {
 					return err
