@@ -6,8 +6,11 @@
 dist/
 
 # dev
-dev/*
-!dev/buildkitd.toml
+dev/cache
+dev/bin
+dev/config
+dev/internal
+.env
 
 # macOS
 .DS_Store
@@ -18,5 +21,3 @@ node_modules/
 # mkdocs
 site/
 gh-pages/
-
-.env

@@ -14,14 +14,14 @@ YARN ?= yarn
 
 .PHONY: apply
 apply: manifests
-	@$(KUBECTL) apply -f internal/stoker/stokercr/config/crd
+	@$(KUBECTL) apply -f internal/config/crd
 
 KIND_CLUSTER_NAME ?= sindri
 
 .PHONY: dev
-dev: kind
+dev: kind kubectl-steamapps
 	@if ! $(KIND) get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
-		$(KIND) create cluster --config hack/kind.yml --kubeconfig dev/config --name $(KIND_CLUSTER_NAME); \
+		$(KIND) create cluster --config dev/kind.yml --kubeconfig dev/config --name $(KIND_CLUSTER_NAME); \
 	else \
 		$(KIND) get kubeconfig --name $(KIND_CLUSTER_NAME) > dev/config; \
 	fi
@@ -35,14 +35,14 @@ dev: kind
 	fi
 	@$(KIND) get kubeconfig --name $(KIND_CLUSTER_NAME) --internal > dev/internal
 	@KUBECONFIG=./dev/internal $(DOCKER) compose up --build --detach stoker migrate boiler --remove-orphans
-	@$(GO) run ./cmd/kubectl-approve_steamapps --kubeconfig dev/config --all
+	@dev/kubectl steamapps approve --kubeconfig dev/config --all
 	@STOKER_URL=http://localhost:5050 BOILER_URL=http://localhost:5000 $(YARN) $@
 
 .PHONY: manifests
-manifests: internal/stoker/stokercr/config/crd
+manifests: internal/config/crd
 
-.PHONY: internal/stoker/stokercr/config/crd
-internal/stoker/stokercr/config/crd: controller-gen
+.PHONY: internal/config/crd
+internal/config/crd: controller-gen
 	@$(CONTROLLER_GEN) crd webhook paths="./..." output:crd:artifacts:config=$@
 
 .PHONY: config
@@ -50,7 +50,7 @@ config: manifests
 
 .PHONY: generate
 generate: controller-gen
-	@$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	@$(CONTROLLER_GEN) paths="./..."
 
 .PHONY: node_modules node_modules/
 node_modules node_modules/:
@@ -85,6 +85,19 @@ swagger: internal/stoker/swagger.json
 LOCALBIN ?= $(shell pwd)/dev/bin
 $(LOCALBIN):
 	@mkdir -p $(LOCALBIN)
+
+KUBECTL_STEAMAPPS ?= $(LOCALBIN)/kubectl-steamapps
+
+.PHONY: kubectl-steamapps
+kubectl-steamapps: $(KUBECTL_STEAMAPPS)
+$(KUBECTL_STEAMAPPS): $(LOCALBIN)
+	@$(GO) build -o $(KUBECTL_STEAMAPPS) ./cmd/kubectl-steamapps
+	@$(call link,$(LOCALBIN)/kubectl-steamapp,$(KUBECTL_STEAMAPPS))
+	@$(call link,$(LOCALBIN)/kubectl-sa,$(KUBECTL_STEAMAPPS))
+
+define link
+@test $(1) || ln -s $(2) $(1)
+endef
 
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint

@@ -1,0 +1,5 @@
+#!/bin/sh
+
+export KUBECONFIG="$(cd $(dirname $0) && pwd)/config"
+export PATH="$(cd $(dirname $0) && pwd)/bin:$PATH"
+exec kubectl $@
