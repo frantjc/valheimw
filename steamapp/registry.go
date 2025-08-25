@@ -195,7 +195,7 @@ func (p *PullRegistry) getManifest(ctx context.Context, name string, reference s
 			return err
 		}
 
-		log.Debug("cacheing config blob in bucket", "key", key)
+		log.Debug("cacheing image config blob in bucket", "key", key)
 
 		cfgfb, err := image.RawConfigFile()
 		if err != nil {
@@ -292,35 +292,40 @@ func (p *PullRegistry) headBlob(ctx context.Context, name string, digest string)
 		return err
 	}
 
-	return fmt.Errorf("layer not found: %s@%s", name, digest)
+	return fmt.Errorf("blob not found: %s@%s", name, digest)
 }
 
-func (p *PullRegistry) getBlob(ctx context.Context, name string, digest string) (io.ReadCloser, error) {
+func (p *PullRegistry) getBlob(ctx context.Context, name string, digest string) (io.ReadCloser, string, error) {
 	log := logutil.SloggerFrom(ctx)
 
 	appID, err := strconv.Atoi(name)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	} else if err := ValidateAppID(appID); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	hash, err := v1.NewHash(digest)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	key := filepath.Join(name, "blobs", hash.String())
 
 	log.Debug("checking bucket for digest reference", "key", key)
 
-	if ok, err := p.Bucket.Exists(ctx, key); ok {
-		return p.Bucket.NewReader(ctx, key, nil)
+	if attr, err := p.Bucket.Attributes(ctx, key); err == nil {
+		rc, err := p.Bucket.NewReader(ctx, key, nil)
+		if err != nil {
+			return nil, "", err
+		}
+
+		return rc, attr.ContentType, nil
 	} else if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return nil, fmt.Errorf("layer not found: %s@%s", name, digest)
+	return nil, "", fmt.Errorf("blob not found: %s@%s", name, digest)
 }
 
 const (
@@ -410,7 +415,7 @@ func (p *PullRegistry) Handler() http.Handler {
 							return
 						}
 
-						blob, err := p.getBlob(r.Context(), name, reference)
+						blob, mediaType, err := p.getBlob(r.Context(), name, reference)
 						if err != nil {
 							log.Error(ep, "err", err.Error())
 							http.Error(w, err.Error(), httputil.HTTPStatusCode(err))
@@ -418,6 +423,7 @@ func (p *PullRegistry) Handler() http.Handler {
 						}
 						defer blob.Close()
 
+						w.Header().Set("Content-Type", mediaType)
 						w.Header().Set(headerDockerContentDigest, reference)
 
 						_, _ = io.Copy(w, blob)

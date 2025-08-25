@@ -94,20 +94,16 @@ func (g *Database) GetBuildImageOpts(
 				"ca-certificates",
 				"xdg-user-dirs",
 			},
-			LaunchType: "default",
 		}, nil
 	case 1690800:
 		// Satisfactory.
-		return &steamapp.GettableBuildImageOpts{
-			LaunchType: "default",
-		}, nil
+		return &steamapp.GettableBuildImageOpts{}, nil
 	case 2857200:
 		// Abiotic Factor.
 		return &steamapp.GettableBuildImageOpts{
 			AptPkgs: []string{
 				"winehq-stable",
 			},
-			LaunchType:   "default",
 			PlatformType: steamcmd.PlatformTypeWindows,
 			Entrypoint: []string{
 				"wine", "/home/steam/AbioticFactor/Binaries/Win64/AbioticFactorServer-Win64-Shipping.exe",

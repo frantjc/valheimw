@@ -52,7 +52,6 @@ wget $1/steamapps/2394010 \
         "ca-certificates",
         "xdg-user-dirs"
       ],
-      "launch_type": "default",
       "ports": [
         {
           "port": 8211,
@@ -68,7 +67,6 @@ wget $1/steamapps/2394010 \
 wget $1/steamapps/1690800 \
     --header="Content-Type: application/json" \
     --post-data='{
-      "launch_type": "default",
       "ports": [
         {
           "port": 7777,
@@ -89,7 +87,6 @@ wget $1/steamapps/1690800 \
 wget $1/steamapps/2857200 \
     --header="Content-Type: application/json" \
     --post-data='{
-      "launch_type": "default",
       "apt_packages": [
         "winehq-stable"
       ],
@@ -115,7 +112,6 @@ wget $1/steamapps/2857200 \
 wget $1/steamapps/728470 \
     --header="Content-Type: application/json" \
     --post-data='{
-      "launch_type": "default",
       "apt_packages": [
         "winehq-stable"
       ],
@@ -125,7 +121,6 @@ wget $1/steamapps/728470 \
 wget $1/steamapps/2278520 \
     --header="Content-Type: application/json" \
     --post-data='{
-      "launch_type": "default",
       "apt_packages": [
         "winehq-stable"
       ],
