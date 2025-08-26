@@ -49,6 +49,7 @@ services:
       - --webhook-secure=false
       - --buildkitd=tcp://buildkitd:1234
       - --mirror=http://mirror:6000/
+      - --scanner=trivy://
     volumes:
       - ./dev/cache:/root/.cache
       - ${KUBECONFIG:-~/.kube/config}:/root/.kube/config:ro

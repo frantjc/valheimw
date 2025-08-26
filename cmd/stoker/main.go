@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/frantjc/sindri/command"
+	_ "github.com/frantjc/sindri/internal/controller/trivy"
 	xerrors "github.com/frantjc/x/errors"
 	xos "github.com/frantjc/x/os"
 	_ "github.com/moby/buildkit/client/connhelper/dockercontainer"

@@ -15,7 +15,6 @@ import (
 
 	"github.com/frantjc/sindri/internal/api"
 	"github.com/frantjc/sindri/internal/controller"
-	"github.com/frantjc/sindri/internal/controller/trivy"
 	"github.com/frantjc/sindri/internal/logutil"
 	"github.com/frantjc/sindri/internal/stoker"
 	"github.com/frantjc/sindri/steamapp"
@@ -79,6 +78,7 @@ func NewStoker() *cobra.Command {
 		db        = &controller.Database{}
 		buildkitd string
 		mirror    string
+		scanner   string
 		cmd       = &cobra.Command{
 			Use: "stoker",
 			RunE: func(cmd *cobra.Command, args []string) error {
@@ -226,14 +226,8 @@ func NewStoker() *cobra.Command {
 					return err
 				}
 
-				scanner, err := trivy.NewScanner(ctx)
-				if err != nil {
-					return err
-				}
-
 				reconciler := &controller.SteamappReconciler{
 					ImageBuilder: &steamapp.ImageBuilder{},
-					ImageScanner: scanner,
 				}
 
 				if mirror != "" {
@@ -242,8 +236,8 @@ func NewStoker() *cobra.Command {
 					}
 				}
 
-				if mirror != "" {
-					if reconciler.Mirror, err = url.Parse(mirror); err != nil {
+				if scanner != "" {
+					if reconciler.ImageScanner, err = controller.OpenImageScanner(ctx, scanner); err != nil {
 						return err
 					}
 				}
@@ -319,6 +313,7 @@ func NewStoker() *cobra.Command {
 	cmd.Flags().StringVar(&buildkitd, "buildkitd", appdefaults.Address, "BuildKitd URL for stoker")
 	cmd.Flags().StringVar(&mirror, "mirror", "", "Container registry mirror URL for stoker")
 	cmd.Flags().StringVarP(&db.Namespace, "namespace", "n", controller.DefaultNamespace, "Namespace for stoker")
+	cmd.Flags().StringVar(&scanner, "scanner", "", "Image scanner for stoker")
 
 	return cmd
 }
