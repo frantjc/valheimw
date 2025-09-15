@@ -27,7 +27,7 @@ require (
 	gocloud.dev v0.43.0
 	golang.org/x/crypto v0.41.0
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476
-	golang.org/x/sync v0.16.0
+	golang.org/x/sync v0.17.0
 	k8s.io/api v0.34.0
 	k8s.io/apimachinery v0.34.0
 	k8s.io/cli-runtime v0.33.4
