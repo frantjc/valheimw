@@ -27,69 +27,6 @@ jobs:
           go-version-file: go.mod
       - run: |
           make test
-  build-boiler:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          push: true
-          build-args: |
-            tool=boiler
-          tags: |
-            ghcr.io/frantjc/boiler:${{ github.sha }}
-  test-boiler:
-    runs-on: ubuntu-latest
-    needs: build-boiler
-    services:
-      buildkitd:
-        image: moby/buildkit
-        options: --privileged
-        volumes:
-          - /run/buildkit:/run/buildkit
-      boiler:
-        image: ghcr.io/frantjc/boiler:${{ github.sha }}
-        ports:
-          - 5000:5000
-        volumes:
-          - /run/buildkit:/run/buildkit
-    steps:
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Run docker pull Valheim
-        run: |
-          docker pull localhost:5000/896660
-          docker rmi localhost:5000/896660
-      - name: Run docker pull Core Keeper
-        run: |
-          docker pull localhost:5000/1963720
-          docker rmi localhost:5000/1963720
-      - name: Run docker pull Palworld
-        run: |
-          docker pull localhost:5000/2394010
-          docker rmi localhost:5000/2394010
-      - name: Run docker pull Satisfactory
-        run: |
-          docker pull localhost:5000/1690800
-          docker rmi localhost:5000/1690800
-      - name: Run docker pull Abiotic Factor
-        run: |
-          docker pull localhost:5000/2857200
-          docker rmi localhost:5000/2857200
-      - uses: frantjc/actions/ghcr-delete-images@v1
-        continue-on-error: true
-        with:
-          token: ${{ secrets.GH_PAT }}
-          tags: |
-            ghcr.io/frantjc/boiler:${{ github.sha }}
   build-mist:
     runs-on: ubuntu-latest
     needs: test
@@ -123,15 +60,6 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           tags: |
             ghcr.io/frantjc/mist:${{ github.sha }}
-  build-stoker:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: docker/build-push-action@v6
-        with:
-          load: true
-          build-args: |
-            tool=stoker
   build-valheimw:
     runs-on: ubuntu-latest
     needs: test

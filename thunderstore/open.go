@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/frantjc/sindri/internal/cache"
+	"github.com/frantjc/valheimw/internal/cache"
 	xtar "github.com/frantjc/x/archive/tar"
 	xzip "github.com/frantjc/x/archive/zip"
 	xio "github.com/frantjc/x/io"

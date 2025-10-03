@@ -1,4 +1,4 @@
-package sindri
+package valheimw
 
 import (
 	"archive/tar"

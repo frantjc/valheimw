@@ -1,7 +1,7 @@
-site_name: Sindri
-repo_name: "frantjc/sindri"
-repo_url: https://github.com/frantjc/sindri
-site_url: https://frantjc.github.io/sindri
+site_name: valheimw
+repo_name: "frantjc/valheimw"
+repo_url: https://github.com/frantjc/valheimw
+site_url: https://frantjc.github.io/valheimw
 edit_uri: edit/main/docs/
 
 markdown_extensions:

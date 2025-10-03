@@ -5,9 +5,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/go-logr/logr"
 	"github.com/spf13/pflag"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 type contextKey struct{}
@@ -21,20 +19,15 @@ func SloggerInto(ctx context.Context, log *slog.Logger) context.Context {
 func SloggerFrom(ctx context.Context) *slog.Logger {
 	v := ctx.Value(contextKey{})
 	if v == nil {
-		return slog.New(logr.ToSlogHandler(log.FromContext(ctx)))
+		return slog.New(slog.DiscardHandler)
 	}
 
 	switch v := v.(type) {
 	case *slog.Logger:
 		return v
 	default:
-		return slog.New(logr.ToSlogHandler(log.FromContext(ctx)))
+		return slog.New(slog.DiscardHandler)
 	}
-}
-
-// Slogger returns a *slog.Logger. Prefer SloggerFrom.
-func Slogger() *slog.Logger {
-	return slog.New(logr.ToSlogHandler(log.Log))
 }
 
 type SlogConfig struct {

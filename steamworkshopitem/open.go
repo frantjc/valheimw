@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/frantjc/go-steamcmd"
-	"github.com/frantjc/sindri/internal/cache"
+	"github.com/frantjc/valheimw/internal/cache"
 	xtar "github.com/frantjc/x/archive/tar"
 )
 

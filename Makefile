@@ -9,57 +9,10 @@ SHELL = /usr/bin/env bash -o pipefail
 
 DOCKER ?= docker
 GO ?= go
-KUBECTL ?= kubectl
-YARN ?= yarn
-
-.PHONY: apply
-apply: manifests
-	@$(KUBECTL) apply -f internal/config/crd
-
-KIND_CLUSTER_NAME ?= sindri
-
-.PHONY: dev
-dev: kind kubectl-steamapps
-	@if ! $(KIND) get clusters | grep -q "^$(KIND_CLUSTER_NAME)$$"; then \
-		$(KIND) create cluster --config dev/kind.yml --kubeconfig dev/config --name $(KIND_CLUSTER_NAME); \
-	else \
-		$(KIND) get kubeconfig --name $(KIND_CLUSTER_NAME) > dev/config; \
-	fi
-	@$(MAKE) apply KUBECONFIG=dev/config
-	@if ! $(KUBECTL) --kubeconfig dev/config get ns sindri-system; then \
-		$(KUBECTL) --kubeconfig dev/config create ns sindri-system; \
-	fi
-	@$(DOCKER) compose create buildkitd
-	@if ! $(DOCKER) network inspect sindri_default --format '{{range .Containers}}{{.Name}}{{end}}' | grep -q "$(KIND_CLUSTER_NAME)-control-plane"; then \
-		$(DOCKER) network connect sindri_default $(KIND_CLUSTER_NAME)-control-plane; \
-	fi
-	@$(KIND) get kubeconfig --name $(KIND_CLUSTER_NAME) --internal > dev/internal
-	@KUBECONFIG=./dev/internal $(DOCKER) compose up --build --detach stoker migrate boiler --remove-orphans
-	@dev/kubectl steamapps approve --kubeconfig dev/config --all
-	@STOKER_URL=http://localhost:5050 BOILER_URL=http://localhost:5000 $(YARN) $@
-
-.PHONY: manifests
-manifests: internal/config/crd
-
-.PHONY: internal/config/crd
-internal/config/crd: controller-gen
-	@$(CONTROLLER_GEN) crd webhook paths="./..." output:crd:artifacts:config=$@
-
-.PHONY: config
-config: manifests
-
-.PHONY: generate
-generate: controller-gen
-	@$(CONTROLLER_GEN) paths="./..."
-
-.PHONY: node_modules node_modules/
-node_modules node_modules/:
-	@$(YARN) install
 
 .PHONY: fmt test
-fmt test: node_modules
+fmt test:
 	@$(GO) $@ ./...
-	@$(YARN) $@
 
 .PHONY: lint
 lint: golangci-lint fmt
@@ -70,64 +23,10 @@ lint: golangci-lint fmt
 .PHONY: gen
 gen: generate
 
-.PHONY: internal/stoker/swagger.json
-internal/stoker/swagger.json: swag
-	@$(SWAG) fmt -g api.go --dir internal/stoker
-	@$(SWAG) init -g api.go --dir internal/stoker --output internal/stoker --outputTypes json --parseInternal
-	@sed 's/stoker\.//g' $@ > $@.tmp
-	@cat $@.tmp > $@
-	@rm $@.tmp
-	@echo >> $@
-
-.PHONY: swagger
-swagger: internal/stoker/swagger.json
-
-LOCALBIN ?= $(shell pwd)/dev/bin
-$(LOCALBIN):
-	@mkdir -p $(LOCALBIN)
-
-KUBECTL_STEAMAPPS ?= $(LOCALBIN)/kubectl-steamapps
-
-.PHONY: kubectl-steamapps
-kubectl-steamapps: $(KUBECTL_STEAMAPPS)
-$(KUBECTL_STEAMAPPS): $(LOCALBIN)
-	@$(GO) build -o $(KUBECTL_STEAMAPPS) ./cmd/kubectl-steamapps
-	@$(call link,$(LOCALBIN)/kubectl-steamapp,$(KUBECTL_STEAMAPPS))
-	@$(call link,$(LOCALBIN)/kubectl-sa,$(KUBECTL_STEAMAPPS))
-
-define link
-@test $(1) || ln -s $(2) $(1)
-endef
-
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
-GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
-KIND ?= $(LOCALBIN)/kind
-SWAG ?= $(LOCALBIN)/swag
-
-CONTROLLER_TOOLS_VERSION ?= v0.17.1
-GOLANGCI_LINT_VERSION ?= v2.1.5
-KIND_VERSION ?= v0.29.0
-SWAG_VERSION ?= v1.16.4
-
-.PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN)
-$(CONTROLLER_GEN): $(LOCALBIN)
-	@$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
-
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT)
 $(GOLANGCI_LINT): $(LOCALBIN)
 	@$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
-
-.PHONY: kind
-kind: $(KIND)
-$(KIND): $(LOCALBIN)
-	@$(call go-install-tool,$(KIND),sigs.k8s.io/kind,$(KIND_VERSION))
-
-.PHONY: swag
-swag: $(SWAG)
-$(SWAG): $(LOCALBIN)
-	@$(call go-install-tool,$(SWAG),github.com/swaggo/swag/cmd/swag,$(SWAG_VERSION))
 
 define go-install-tool
 @[ -f "$(1)" ] || { \

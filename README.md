@@ -1,5 +1,5 @@
-# sindri [![CI](https://github.com/frantjc/sindri/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/frantjc/sindri/actions) [![godoc](https://pkg.go.dev/badge/github.com/frantjc/sindri.svg)](https://pkg.go.dev/github.com/frantjc/sindri) [![goreportcard](https://goreportcard.com/badge/github.com/frantjc/sindri)](https://goreportcard.com/report/github.com/frantjc/sindri)
+# valheimw [![CI](https://github.com/frantjc/valheimw/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/frantjc/valheimw/actions) [![godoc](https://pkg.go.dev/badge/github.com/frantjc/valheimw.svg)](https://pkg.go.dev/github.com/frantjc/valheimw) [![goreportcard](https://goreportcard.com/badge/github.com/frantjc/valheimw)](https://goreportcard.com/report/github.com/frantjc/valheimw)
 
-Sindri is a toolkit for turning Steamapp servers into container images. This repository also houses tools built from this toolkit.
+Valheimw is a wrapper for the Valheim Dedicated Server.
 
-[**Learn more**](https://frantjc.github.io/sindri).
+[**Learn more**](https://frantjc.github.io/valheimw).

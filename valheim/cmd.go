@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	//go:embed start_server_sindri.sh
+	//go:embed start_server_valheimw.sh
 	startServerBepInExSh []byte
 )
 
@@ -71,7 +71,7 @@ func NewCommand(ctx context.Context, dir string, opts *Opts) (*exec.Cmd, error) 
 		// We seem to have to use a script because
 		// a shell does something special with one
 		// of the env vars that we are using.
-		cmd.Path = filepath.Join(dir, "start_server_sindri.sh")
+		cmd.Path = filepath.Join(dir, "start_server_valheimw.sh")
 
 		f, err := os.OpenFile(cmd.Path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
 		if err != nil {

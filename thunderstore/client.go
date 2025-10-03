@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/frantjc/sindri/internal/cache"
+	"github.com/frantjc/valheimw/internal/cache"
 )
 
 var (

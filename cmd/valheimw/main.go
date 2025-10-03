@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/frantjc/sindri/command"
+	"github.com/frantjc/valheimw/command"
 	xerrors "github.com/frantjc/x/errors"
 	xos "github.com/frantjc/x/os"
 )

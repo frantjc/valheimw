@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/frantjc/sindri/internal/logutil"
+	"github.com/frantjc/valheimw/internal/logutil"
 	"github.com/spf13/pflag"
 )
 

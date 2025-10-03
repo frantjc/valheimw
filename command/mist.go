@@ -8,8 +8,8 @@ import (
 	"runtime"
 
 	"github.com/adrg/xdg"
-	"github.com/frantjc/sindri"
-	"github.com/frantjc/sindri/internal/cache"
+	"github.com/frantjc/valheimw"
+	"github.com/frantjc/valheimw/internal/cache"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +30,7 @@ func NewMist() *cobra.Command {
 					return fmt.Errorf("accepts 2 arg(s), received %d", lenArgs)
 				}
 
-				return sindri.Extract(cmd.Context(), args[0], args[1])
+				return valheimw.Extract(cmd.Context(), args[0], args[1])
 			},
 		}
 	)

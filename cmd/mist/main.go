@@ -7,10 +7,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/frantjc/sindri/command"
-	_ "github.com/frantjc/sindri/steamapp"
-	_ "github.com/frantjc/sindri/steamworkshopitem"
-	_ "github.com/frantjc/sindri/thunderstore"
+	"github.com/frantjc/valheimw/command"
+	_ "github.com/frantjc/valheimw/steamapp"
+	_ "github.com/frantjc/valheimw/steamworkshopitem"
+	_ "github.com/frantjc/valheimw/thunderstore"
 	xerrors "github.com/frantjc/x/errors"
 	xos "github.com/frantjc/x/os"
 )

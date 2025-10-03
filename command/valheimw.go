@@ -16,12 +16,12 @@ import (
 	"time"
 
 	"github.com/frantjc/go-ingress"
-	"github.com/frantjc/sindri"
-	"github.com/frantjc/sindri/internal/cache"
-	"github.com/frantjc/sindri/internal/logutil"
-	"github.com/frantjc/sindri/steamapp"
-	"github.com/frantjc/sindri/thunderstore"
-	"github.com/frantjc/sindri/valheim"
+	"github.com/frantjc/valheimw"
+	"github.com/frantjc/valheimw/internal/cache"
+	"github.com/frantjc/valheimw/internal/logutil"
+	"github.com/frantjc/valheimw/steamapp"
+	"github.com/frantjc/valheimw/thunderstore"
+	"github.com/frantjc/valheimw/valheim"
 	xtar "github.com/frantjc/x/archive/tar"
 	"github.com/mmatczuk/anyflag"
 	"github.com/spf13/cobra"
@@ -81,7 +81,7 @@ func NewValheimw() *cobra.Command {
 						log.Info("installing package", "package", pkg.String(), "rel", dir)
 
 						eg.Go(func() error {
-							return sindri.Extract(installCtx,
+							return valheimw.Extract(installCtx,
 								fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()),
 								filepath.Join(wd, dir),
 							)
@@ -94,7 +94,7 @@ func NewValheimw() *cobra.Command {
 						log.Info("installing latest BepInEx as nothing specified a specific version as a dependency")
 
 						eg.Go(func() error {
-							return sindri.Extract(installCtx,
+							return valheimw.Extract(installCtx,
 								fmt.Sprintf("%s://%s-%s", thunderstore.Scheme, bepInExNamespace, bepInExName),
 								wd,
 							)
@@ -105,7 +105,7 @@ func NewValheimw() *cobra.Command {
 				log.Info("installing Valheim server", "id", valheim.SteamappID)
 
 				eg.Go(func() error {
-					return sindri.Extract(installCtx,
+					return valheimw.Extract(installCtx,
 						fmt.Sprintf("%s://%d?%s", steamapp.Scheme, valheim.SteamappID, steamapp.URLValues(openOpts).Encode()),
 						wd,
 					)
@@ -316,7 +316,7 @@ func NewValheimw() *cobra.Command {
 							w.Header().Add("Content-Disposition", "attachment")
 
 							for _, mod := range mods {
-								rc, err := sindri.Open(ctx, mod)
+								rc, err := valheimw.Open(ctx, mod)
 								if err != nil {
 									w.WriteHeader(http.StatusInternalServerError)
 									return
@@ -362,7 +362,7 @@ func NewValheimw() *cobra.Command {
 							w.Header().Add("Content-Disposition", "attachment")
 
 							for _, mod := range mods {
-								rc, err := sindri.Open(ctx, mod)
+								rc, err := valheimw.Open(ctx, mod)
 								if err != nil {
 									w.WriteHeader(http.StatusInternalServerError)
 									return
@@ -473,9 +473,9 @@ func NewValheimw() *cobra.Command {
 	cmd.Flags().IntVar(&addr, "addr", 8080, "Port for valheimw to listen on")
 
 	cmd.Flags().StringVar(&opts.SaveDir, "savedir", filepath.Join(cache.Dir, "valheim"), "Valheim server -savedir")
-	cmd.Flags().StringVar(&opts.Name, "name", "sindri", "Valheim server -name")
+	cmd.Flags().StringVar(&opts.Name, "name", "valheimw", "Valheim server -name")
 	cmd.Flags().Int64Var(&opts.Port, "port", 0, "Valheim server -port (0 to use default)")
-	cmd.Flags().StringVar(&opts.World, "world", "sindri", "Valheim server -world")
+	cmd.Flags().StringVar(&opts.World, "world", "valheimw", "Valheim server -world")
 	cmd.Flags().BoolVar(&opts.Public, "public", false, "Valheim server make -public")
 
 	cmd.Flags().DurationVar(&opts.SaveInterval, "save-interval", 0, "Valheim server -saveinterval duration")

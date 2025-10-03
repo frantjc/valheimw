@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/frantjc/go-steamcmd"
-	"github.com/frantjc/sindri/internal/logutil"
+	"github.com/frantjc/valheimw/internal/logutil"
 )
 
 type GetAppInfoOpts struct {

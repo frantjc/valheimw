@@ -6,11 +6,11 @@ import (
 	"io"
 	"net/url"
 
-	"github.com/frantjc/sindri"
+	"github.com/frantjc/valheimw"
 )
 
 func init() {
-	sindri.Register(
+	valheimw.Register(
 		new(URLOpener),
 		Scheme,
 	)

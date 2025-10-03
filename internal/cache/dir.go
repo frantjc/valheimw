@@ -7,5 +7,5 @@ import (
 )
 
 var (
-	Dir = filepath.Join(xdg.CacheHome, "sindri")
+	Dir = filepath.Join(xdg.CacheHome, "valheimw")
 )
