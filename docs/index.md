@@ -1,15 +1,13 @@
 # Valheimw
 
-This special supports comes in the form of `valheimw`, a **Valheim** server **wrapper**. Instead of being a Steamapp server that valheimw can help build into a container image, `valheimw` is a pre-built tool specifically for Valheim servers, modded or otherwise. If mods are specified, it uses [BepInEx](https://valheim.thunderstore.io/p/denikson/BepInExPack_Valheim) to load them.
-
-It provides additional features beyond that in an HTTP server that it runs alongside the Valheim server, including:
+Valheimw is a **Valheim** server **wrapper** for running the Valheim Dedicated Server, modded or otherwise. If mods are specified, it uses [BepInEx](https://valheim.thunderstore.io/p/denikson/BepInExPack_Valheim) to load them. It provides additional features beyond that in the form of an HTTP server that it runs alongside the Valheim server, featuring the ability to:
 
 - Download a tarball of the mods in use to distribute them to other players.
 - Download the world's `.db` and `.fwl` files.
 - Get information from the world's `.fwl` file, parsed on your behalf.
 - Go to the world's [valheim-map.world](https://valheim-map.world/) page.
 
-For an example of how to use `valheimw`, consider a directory with the following `docker-compose.yml`:
+For an example of how to use Valheimw, consider a directory with the following `docker-compose.yml`:
 
 ```yml
 services:
@@ -41,7 +39,7 @@ services:
       # is "valheimw".
       VALHEIM_PASSWORD: hellothere
     volumes:
-      # `valheimw` caches stuff here and the Valheim server's
+      # Valheimw caches stuff here and the Valheim server's
       # save data is here by default.
       - ./saves:/home/valheimw/.cache
     ports:
@@ -49,19 +47,19 @@ services:
       # If you change the Valheim server's port from its default,
       # via `--port`, ensure that this is changed to match.
       - 2456:2456/udp
-      # Expose `valheimw`'s HTTP server's port.
-      # If you change `valheimw`'s HTTP server's port from its default,
+      # Expose Valheimw's HTTP server's port.
+      # If you change Valheimw's HTTP server's port from its default,
       # via `--addr`, ensure that this is changed to match.
       - 8080:8080
 ```
 
-To run the `valheimw` this way, run the following command in the directory that the above file is placed in.
+To run the Valheimw this way, run the following command in the directory that the above file is placed in.
 
 ```sh
 docker compose up
 ```
 
-Once `valheimw` is running, its helpful HTTP server can be used.
+Once Valheimw is running, its helpful HTTP server can be used.
 
 To get the world's seed, run the following:
 
@@ -77,7 +75,7 @@ To download the mods that the Valheim server is using (if any), run the followin
 curl http://localhost:8080/mods.gz | tar -xzf-
 ```
 
-To see an exhaustive list of arguments for `valheimw`, see the following or run the help command yourself:
+To see an exhaustive list of arguments for Valheimw, see the following or run the help command yourself:
 
 ```sh
 docker run ghcr.io/frantjc/valheimw --help
