@@ -86,7 +86,7 @@ Usage:
   valheimw [flags]
 
 Flags:
-      --addr string              address (default ":8080")
+      --addr int                 Port for valheimw to listen on (default 8080)
       --admin int64Slice         Valheim server admin Steam IDs (default [])
       --backup-long duration     Valheim server -backuplong duration
       --backup-short duration    Valheim server -backupshort duration
@@ -94,29 +94,31 @@ Flags:
       --ban int64Slice           Valheim server banned Steam IDs (default [])
       --beta string              Steam beta branch
       --beta-password string     Steam beta password
-      --combat-modifier          Valheim server -modifier combat
+      --combat-modifier          Valheim server -modifier combat.
       --crossplay                Valheim server enable -crossplay
-      --death-penalty-modifier   Valheim server -modifier deathpenalty
-  -h, --help                     help for valheimw
+      --death-penalty-modifier   Valheim server -modifier deathpenalty.
+  -d, --debug                    Print debug logs
+  -h, --help                     Help for valheimw
       --instance-id string       Valheim server -instanceid
   -m, --mod stringArray          Thunderstore mods (case-sensitive)
       --name string              Valheim server -name (default "valheimw")
       --no-build-cost            Valheim server -setkey nobuildcost
-      --no-db                    do not expose the world .db file for download
-      --no-fwl                   do not expose the world .fwl file information
+      --no-db                    Do not expose the world .db file for download
+      --no-fwl                   Do not expose the world .fwl file information
       --no-map                   Valheim server -setkey nomap
       --passive-mobs             Valheim server -setkey passivemobs
       --permit int64Slice        Valheim server permitted Steam IDs (default [])
       --player-events            Valheim server -setkey playerevents
       --port int                 Valheim server -port (0 to use default)
-      --portal-modifier          Valheim server -modifier portals
-      --preset                   Valheim server -preset
+      --portal-modifier          Valheim server -modifier portals.
+      --preset                   Valheim server -preset.
       --public                   Valheim server make -public
-      --raid-modifier            Valheim server -modifier raids
-      --resource-modifier        Valheim server -modifier resources
+  -q, --quiet                    Minimize logs
+      --raid-modifier            Valheim server -modifier raids.
+      --resource-modifier        Valheim server -modifier resources.
       --save-interval duration   Valheim server -saveinterval duration
-      --savedir string           Valheim server -savedir (default "/home/valheimw/.cache/valheimw/valheim")
-  -V, --verbose count            verbosity
-  -v, --version                  version for valheimw
+      --savedir string           Valheim server -savedir (default "/home/frantjc/.cache/valheimw/valheim")
+  -v, --verbose count            More vebose logging
+      --version                  Version for valheimw
       --world string             Valheim server -world (default "valheimw")
 ```
