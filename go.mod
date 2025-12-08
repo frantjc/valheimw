@@ -10,7 +10,7 @@ require (
 	github.com/frantjc/go-steamcmd v0.0.0-20250814210827-114d014fdfee
 	github.com/frantjc/x v0.0.0-20250812130030-e7e2a3978c7c
 	github.com/mmatczuk/anyflag v0.0.0-20240709090339-eb9e24cd1b44
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
 	golang.org/x/sync v0.18.0
