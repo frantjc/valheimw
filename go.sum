@@ -5,12 +5,12 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/frantjc/go-encoding-vdf v0.0.0-20250505052333-4ba0456e21d7 h1:gETpIkyRd9LwnMR8pJiXXyKRw2o9oJlesY75x2VkdH4=
 github.com/frantjc/go-encoding-vdf v0.0.0-20250505052333-4ba0456e21d7/go.mod h1:PTLkpVRA5rbM+1/QW7BqqgNG0z0DuzUc+uonsCLajJ8=
-github.com/frantjc/go-ingress v0.3.0 h1:TtQ+b8nOeiUnLXBCBxM6VAKAsYCj6ahNHJ9KR9zewks=
-github.com/frantjc/go-ingress v0.3.0/go.mod h1:+OiXfXH9Dh3ETg0XFa7YCOvwI+DkRzj4HWiH2DHXTJo=
+github.com/frantjc/go-ingress v0.5.0 h1:m54lqpAuvwZ4bdVdv/5qi89e0BNWhhEvsF7RQ3PTgxQ=
+github.com/frantjc/go-ingress v0.5.0/go.mod h1:wc0fuQNtexcGRdmqvxxoY+8FuMxP8lU64nvBpYvHGTY=
 github.com/frantjc/go-steamcmd v0.0.0-20250814210827-114d014fdfee h1:9SHnZunx0CRJ82ZLpLgwmLA2f1WJlyfXRZQg8c+zduU=
 github.com/frantjc/go-steamcmd v0.0.0-20250814210827-114d014fdfee/go.mod h1:x/i0gLx8uDuHx5YikM3eFA+ISYJwtmYuqhzd3/6vIpI=
-github.com/frantjc/x v0.0.0-20250812130030-e7e2a3978c7c h1:aIBlB401l3mD0sauaO17aoG/leHgY/KyT2iREbgEqw4=
-github.com/frantjc/x v0.0.0-20250812130030-e7e2a3978c7c/go.mod h1:tddPtloeZsRJ+hPcZlVSgS4rbm9RIuTKfaYv8EMHDlc=
+github.com/frantjc/x v0.0.0-20251124021033-235d2232e229 h1:Su/VJPhBgc/OEjcrEo0b8+2+Li8Uynb5UsK1pPLmoGM=
+github.com/frantjc/x v0.0.0-20251124021033-235d2232e229/go.mod h1:tddPtloeZsRJ+hPcZlVSgS4rbm9RIuTKfaYv8EMHDlc=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
@@ -28,8 +28,8 @@ github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3A
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 go.yaml.in/yaml/v3 v3.0.4/go.mod h1:DhzuOOF2ATzADvBadXxruRBLzYTpT36CKvDb3+aBEFg=
-golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b h1:M2rDM6z3Fhozi9O7NWsxAkg/yqS/lQJ6PmkyIV3YP+o=
-golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b/go.mod h1:3//PLf8L/X+8b4vuAfHzxeRUl04Adcb341+IGKfnqS8=
+golang.org/x/exp v0.0.0-20251125195548-87e1e737ad39 h1:DHNhtq3sNNzrvduZZIiFyXWOL9IWaDPHqTnLJp+rCBY=
+golang.org/x/exp v0.0.0-20251125195548-87e1e737ad39/go.mod h1:46edojNIoXTNOhySWIWdix628clX9ODXwPsQuG6hsK0=
 golang.org/x/sync v0.19.0 h1:vV+1eWNmZ5geRlYjzm2adRgW2/mcpevXNg50YZtPCE4=
 golang.org/x/sync v0.19.0/go.mod h1:9KTHXmSnoGruLpwFjVSX0lNNA75CykiMECbovNTZqGI=
 golang.org/x/sys v0.35.0 h1:vz1N37gP5bs89s7He8XuIYXpyY0+QlsKmzipCbUtyxI=
