@@ -99,7 +99,7 @@ func (m *ValheimwDev) Service(ctx context.Context) (*dagger.Service, error) {
 		WithExposedPort(8080).
 		WithSecretVariable("VALHEIM_PASSWORD", dag.SetSecret("VALHEIM_PASSWORD", "plaintext")).
 		AsService(dagger.ContainerAsServiceOpts{
-			UseEntrypoint:                 true,
+			UseEntrypoint: true,
 			Args: []string{
 				"--debug",
 				"--mod-category-check",

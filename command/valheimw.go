@@ -49,7 +49,7 @@ func NewValheimw() *cobra.Command {
 			Password: os.Getenv("VALHEIM_PASSWORD"),
 		}
 		modCategoryCheck bool
-		cmd                     = &cobra.Command{
+		cmd              = &cobra.Command{
 			Use: "valheimw",
 			RunE: func(cmd *cobra.Command, _ []string) error {
 				wd := filepath.Join(cache.Dir, "valheimw")
@@ -104,7 +104,7 @@ func NewValheimw() *cobra.Command {
 
 						pkg, err := thunderstore.NewClient().GetPackage(ctx, &thunderstore.Package{
 							Namespace: bepInExNamespace,
-							Name: bepInExName,
+							Name:      bepInExName,
 						})
 						if err != nil {
 							return err
@@ -394,7 +394,7 @@ func NewValheimw() *cobra.Command {
 							w.Header().Add("Content-Encoding", "application/gzip")
 							w.Header().Add("Content-Disposition", "attachment")
 
-							for _, pkg := range pkgs {	
+							for _, pkg := range pkgs {
 								if pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName {
 									continue
 								} else if modCategoryCheck && !xslices.Some(pkg.CommunityListings, func(communityListing thunderstore.CommunityListing, _ int) bool {
