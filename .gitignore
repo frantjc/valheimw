@@ -2,22 +2,8 @@
 .idea/
 .vscode/
 
-# goreleaser
-dist/
-
 # dev
-dev/cache
-dev/bin
-dev/config
-dev/internal
 .env
 
 # macOS
 .DS_Store
-
-# nodejs
-node_modules/
-
-# mkdocs
-site/
-gh-pages/

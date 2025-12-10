@@ -11,7 +11,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -23,6 +25,7 @@ import (
 	"github.com/frantjc/valheimw/thunderstore"
 	"github.com/frantjc/valheimw/valheim"
 	xtar "github.com/frantjc/x/archive/tar"
+	xslices "github.com/frantjc/x/slices"
 	"github.com/mmatczuk/anyflag"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -45,7 +48,8 @@ func NewValheimw() *cobra.Command {
 		opts        = &valheim.Opts{
 			Password: os.Getenv("VALHEIM_PASSWORD"),
 		}
-		cmd = &cobra.Command{
+		modCategoryCheck bool
+		cmd                     = &cobra.Command{
 			Use: "valheimw",
 			RunE: func(cmd *cobra.Command, _ []string) error {
 				wd := filepath.Join(cache.Dir, "valheimw")
@@ -60,25 +64,32 @@ func NewValheimw() *cobra.Command {
 					log            = logutil.SloggerFrom(ctx)
 					eg, installCtx = errgroup.WithContext(ctx)
 					modded         = len(mods) > 0
+					pkgs           = []thunderstore.Package{}
 				)
 
 				if modded {
 					log.Info("resolving dependency tree")
 
-					pkgs, err := thunderstore.DependencyTree(ctx, mods...)
+					var err error
+					pkgs, err = thunderstore.DependencyTree(ctx, mods...)
 					if err != nil {
 						return err
 					}
 
 					for _, pkg := range pkgs {
 						dir := fmt.Sprintf("BepInEx/plugins/%s", pkg.String())
+						isBepInEx := pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName
 
-						if pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName {
+						if !isBepInEx && modCategoryCheck && xslices.Some(pkg.CommunityListings, func(communityListing thunderstore.CommunityListing, _ int) bool {
+							return slices.Contains(communityListing.Categories, "Server-side")
+						}) {
+							continue
+						} else if isBepInEx {
 							opts.BepInEx = true
-							dir = ""
+							dir = "."
 						}
 
-						log.Info("installing package", "package", pkg.String(), "rel", dir)
+						log.Info("installing package", "pkg", pkg.String(), "rel", dir)
 
 						eg.Go(func() error {
 							return valheimw.Extract(installCtx,
@@ -88,21 +99,31 @@ func NewValheimw() *cobra.Command {
 						})
 					}
 
-					if !opts.BepInEx && modded {
+					if !opts.BepInEx {
 						opts.BepInEx = true
 
-						log.Info("installing latest BepInEx as nothing specified a specific version as a dependency")
+						pkg, err := thunderstore.NewClient().GetPackage(ctx, &thunderstore.Package{
+							Namespace: bepInExNamespace,
+							Name: bepInExName,
+						})
+						if err != nil {
+							return err
+						}
+
+						pkgs = append(pkgs, *pkg)
+
+						log.Info("installing latest BepInEx: nothing specified a specific version as a dependency", "pkg", pkg.String())
 
 						eg.Go(func() error {
 							return valheimw.Extract(installCtx,
-								fmt.Sprintf("%s://%s-%s", thunderstore.Scheme, bepInExNamespace, bepInExName),
+								fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()),
 								wd,
 							)
 						})
 					}
 				}
 
-				log.Info("installing Valheim server", "id", valheim.SteamappID)
+				log.Info("installing Valheim server")
 
 				eg.Go(func() error {
 					return valheimw.Extract(installCtx,
@@ -112,7 +133,7 @@ func NewValheimw() *cobra.Command {
 				})
 
 				if err := eg.Wait(); err != nil {
-					return err
+					return fmt.Errorf("installing game files: %w", err)
 				}
 
 				if modded {
@@ -164,7 +185,7 @@ func NewValheimw() *cobra.Command {
 
 							db, err := valheim.OpenDB(opts.SaveDir, opts.World)
 							if err != nil {
-								w.WriteHeader(http.StatusInternalServerError)
+								http.Error(w, err.Error(), http.StatusInternalServerError)
 								return
 							}
 							defer db.Close()
@@ -191,7 +212,7 @@ func NewValheimw() *cobra.Command {
 						seedJSONHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							seed, err := valheim.ReadWorldSeed(opts.SaveDir, opts.World)
 							if err != nil {
-								w.WriteHeader(http.StatusInternalServerError)
+								http.Error(w, err.Error(), http.StatusInternalServerError)
 								return
 							}
 
@@ -202,7 +223,7 @@ func NewValheimw() *cobra.Command {
 						seedTxtHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							seed, err := valheim.ReadWorldSeed(opts.SaveDir, opts.World)
 							if err != nil {
-								w.WriteHeader(http.StatusInternalServerError)
+								http.Error(w, err.Error(), http.StatusInternalServerError)
 								return
 							}
 
@@ -221,7 +242,7 @@ func NewValheimw() *cobra.Command {
 						mapHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							seed, err := valheim.ReadWorldSeed(opts.SaveDir, opts.World)
 							if err != nil {
-								w.WriteHeader(http.StatusInternalServerError)
+								http.Error(w, err.Error(), http.StatusInternalServerError)
 								return
 							}
 
@@ -236,7 +257,7 @@ func NewValheimw() *cobra.Command {
 
 							fwl, err := valheim.OpenFWL(opts.SaveDir, opts.World)
 							if err != nil {
-								w.WriteHeader(http.StatusInternalServerError)
+								http.Error(w, err.Error(), http.StatusInternalServerError)
 								return
 							}
 							defer fwl.Close()
@@ -315,10 +336,20 @@ func NewValheimw() *cobra.Command {
 							w.Header().Add("Content-Type", "application/tar")
 							w.Header().Add("Content-Disposition", "attachment")
 
-							for _, mod := range mods {
-								rc, err := valheimw.Open(ctx, mod)
+							for _, pkg := range pkgs {
+								if pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName {
+									continue
+								} else if modCategoryCheck && !xslices.Some(pkg.CommunityListings, func(communityListing thunderstore.CommunityListing, _ int) bool {
+									return slices.Contains(communityListing.Categories, "Client-side")
+								}) {
+									continue
+								}
+
+								dir := fmt.Sprintf("BepInEx/plugins/%s", pkg.String())
+
+								rc, err := valheimw.Open(ctx, fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()))
 								if err != nil {
-									w.WriteHeader(http.StatusInternalServerError)
+									http.Error(w, err.Error(), http.StatusInternalServerError)
 									return
 								}
 								defer rc.Close()
@@ -330,18 +361,20 @@ func NewValheimw() *cobra.Command {
 									if errors.Is(err, io.EOF) {
 										break
 									} else if err != nil {
-										w.WriteHeader(http.StatusInternalServerError)
+										http.Error(w, err.Error(), http.StatusInternalServerError)
 										return
 									}
 
+									hdr.Name = path.Join(dir, hdr.Name)
+
 									if err = tw.WriteHeader(hdr); err != nil {
-										w.WriteHeader(http.StatusInternalServerError)
+										http.Error(w, err.Error(), http.StatusInternalServerError)
 										return
 									}
 
 									//nolint:gosec
 									if _, err = io.Copy(tw, tr); err != nil {
-										w.WriteHeader(http.StatusInternalServerError)
+										http.Error(w, err.Error(), http.StatusInternalServerError)
 										return
 									}
 								}
@@ -361,10 +394,22 @@ func NewValheimw() *cobra.Command {
 							w.Header().Add("Content-Encoding", "application/gzip")
 							w.Header().Add("Content-Disposition", "attachment")
 
-							for _, mod := range mods {
-								rc, err := valheimw.Open(ctx, mod)
+							for _, pkg := range pkgs {	
+								if pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName {
+									continue
+								} else if modCategoryCheck && !xslices.Some(pkg.CommunityListings, func(communityListing thunderstore.CommunityListing, _ int) bool {
+									return xslices.Some(communityListing.Categories, func(category string, _ int) bool {
+										return category == "Client-side" || category == "Libraries"
+									})
+								}) {
+									continue
+								}
+
+								dir := fmt.Sprintf("BepInEx/plugins/%s", pkg.String())
+
+								rc, err := valheimw.Open(ctx, fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()))
 								if err != nil {
-									w.WriteHeader(http.StatusInternalServerError)
+									http.Error(w, err.Error(), http.StatusInternalServerError)
 									return
 								}
 								defer rc.Close()
@@ -376,18 +421,20 @@ func NewValheimw() *cobra.Command {
 									if errors.Is(err, io.EOF) {
 										break
 									} else if err != nil {
-										w.WriteHeader(http.StatusInternalServerError)
+										http.Error(w, err.Error(), http.StatusInternalServerError)
 										return
 									}
 
+									hdr.Name = path.Join(dir, hdr.Name)
+
 									if err = tw.WriteHeader(hdr); err != nil {
-										w.WriteHeader(http.StatusInternalServerError)
+										http.Error(w, err.Error(), http.StatusInternalServerError)
 										return
 									}
 
 									//nolint:gosec
 									if _, err = io.Copy(tw, tr); err != nil {
-										w.WriteHeader(http.StatusInternalServerError)
+										http.Error(w, err.Error(), http.StatusInternalServerError)
 										return
 									}
 								}
@@ -466,6 +513,7 @@ func NewValheimw() *cobra.Command {
 	)
 
 	cmd.Flags().StringArrayVarP(&mods, "mod", "m", nil, "Thunderstore mods (case-sensitive)")
+	cmd.Flags().BoolVar(&modCategoryCheck, "mod-category-check", false, "Check mods for categories")
 
 	cmd.Flags().BoolVar(&noDB, "no-db", false, "Do not expose the world .db file for download")
 	cmd.Flags().BoolVar(&noFWL, "no-fwl", false, "Do not expose the world .fwl file information")
@@ -502,7 +550,7 @@ func NewValheimw() *cobra.Command {
 			),
 		),
 		"preset",
-		"Valheim server -preset.",
+		"Valheim server -preset",
 	)
 
 	cmd.Flags().Var(
@@ -517,7 +565,7 @@ func NewValheimw() *cobra.Command {
 			),
 		),
 		"combat-modifier",
-		"Valheim server -modifier combat.",
+		"Valheim server -modifier combat",
 	)
 
 	cmd.Flags().Var(
@@ -533,7 +581,7 @@ func NewValheimw() *cobra.Command {
 			),
 		),
 		"death-penalty-modifier",
-		"Valheim server -modifier deathpenalty.",
+		"Valheim server -modifier deathpenalty",
 	)
 
 	cmd.Flags().Var(
@@ -549,7 +597,7 @@ func NewValheimw() *cobra.Command {
 			),
 		),
 		"resource-modifier",
-		"Valheim server -modifier resources.",
+		"Valheim server -modifier resources",
 	)
 
 	cmd.Flags().Var(
@@ -565,7 +613,7 @@ func NewValheimw() *cobra.Command {
 			),
 		),
 		"raid-modifier",
-		"Valheim server -modifier raids.",
+		"Valheim server -modifier raids",
 	)
 
 	cmd.Flags().Var(
@@ -579,7 +627,7 @@ func NewValheimw() *cobra.Command {
 			),
 		),
 		"portal-modifier",
-		"Valheim server -modifier portals.",
+		"Valheim server -modifier portals",
 	)
 
 	cmd.Flags().BoolVar(&opts.NoBuildCost, "no-build-cost", false, "Valheim server -setkey nobuildcost")

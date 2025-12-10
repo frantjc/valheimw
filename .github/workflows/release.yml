@@ -6,36 +6,26 @@ on:
       # on complete semantic versions e.g. v1.0.0, but not v1.
       - v[0-9]+.[0-9]+.[0-9]+*
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
+  contents: read
   packages: write
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@v6
+      - uses: frantjc/actions/setup-tool@v1
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ github.token }}
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-      - uses: crazy-max/ghaction-upx@v3
-        with:
-          install-only: true
-      - uses: sigstore/cosign-installer@v4.0.0
-      - uses: anchore/sbom-action/download-syft@v0.20.10
-      - uses: goreleaser/goreleaser-action@v6
-        with:
-          args: release
+          repository: dagger/dagger
+          version: v0.19.7
+      - shell: dagger {0}
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          DOCKER_BUILDKIT: 1
-      - uses: actions/attest-build-provenance@v3
-        with:
-          subject-checksums: dist/checksums.txt
+        run: |
+            withGhcrAuth() {
+              $1 | withRegistryAuth ghcr.io ${{ github.actor }} env://GITHUB_TOKEN
+            }
+            tag=$(tag)
+            container=$(withGhcrAuth $(container))
+            $container | publish ghcr.io/${{ github.repository }} &
+            $container | publish ghcr.io/${{ github.repository }}:$tag &
+            .wait

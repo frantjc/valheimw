@@ -11,7 +11,7 @@ import (
 )
 
 func newSlogHandler(w io.Writer, opts *slog.HandlerOptions) slog.Handler {
-	return slog.New(slog.NewJSONHandler(w, opts)).Handler()
+	return slog.New(slog.NewTextHandler(w, opts)).Handler()
 }
 
 func SetCommon(cmd *cobra.Command, version string) *cobra.Command {

@@ -12,27 +12,35 @@ import (
 )
 
 type Package struct {
-	Namespace      string    `json:"namespace"`
-	Name           string    `json:"name"`
-	VersionNumber  string    `json:"version_number,omitempty"`
-	FullName       string    `json:"full_name"`
-	Owner          string    `json:"owner,omitempty"`
-	PackageURL     *URL      `json:"package_url,omitempty"`
-	Description    string    `json:"description,omitempty"`
-	Icon           *URL      `json:"icon,omitempty"`
-	Dependencies   []string  `json:"dependencies,omitempty"`
-	DownloadURL    *URL      `json:"download_url,omitempty"`
-	Downloads      int       `json:"downloads,omitempty"`
-	DateCreated    time.Time `json:"date_created,omitempty"`
-	DateUpdated    time.Time `json:"date_updated,omitempty"`
-	WebsiteURL     *URL      `json:"website_url,omitempty"`
-	RatingScore    int       `json:"rating_score,omitempty"`
-	TotalDownloads int       `json:"total_downloads,omitempty"`
-	IsActive       bool      `json:"is_active,omitempty"`
-	IsPinned       bool      `json:"is_pinned,omitempty"`
-	IsDeprecated   bool      `json:"is_deprecated,omitempty"`
-	Latest         *Latest   `json:"latest,omitempty"`
-	Detail         string    `json:"detail,omitempty"`
+	Namespace         string             `json:"namespace"`
+	Name              string             `json:"name"`
+	VersionNumber     string             `json:"version_number,omitempty"`
+	FullName          string             `json:"full_name"`
+	Owner             string             `json:"owner,omitempty"`
+	PackageURL        *URL               `json:"package_url,omitempty"`
+	Description       string             `json:"description,omitempty"`
+	Icon              *URL               `json:"icon,omitempty"`
+	Dependencies      []string           `json:"dependencies,omitempty"`
+	DownloadURL       *URL               `json:"download_url,omitempty"`
+	Downloads         int                `json:"downloads,omitempty"`
+	DateCreated       time.Time          `json:"date_created,omitempty"`
+	DateUpdated       time.Time          `json:"date_updated,omitempty"`
+	WebsiteURL        *URL               `json:"website_url,omitempty"`
+	RatingScore       int                `json:"rating_score,omitempty"`
+	TotalDownloads    int                `json:"total_downloads,omitempty"`
+	IsActive          bool               `json:"is_active,omitempty"`
+	IsPinned          bool               `json:"is_pinned,omitempty"`
+	IsDeprecated      bool               `json:"is_deprecated,omitempty"`
+	Latest            *Latest            `json:"latest,omitempty"`
+	Detail            string             `json:"detail,omitempty"`
+	CommunityListings []CommunityListing `json:"community_listings,omitempty"`
+}
+
+type CommunityListing struct {
+	HasNsfwContent bool     `json:"has_nsfw_content"`
+	Categories     []string `json:"categories,omitempty"`
+	Community      string   `json:"community,omitempty"`
+	ReviewStatus   string   `json:"review_status,omitempty"`
 }
 
 type Latest struct {

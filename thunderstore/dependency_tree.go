@@ -9,7 +9,7 @@ import (
 func DependencyTree(ctx context.Context, pkgNames ...string) ([]Package, error) {
 	b := new(depTreeBldr)
 
-	if err := b.buildDependencyTree(ctx, pkgNames...); err != nil {
+	if err := b.buildDependencyTree(ctx, nil, pkgNames...); err != nil {
 		return nil, err
 	}
 
@@ -30,7 +30,7 @@ type depTreeBldr struct {
 	seenPkgs map[string]Package
 }
 
-func (b *depTreeBldr) buildDependencyTree(ctx context.Context, pkgNames ...string) error {
+func (b *depTreeBldr) buildDependencyTree(ctx context.Context, communityListings []CommunityListing, pkgNames ...string) error {
 	for _, pkgName := range pkgNames {
 		u, err := url.Parse(pkgName)
 		if err != nil {
@@ -67,6 +67,14 @@ func (b *depTreeBldr) buildDependencyTree(ctx context.Context, pkgNames ...strin
 			return err
 		}
 
+		if p.CommunityListings == nil {
+			p.CommunityListings = []CommunityListing{}
+		}
+
+		if communityListings != nil {
+			p.CommunityListings = append(p.CommunityListings, communityListings...)
+		}
+
 		b.seenPkgs[p.Versionless()] = *p
 
 		deps := p.Dependencies
@@ -74,7 +82,7 @@ func (b *depTreeBldr) buildDependencyTree(ctx context.Context, pkgNames ...strin
 			deps = p.Latest.Dependencies
 		}
 
-		if err = b.buildDependencyTree(ctx, deps...); err != nil {
+		if err = b.buildDependencyTree(ctx, p.CommunityListings, deps...); err != nil {
 			return err
 		}
 	}

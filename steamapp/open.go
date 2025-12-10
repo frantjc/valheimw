@@ -128,7 +128,7 @@ func Open(ctx context.Context, appID int, opts ...OpenOpt) (io.ReadCloser, error
 	})
 
 	if err := steamcmd.Run(ctx, commands...); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("steamcmd: %w", err)
 	}
 
 	return xtar.Compress(installDir), nil

@@ -8,64 +8,14 @@ on:
     branches:
       - main
 permissions:
-  packages: write
+  contents: read
 jobs:
-  lint:
+  ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v6
+      - uses: frantjc/actions/setup-tool@v1
         with:
-          go-version-file: go.mod
-      - uses: golangci/golangci-lint-action@v9.2.0
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-      - run: |
-          make test
-  build-mist:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          push: true
-          build-args: |
-            tool=mist
-          tags: |
-            ghcr.io/frantjc/mist:${{ github.sha }}
-  test-mist:
-    runs-on: ubuntu-latest
-    needs: build-mist
-    steps:
-      - uses: actions/checkout@v5
-      - uses: docker/build-push-action@v6
-        with:
-          context: testdata/mist
-          load: true
-          build-args: |
-            MIST_TAG=${{ github.sha }}
-      - uses: frantjc/actions/ghcr-delete-images@v1
-        continue-on-error: true
-        with:
-          token: ${{ secrets.GH_PAT }}
-          tags: |
-            ghcr.io/frantjc/mist:${{ github.sha }}
-  build-valheimw:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: docker/build-push-action@v6
-        with:
-          load: true
-          build-args: |
-            tool=valheimw
+          repository: dagger/dagger
+          version: v0.19.7
+      - run: dagger checks

@@ -1,0 +1,31 @@
+{
+  "name": "valheimw-dev",
+  "engineVersion": "v0.19.7",
+  "sdk": {
+    "source": "go"
+  },
+  "dependencies": [
+    {
+      "name": "doug",
+      "source": "github.com/vito/daggerverse/doug@main",
+      "pin": "776610fc77055f983a3dca99f5f55946616c624e"
+    },
+    {
+      "name": "go",
+      "source": "github.com/frantjc/daggerverse/go@main",
+      "pin": "b5316c47aa86d507bc2355cdd862b7ac49ee5048"
+    },
+    {
+      "name": "tls",
+      "source": "github.com/frantjc/daggerverse/tls@main",
+      "pin": "b5316c47aa86d507bc2355cdd862b7ac49ee5048"
+    },
+    {
+      "name": "wolfi",
+      "source": "github.com/dagger/dagger/modules/wolfi@v0.19.7",
+      "pin": "81fe990dd3cd47ae45dd91ba680f8854aa56aa66"
+    }
+  ],
+  "source": ".dagger",
+  "disableDefaultFunctionCaching": true
+}
