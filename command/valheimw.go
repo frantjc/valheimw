@@ -203,7 +203,7 @@ func NewValheimw() *cobra.Command {
 				if !noFWL {
 					log.Info("exposing .fwl-related endpoints")
 
-					valheimMapURL, err := url.Parse("https://valheim-map.world?offset=0,0&zoom=0.600&view=0&ver=0.217.22")
+					valheimMapURL, err := url.Parse("https://valheim-map.world?offset=0,0&zoom=0.600&view=0&ver=0.221.4")
 					if err != nil {
 						return err
 					}
