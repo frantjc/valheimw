@@ -48,8 +48,9 @@ func NewValheimw() *cobra.Command {
 		opts        = &valheim.Opts{
 			Password: os.Getenv("VALHEIM_PASSWORD"),
 		}
-		modCategoryCheck bool
-		cmd              = &cobra.Command{
+		modCategoryCheck       bool
+		valheimMapWorldVersion string
+		cmd                    = &cobra.Command{
 			Use: "valheimw",
 			RunE: func(cmd *cobra.Command, _ []string) error {
 				wd := filepath.Join(cache.Dir, "valheimw")
@@ -203,7 +204,12 @@ func NewValheimw() *cobra.Command {
 				if !noFWL {
 					log.Info("exposing .fwl-related endpoints")
 
-					valheimMapURL, err := url.Parse("https://valheim-map.world?offset=0,0&zoom=0.600&view=0&ver=0.221.4")
+					valheimMapURL, err := url.Parse(
+						fmt.Sprintf(
+							"https://valheim-map.world?offset=0,0&zoom=0.600&view=0&ver=%s",
+							valheimMapWorldVersion,
+						),
+					)
 					if err != nil {
 						return err
 					}
@@ -517,6 +523,8 @@ func NewValheimw() *cobra.Command {
 
 	cmd.Flags().BoolVar(&noDB, "no-db", false, "Do not expose the world .db file for download")
 	cmd.Flags().BoolVar(&noFWL, "no-fwl", false, "Do not expose the world .fwl file information")
+
+	cmd.Flags().StringVar(&valheimMapWorldVersion, "valheim-map-world-version", "0.221.4", "Version of valheim-map.world to redirect to")
 
 	cmd.Flags().IntVar(&addr, "addr", 8080, "Port for valheimw to listen on")
 
