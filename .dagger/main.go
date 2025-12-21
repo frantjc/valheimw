@@ -92,21 +92,16 @@ func (m *ValheimwDev) Service(ctx context.Context) (*dagger.Service, error) {
 	}
 
 	return container.
-		WithExposedPort(2456, dagger.ContainerWithExposedPortOpts{
-			// Protocol: dagger.NetworkProtocolUdp,
-			ExperimentalSkipHealthcheck: true,
-		}).
 		WithExposedPort(8080).
 		WithSecretVariable("VALHEIM_PASSWORD", dag.SetSecret("VALHEIM_PASSWORD", "plaintext")).
 		AsService(dagger.ContainerAsServiceOpts{
 			UseEntrypoint: true,
 			Args: []string{
 				"--debug",
-				"--mod-category-check",
+				"--no-valheim",
 				"--mod=Advize/PlantEasily",
 				"--mod=shudnal/ExtraSlots",
-				"--mod=Goldenrevolver/Quick_Stack_Store_Sort_Trash_Restock",
-				"--mod=Smoothbrain/TargetPortal",
+				"--mod=Goldenrevolver/Quick_Stack_Store_Sort_Trash_Restock?category=Client-side",
 			},
 		}), nil
 }

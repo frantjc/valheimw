@@ -42,13 +42,12 @@ func NewValheimw() *cobra.Command {
 		openOpts = &steamapp.OpenOpts{
 			LaunchType: "server",
 		}
-		mods        []string
-		noDB, noFWL bool
-		playerLists = &valheim.PlayerLists{}
-		opts        = &valheim.Opts{
+		mods                   []string
+		noDB, noFWL, noValheim bool
+		playerLists            = &valheim.PlayerLists{}
+		opts                   = &valheim.Opts{
 			Password: os.Getenv("VALHEIM_PASSWORD"),
 		}
-		modCategoryCheck       bool
 		valheimMapWorldVersion string
 		cmd                    = &cobra.Command{
 			Use: "valheimw",
@@ -61,108 +60,109 @@ func NewValheimw() *cobra.Command {
 				}
 
 				var (
-					ctx            = cmd.Context()
-					log            = logutil.SloggerFrom(ctx)
-					eg, installCtx = errgroup.WithContext(ctx)
-					modded         = len(mods) > 0
-					pkgs           = []thunderstore.Package{}
+					ctx    = cmd.Context()
+					log    = logutil.SloggerFrom(ctx)
+					modded = len(mods) > 0
 				)
 
-				if modded {
-					log.Info("resolving dependency tree")
+				pkgs, err := thunderstore.DependencyTree(ctx, mods...)
+				if err != nil {
+					return err
+				}
 
-					var err error
-					pkgs, err = thunderstore.DependencyTree(ctx, mods...)
-					if err != nil {
-						return err
-					}
+				if !noValheim {
+					eg, installCtx := errgroup.WithContext(ctx)
 
-					for _, pkg := range pkgs {
-						dir := fmt.Sprintf("BepInEx/plugins/%s", pkg.String())
-						isBepInEx := pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName
+					if modded {
+						log.Info("resolving dependency tree")
 
-						if !isBepInEx && modCategoryCheck && xslices.Some(pkg.CommunityListings, func(communityListing thunderstore.CommunityListing, _ int) bool {
-							return slices.Contains(communityListing.Categories, "Server-side")
-						}) {
-							continue
-						} else if isBepInEx {
-							opts.BepInEx = true
-							dir = "."
+						for _, pkg := range pkgs {
+							dir := fmt.Sprintf("BepInEx/plugins/%s", pkg.String())
+							isBepInEx := pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName
+
+							if !isBepInEx && xslices.Some(pkg.CommunityListings, func(communityListing thunderstore.CommunityListing, _ int) bool {
+								return slices.Contains(communityListing.Categories, "Server-side")
+							}) {
+								continue
+							} else if isBepInEx {
+								opts.BepInEx = true
+								dir = "."
+							}
+
+							log.Info("installing package", "pkg", pkg.String(), "rel", dir)
+
+							eg.Go(func() error {
+								return valheimw.Extract(installCtx,
+									fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()),
+									filepath.Join(wd, dir),
+								)
+							})
 						}
 
-						log.Info("installing package", "pkg", pkg.String(), "rel", dir)
+						if !opts.BepInEx {
+							opts.BepInEx = true
 
-						eg.Go(func() error {
-							return valheimw.Extract(installCtx,
-								fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()),
-								filepath.Join(wd, dir),
-							)
-						})
+							pkg, err := thunderstore.NewClient().GetPackage(ctx, &thunderstore.Package{
+								Namespace: bepInExNamespace,
+								Name:      bepInExName,
+							})
+							if err != nil {
+								return err
+							}
+
+							pkgs = append(pkgs, *pkg)
+
+							log.Info("installing latest BepInEx: no mods depended on a specific version", "pkg", pkg.String())
+
+							eg.Go(func() error {
+								return valheimw.Extract(installCtx,
+									fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()),
+									wd,
+								)
+							})
+						}
 					}
 
-					if !opts.BepInEx {
-						opts.BepInEx = true
+					log.Info("installing Valheim server")
 
-						pkg, err := thunderstore.NewClient().GetPackage(ctx, &thunderstore.Package{
-							Namespace: bepInExNamespace,
-							Name:      bepInExName,
-						})
-						if err != nil {
+					eg.Go(func() error {
+						return valheimw.Extract(installCtx,
+							fmt.Sprintf("%s://%d?%s", steamapp.Scheme, valheim.SteamappID, steamapp.URLValues(openOpts).Encode()),
+							wd,
+						)
+					})
+
+					if err := eg.Wait(); err != nil {
+						return fmt.Errorf("installing game files: %w", err)
+					}
+
+					log.Info("finished installing")
+
+					if modded {
+						var (
+							saveCfgDir    = filepath.Join(opts.SaveDir, "config")
+							bepInExCfgDir = filepath.Join(wd, "BepInEx/config")
+						)
+
+						if err := os.MkdirAll(saveCfgDir, 0775); err != nil {
 							return err
 						}
 
-						pkgs = append(pkgs, *pkg)
+						if err := xtar.Extract(
+							tar.NewReader(xtar.Compress(saveCfgDir)),
+							bepInExCfgDir,
+						); err != nil {
+							return err
+						}
 
-						log.Info("installing latest BepInEx: nothing specified a specific version as a dependency", "pkg", pkg.String())
-
-						eg.Go(func() error {
-							return valheimw.Extract(installCtx,
-								fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()),
-								wd,
+						defer func() {
+							_ = xtar.Extract(
+								tar.NewReader(xtar.Compress(bepInExCfgDir)),
+								saveCfgDir,
 							)
-						})
+						}()
 					}
 				}
-
-				log.Info("installing Valheim server")
-
-				eg.Go(func() error {
-					return valheimw.Extract(installCtx,
-						fmt.Sprintf("%s://%d?%s", steamapp.Scheme, valheim.SteamappID, steamapp.URLValues(openOpts).Encode()),
-						wd,
-					)
-				})
-
-				if err := eg.Wait(); err != nil {
-					return fmt.Errorf("installing game files: %w", err)
-				}
-
-				if modded {
-					var (
-						saveCfgDir    = filepath.Join(opts.SaveDir, "config")
-						bepInExCfgDir = filepath.Join(wd, "BepInEx/config")
-					)
-
-					if err := os.MkdirAll(saveCfgDir, 0775); err != nil {
-						return err
-					}
-
-					if err := xtar.Extract(
-						tar.NewReader(xtar.Compress(saveCfgDir)),
-						bepInExCfgDir,
-					); err != nil {
-						return err
-					}
-
-					defer func() {
-						_ = xtar.Extract(
-							tar.NewReader(xtar.Compress(bepInExCfgDir)),
-							saveCfgDir,
-						)
-					}()
-				}
-
-				log.Info("finished installing")
 
 				log.Info("configuring HTTP server")
 
@@ -197,7 +197,7 @@ func NewValheimw() *cobra.Command {
 
 					paths = append(paths,
 						ingress.ExactPath("/world.db", dbHandler),
-						ingress.ExactPath(filepath.Join("/", opts.World+".db"), dbHandler),
+						ingress.ExactPath(path.Join("/", fmt.Sprintf("%s.db", opts.World)), dbHandler),
 					)
 				}
 
@@ -224,7 +224,7 @@ func NewValheimw() *cobra.Command {
 
 							w.Header().Add("Content-Type", "application/json")
 
-							_, _ = w.Write([]byte(`{"seed":"` + seed + `"}`))
+							_, _ = w.Write([]byte(fmt.Sprintf(`{"seed":"%s"}`, seed)))
 						})
 						seedTxtHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							seed, err := valheim.ReadWorldSeed(opts.SaveDir, opts.World)
@@ -278,7 +278,7 @@ func NewValheimw() *cobra.Command {
 						ingress.ExactPath("/seed", seedHdrHandler),
 						ingress.ExactPath("/map", mapHandler),
 						ingress.ExactPath("/world.fwl", fwlHandler),
-						ingress.ExactPath(filepath.Join("/", opts.World+".fwl"), fwlHandler),
+						ingress.ExactPath(path.Join("/", fmt.Sprintf("%s.fwl", opts.World)), fwlHandler),
 					)
 				}
 
@@ -324,6 +324,7 @@ func NewValheimw() *cobra.Command {
 						ingress.ExactPath("/worlds.tar", worldsTarHandler),
 						ingress.ExactPath("/worlds.tar.gz", worldsTgzHandler),
 						ingress.ExactPath("/worlds.tgz", worldsTgzHandler),
+						ingress.ExactPath("/worlds_local.tar", worldsTarHandler),
 						ingress.ExactPath("/worlds_local.tar.gz", worldsTgzHandler),
 						ingress.ExactPath("/worlds_local.tgz", worldsTgzHandler),
 						ingress.ExactPath("/worlds", worldsHdrHandler),
@@ -331,7 +332,7 @@ func NewValheimw() *cobra.Command {
 					)
 				}
 
-				if len(mods) > 0 {
+				if modded {
 					log.Info("exposing mod-related endpoints")
 
 					var (
@@ -345,8 +346,8 @@ func NewValheimw() *cobra.Command {
 							for _, pkg := range pkgs {
 								if pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName {
 									continue
-								} else if modCategoryCheck && !xslices.Some(pkg.CommunityListings, func(communityListing thunderstore.CommunityListing, _ int) bool {
-									return slices.Contains(communityListing.Categories, "Client-side")
+								} else if xslices.Every(pkg.CommunityListings, func(communityListing thunderstore.CommunityListing, _ int) bool {
+									return !slices.Contains(communityListing.Categories, "Server-side")
 								}) {
 									continue
 								}
@@ -403,15 +404,11 @@ func NewValheimw() *cobra.Command {
 							for _, pkg := range pkgs {
 								if pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName {
 									continue
-								} else if modCategoryCheck && !xslices.Some(pkg.CommunityListings, func(communityListing thunderstore.CommunityListing, _ int) bool {
-									return xslices.Some(communityListing.Categories, func(category string, _ int) bool {
-										return category == "Client-side" || category == "Libraries"
-									})
+								} else if !xslices.Some(pkg.CommunityListings, func(communityListing thunderstore.CommunityListing, _ int) bool {
+									return slices.Contains(communityListing.Categories, "Client-side")
 								}) {
 									continue
 								}
-
-								dir := fmt.Sprintf("BepInEx/plugins/%s", pkg.String())
 
 								rc, err := valheimw.Open(ctx, fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()))
 								if err != nil {
@@ -431,7 +428,15 @@ func NewValheimw() *cobra.Command {
 										return
 									}
 
-									hdr.Name = path.Join(dir, hdr.Name)
+									base := path.Base(hdr.Name)
+
+									if ext := path.Ext(base); ext != ".dll" {
+										continue
+									} else if base == ".dll" {
+										hdr.Name = path.Join("BepInEx/plugins", fmt.Sprintf("%s.dll", pkg.String()))
+									} else {
+										hdr.Name = path.Join("BepInEx/plugins", fmt.Sprintf("%s-%s", pkg.String(), base))
+									}
 
 									if err = tw.WriteHeader(hdr); err != nil {
 										http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -472,18 +477,20 @@ func NewValheimw() *cobra.Command {
 
 				eg, egctx := errgroup.WithContext(ctx)
 
-				sub, err := valheim.NewCommand(egctx, wd, opts)
-				if err != nil {
-					return err
+				if !noValheim {
+					sub, err := valheim.NewCommand(egctx, wd, opts)
+					if err != nil {
+						return err
+					}
+
+					sub.Stdin = cmd.InOrStdin()
+					sub.Stdout = cmd.OutOrStdout()
+					sub.Stderr = cmd.ErrOrStderr()
+
+					log.Info("starting Valheim server")
+
+					eg.Go(sub.Run)
 				}
-
-				sub.Stdin = cmd.InOrStdin()
-				sub.Stdout = cmd.OutOrStdout()
-				sub.Stderr = cmd.ErrOrStderr()
-
-				log.Info("starting Valheim server")
-
-				eg.Go(sub.Run)
 
 				l, err := net.Listen("tcp", fmt.Sprintf(":%d", addr))
 				if err != nil {
@@ -519,10 +526,10 @@ func NewValheimw() *cobra.Command {
 	)
 
 	cmd.Flags().StringArrayVarP(&mods, "mod", "m", nil, "Thunderstore mods (case-sensitive)")
-	cmd.Flags().BoolVar(&modCategoryCheck, "mod-category-check", false, "Check mods for categories")
 
 	cmd.Flags().BoolVar(&noDB, "no-db", false, "Do not expose the world .db file for download")
 	cmd.Flags().BoolVar(&noFWL, "no-fwl", false, "Do not expose the world .fwl file information")
+	cmd.Flags().BoolVar(&noValheim, "no-valheim", false, "Do not run Valheim")
 
 	cmd.Flags().StringVar(&valheimMapWorldVersion, "valheim-map-world-version", "0.221.4", "Version of valheim-map.world to redirect to")
 

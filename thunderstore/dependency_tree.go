@@ -75,6 +75,14 @@ func (b *depTreeBldr) buildDependencyTree(ctx context.Context, communityListings
 			p.CommunityListings = append(p.CommunityListings, communityListings...)
 		}
 
+		q := u.Query()
+
+		if categories, ok := q["category"]; ok {
+			p.CommunityListings = append(p.CommunityListings, CommunityListing{
+				Categories: categories,
+			})
+		}
+
 		b.seenPkgs[p.Versionless()] = *p
 
 		deps := p.Dependencies
