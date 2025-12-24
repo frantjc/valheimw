@@ -352,8 +352,6 @@ func NewValheimw() *cobra.Command {
 									continue
 								}
 
-								dir := fmt.Sprintf("BepInEx/plugins/%s", pkg.String())
-
 								rc, err := valheimw.Open(ctx, fmt.Sprintf("%s://%s", thunderstore.Scheme, pkg.String()))
 								if err != nil {
 									http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -372,7 +370,13 @@ func NewValheimw() *cobra.Command {
 										return
 									}
 
-									hdr.Name = path.Join(dir, hdr.Name)
+									base := path.Base(hdr.Name)
+
+									if ext := path.Ext(base); ext != ".dll" {
+										continue
+									} else {
+										hdr.Name = path.Join("BepInEx/plugins", pkg.String(), base)
+									}
 
 									if err = tw.WriteHeader(hdr); err != nil {
 										http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -432,10 +436,8 @@ func NewValheimw() *cobra.Command {
 
 									if ext := path.Ext(base); ext != ".dll" {
 										continue
-									} else if base == ".dll" {
-										hdr.Name = path.Join("BepInEx/plugins", fmt.Sprintf("%s.dll", pkg.String()))
 									} else {
-										hdr.Name = path.Join("BepInEx/plugins", fmt.Sprintf("%s-%s", pkg.String(), base))
+										hdr.Name = path.Join("BepInEx/plugins", pkg.String(), base)
 									}
 
 									if err = tw.WriteHeader(hdr); err != nil {
