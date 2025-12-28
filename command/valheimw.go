@@ -162,6 +162,10 @@ func NewValheimw() *cobra.Command {
 							)
 						}()
 					}
+
+					if err := valheim.WritePlayerLists(opts.SaveDir, playerLists); err != nil {
+						return fmt.Errorf("writing player lists: %w", err)
+					}
 				}
 
 				log.Info("configuring HTTP server")

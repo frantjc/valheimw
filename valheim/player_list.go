@@ -64,6 +64,10 @@ func WritePlayerList(w io.Writer, playerIDs []int64) error {
 }
 
 func WritePlayerLists(savedir string, playerLists *PlayerLists) error {
+	if err := os.MkdirAll(savedir, 0644); err != nil {
+		return err
+	}
+
 	if err := writePlayerListFile(filepath.Join(savedir, AdminListName), playerLists.AdminIDs); err != nil {
 		return err
 	}
