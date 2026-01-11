@@ -80,13 +80,13 @@ func NewValheimw() *cobra.Command {
 							dir := fmt.Sprintf("BepInEx/plugins/%s", pkg.String())
 							isBepInEx := pkg.Namespace == bepInExNamespace && pkg.Name == bepInExName
 
-							if !isBepInEx && xslices.Some(pkg.CommunityListings, func(communityListing thunderstore.CommunityListing, _ int) bool {
+							if isBepInEx {
+								opts.BepInEx = true
+								dir = "."
+							} else if !xslices.Some(pkg.CommunityListings, func(communityListing thunderstore.CommunityListing, _ int) bool {
 								return slices.Contains(communityListing.Categories, "Server-side")
 							}) {
 								continue
-							} else if isBepInEx {
-								opts.BepInEx = true
-								dir = "."
 							}
 
 							log.Info("installing package", "pkg", pkg.String(), "rel", dir)
