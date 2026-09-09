@@ -173,7 +173,7 @@ func (m *ValheimwDev) Release(
 	}
 
 	registry := "ghcr.io"
-	container.WithRegistryAuth(registry, "x-access-token", githubToken)
+	container = container.WithRegistryAuth(registry, "x-access-token", githubToken)
 
 	if _, err := container.Publish(ctx, fmt.Sprintf("%s/%s:%s", registry, githubRepo, m.Tag(ctx, ws))); err != nil {
 		return err
