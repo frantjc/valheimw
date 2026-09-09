@@ -4,59 +4,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/frantjc/valheimw/.dagger/internal/dagger"
-	xslices "github.com/frantjc/x/slices"
 )
 
-type ValheimwDev struct {
-	Source *dagger.Directory
-}
-
-func New(
-	ctx context.Context,
-	// +optional
-	// +defaultPath="."
-	src *dagger.Directory,
-) (*ValheimwDev, error) {
-	return &ValheimwDev{
-		Source: src,
-	}, nil
-}
-
-func (m *ValheimwDev) Fmt(ctx context.Context) *dagger.Changeset {
-	goModules := []string{
-		".dagger/",
-	}
-
-	root := dag.Go(dagger.GoOpts{
-		Module: m.Source.Filter(dagger.DirectoryFilterOpts{
-			Exclude: goModules,
-		}),
-	}).
-		Container().
-		WithExec([]string{"go", "fmt", "./..."}).
-		Directory(".")
-
-	for _, module := range goModules {
-		root = root.WithDirectory(
-			module,
-			dag.Go(dagger.GoOpts{
-				Module: m.Source.Directory(module).Filter(dagger.DirectoryFilterOpts{
-					Exclude: xslices.Filter(goModules, func(m string, _ int) bool {
-						return strings.HasPrefix(m, module)
-					}),
-				}),
-			}).
-				Container().
-				WithExec([]string{"go", "fmt", "./..."}).
-				Directory("."),
-		)
-	}
-
-	return root.Changes(m.Source)
-}
+type ValheimwDev struct {}
 
 const (
 	gid   = "1001"
@@ -67,7 +21,7 @@ const (
 	home  = "/home/" + user
 )
 
-func (m *ValheimwDev) Container(ctx context.Context) (*dagger.Container, error) {
+func (m *ValheimwDev) Container(ctx context.Context, ws *dagger.Workspace) (*dagger.Container, error) {
 	return dag.Container().From("debian:stable-slim").
 		WithExec([]string{"apt-get", "update", "-y"}).
 		WithExec([]string{"apt-get", "install", "-y", "--no-install-recommends", "ca-certificates", "lib32gcc-s1"}).
@@ -77,7 +31,7 @@ func (m *ValheimwDev) Container(ctx context.Context) (*dagger.Container, error) 
 		WithExec([]string{"useradd", "-m", "-g", group, "-u", uid, "-r", user}).
 		WithEnvVariable("PATH", home+"/.local/bin:$PATH", dagger.ContainerWithEnvVariableOpts{Expand: true}).
 		WithFile(
-			home+"/.local/bin/valheimw", m.Binary(ctx),
+			home+"/.local/bin/valheimw", m.Binary(ctx, ws),
 			dagger.ContainerWithFileOpts{Expand: true, Owner: owner, Permissions: 0700}).
 		WithExec([]string{"chown", "-R", owner, home}).
 		WithUser(user).
@@ -85,8 +39,8 @@ func (m *ValheimwDev) Container(ctx context.Context) (*dagger.Container, error) 
 		WithEntrypoint([]string{"valheimw"}), nil
 }
 
-func (m *ValheimwDev) Service(ctx context.Context) (*dagger.Service, error) {
-	container, err := m.Container(ctx)
+func (m *ValheimwDev) Service(ctx context.Context, ws *dagger.Workspace) (*dagger.Service, error) {
+	container, err := m.Container(ctx, ws)
 	if err != nil {
 		return nil, err
 	}
@@ -106,17 +60,19 @@ func (m *ValheimwDev) Service(ctx context.Context) (*dagger.Service, error) {
 		}), nil
 }
 
-func (m *ValheimwDev) Version(ctx context.Context) string {
+func (m *ValheimwDev) Version(ctx context.Context, ws *dagger.Workspace) string {
 	version := "v0.0.0-unknown"
 
-	gitRef := m.Source.AsGit().LatestVersion()
+	src := ws.Directory(".")
+	gitRepo := src.AsGit()
+	gitRef := gitRepo.LatestVersion()
 
 	if ref, err := gitRef.Ref(ctx); err == nil {
 		version = strings.TrimPrefix(ref, "refs/tags/")
 	}
 
 	if latestVersionCommit, err := gitRef.Commit(ctx); err == nil {
-		if headCommit, err := m.Source.AsGit().Head().Commit(ctx); err == nil {
+		if headCommit, err := gitRepo.Head().Commit(ctx); err == nil {
 			if headCommit != latestVersionCommit {
 				if len(headCommit) > 7 {
 					headCommit = headCommit[:7]
@@ -126,101 +82,112 @@ func (m *ValheimwDev) Version(ctx context.Context) string {
 		}
 	}
 
-	if empty, _ := m.Source.AsGit().Uncommitted().IsEmpty(ctx); !empty {
+	if empty, _ := gitRepo.Uncommitted().IsEmpty(ctx); !empty {
 		version += "+dirty"
 	}
 
 	return version
 }
 
-func (m *ValheimwDev) Tag(ctx context.Context) string {
-	before, _, _ := strings.Cut(strings.TrimPrefix(m.Version(ctx), "v"), "+")
+func (m *ValheimwDev) Tag(ctx context.Context, ws *dagger.Workspace) string {
+	before, _, _ := strings.Cut(strings.TrimPrefix(m.Version(ctx, ws), "v"), "+")
 	return before
 }
 
-func (m *ValheimwDev) Binary(ctx context.Context) *dagger.File {
+func (m *ValheimwDev) Binary(ctx context.Context, ws *dagger.Workspace) *dagger.File {
 	return dag.Go(dagger.GoOpts{
-		Module: m.Source.Filter(dagger.DirectoryFilterOpts{
-			Exclude: []string{".github/", "e2e/"},
-		}),
+		Ws: ws,
 	}).
 		Build(dagger.GoBuildOpts{
 			Pkg:     "./cmd/valheimw",
-			Ldflags: "-s -w -X main.version=" + m.Version(ctx),
+			Ldflags: "-s -w -X main.version=" + m.Version(ctx, ws),
 		})
 }
 
-func (m *ValheimwDev) Vulncheck(ctx context.Context) (string, error) {
-	return dag.Go(dagger.GoOpts{
-		Module: m.Source.Filter(dagger.DirectoryFilterOpts{
-			Exclude: []string{
-				".dagger/",
-			},
-		}),
-	}).
-		Container().
-		WithExec([]string{"go", "install", "golang.org/x/vuln/cmd/govulncheck@v1.1.4"}).
-		WithExec([]string{"govulncheck", "./..."}).
-		CombinedOutput(ctx)
-}
-
-func (m *ValheimwDev) Vet(ctx context.Context) (string, error) {
-	return dag.Go(dagger.GoOpts{
-		Module: m.Source.Filter(dagger.DirectoryFilterOpts{
-			Exclude: []string{
-				".dagger/",
-			},
-		}),
-	}).
-		Container().
-		WithExec([]string{"go", "vet", "./..."}).
-		CombinedOutput(ctx)
-}
-
-func (m *ValheimwDev) Staticcheck(ctx context.Context) (string, error) {
-	return dag.Go(dagger.GoOpts{
-		Module: m.Source.Filter(dagger.DirectoryFilterOpts{
-			Exclude: []string{
-				".dagger/",
-			},
-		}),
-	}).
-		Container().
-		WithExec([]string{"go", "install", "honnef.co/go/tools/cmd/staticcheck@v0.6.1"}).
-		WithExec([]string{"staticcheck", "./..."}).
-		CombinedOutput(ctx)
-}
-
-func (m *ValheimwDev) Coder(ctx context.Context) (*dagger.LLM, error) {
-	gopls := dag.Go(dagger.GoOpts{Module: m.Source}).
-		Container().
-		WithExec([]string{"go", "install", "golang.org/x/tools/gopls@latest"})
-
-	instructions, err := gopls.WithExec([]string{"gopls", "mcp", "-instructions"}).Stdout(ctx)
-	if err != nil {
-		return nil, err
+func (m *ValheimwDev) Release(
+	ctx context.Context,
+	ws *dagger.Workspace,
+	githubToken *dagger.Secret,
+	// +optional
+	githubRepo string,
+) error {
+	_, repo, ok := strings.Cut(githubRepo, "/")
+	if !ok {
+		return fmt.Errorf("expected org/repo format, got %q", githubRepo)
 	}
 
-	return dag.Doug().
-		Agent(
-			dag.LLM().
-				WithEnv(
-					dag.Env().
-						WithCurrentModule().
-						WithWorkspace(m.Source.Filter(dagger.DirectoryFilterOpts{
-							Exclude: []string{".dagger/", ".github/"},
-						})),
-				).
-				WithBlockedFunction("ValheimwDev", "container").
-				WithBlockedFunction("ValheimwDev", "service").
-				WithBlockedFunction("ValheimwDev", "tag").
-				WithBlockedFunction("ValheimwDev", "version").
-				WithSystemPrompt(instructions).
-				WithMCPServer(
-					"gopls",
-					gopls.AsService(dagger.ContainerAsServiceOpts{
-						Args: []string{"gopls", "mcp"},
-					}),
+	gh := dag.Gh(githubToken)
+	src := ws.Directory(".", dagger.WorkspaceDirectoryOpts{
+		Gitignore: true,
+	})
+
+	gitRepository := src.AsGit()
+	latestVersion := gitRepository.LatestVersion()
+
+	ref, err := latestVersion.Ref(ctx)
+	if err != nil {
+		return err
+	}
+	tag := strings.TrimPrefix(ref, "refs/tags/")
+
+
+	bin := dag.Upx().Pack(m.Binary(ctx, ws))
+	file := fmt.Sprintf("%s-%s-linux-amd64.tar.gz", repo, tag,)
+	asset := dag.Archive().
+		Tar(
+			src.Filter(dagger.DirectoryFilterOpts{
+				Include: []string{
+					"README.md",
+					"LICENSE",
+				},
+			}).
+				WithFile(
+					repo,
+					bin,
 				),
-		), nil
+			dagger.ArchiveTarOpts{
+				Gzip: true,
+			},
+		).WithName(file)
+
+	assets := []*dagger.File{asset}
+
+	container, err := m.Container(ctx, ws)
+	if err != nil {
+		return err
+	}
+
+	release := gh.Release(githubRepo, tag)
+
+	if err := release.Create(ctx, dagger.GhReleaseCreateOpts{
+		Draft:         true,
+		GenerateNotes: true,
+	}); err != nil {
+		return err
+	}
+
+	if err := release.Upload(ctx, assets, dagger.GhReleaseUploadOpts{
+		Clobber: true,
+	}); err != nil {
+		return err
+	}
+
+	registry := "ghcr.io"
+	container.WithRegistryAuth(registry, "x-access-token", githubToken)
+
+	if _, err := container.Publish(ctx, fmt.Sprintf("%s/%s:%s", registry, githubRepo, m.Tag(ctx, ws))); err != nil {
+		return err
+	}
+
+	if _, err := container.Publish(ctx, fmt.Sprintf("%s/%s:latest", registry, githubRepo)); err != nil {
+		return err
+	}
+
+	if err := release.Edit(ctx, dagger.GhReleaseEditOpts{
+		Latest: true,
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }

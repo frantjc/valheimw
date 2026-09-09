@@ -12,20 +12,13 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: frantjc/actions/setup-tool@v1
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
         with:
-          repository: dagger/dagger
-          version: v0.19.7
-      - shell: dagger {0}
-        env:
+          install_args: dagger
+      - env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: |
-            withGhcrAuth() {
-              $1 | withRegistryAuth ghcr.io ${{ github.actor }} env://GITHUB_TOKEN
-            }
-            tag=$(tag)
-            container=$(withGhcrAuth $(container))
-            $container | publish ghcr.io/${{ github.repository }} &
-            $container | publish ghcr.io/${{ github.repository }}:$tag &
-            .wait
+        run: >-
+          dagger call release
+          --github-repo=${{ github.repository }}
+          --github-token=env://GITHUB_TOKEN

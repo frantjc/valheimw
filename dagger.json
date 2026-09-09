@@ -1,29 +1,60 @@
 {
   "name": "valheimw-dev",
-  "engineVersion": "v0.19.7",
+  "engineVersion": "v0.21.7",
   "sdk": {
     "source": "go"
   },
+  "toolchains": [
+    {
+      "name": "go",
+      "source": "github.com/frantjc/daggerverse/go@main",
+      "pin": "e91bca30db6fdae3ef6460d9e225d9138effe839",
+      "ignoreChecks": [
+        "test",
+        "vulncheck"
+      ]
+    },
+    {
+      "name": "mise",
+      "source": "github.com/frantjc/daggerverse/mise@main",
+      "pin": "e91bca30db6fdae3ef6460d9e225d9138effe839"
+    },
+    {
+      "name": "trivy",
+      "source": "github.com/frantjc/daggerverse/trivy@main",
+      "pin": "e91bca30db6fdae3ef6460d9e225d9138effe839"
+    }
+  ],
   "dependencies": [
     {
-      "name": "doug",
-      "source": "github.com/vito/daggerverse/doug@main",
-      "pin": "776610fc77055f983a3dca99f5f55946616c624e"
+      "name": "archive",
+      "source": "github.com/frantjc/daggerverse/archive@main",
+      "pin": "e91bca30db6fdae3ef6460d9e225d9138effe839"
+    },
+    {
+      "name": "gh",
+      "source": "github.com/frantjc/daggerverse/gh@main",
+      "pin": "e91bca30db6fdae3ef6460d9e225d9138effe839"
     },
     {
       "name": "go",
       "source": "github.com/frantjc/daggerverse/go@main",
-      "pin": "b5316c47aa86d507bc2355cdd862b7ac49ee5048"
+      "pin": "e91bca30db6fdae3ef6460d9e225d9138effe839"
     },
     {
-      "name": "tls",
-      "source": "github.com/frantjc/daggerverse/tls@main",
-      "pin": "b5316c47aa86d507bc2355cdd862b7ac49ee5048"
+      "name": "mise",
+      "source": "github.com/frantjc/daggerverse/mise@main",
+      "pin": "e91bca30db6fdae3ef6460d9e225d9138effe839"
+    },
+    {
+      "name": "upx",
+      "source": "github.com/frantjc/daggerverse/upx@main",
+      "pin": "e91bca30db6fdae3ef6460d9e225d9138effe839"
     },
     {
       "name": "wolfi",
-      "source": "github.com/dagger/dagger/modules/wolfi@v0.19.7",
-      "pin": "81fe990dd3cd47ae45dd91ba680f8854aa56aa66"
+      "source": "github.com/dagger/dagger/modules/wolfi@v0.21.7",
+      "pin": "054f94b2d86c0ac00bef11ac4550816973c4aeef"
     }
   ],
   "source": ".dagger",
