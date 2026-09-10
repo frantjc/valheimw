@@ -8,12 +8,47 @@ import (
 	"path/filepath"
 )
 
+// findWorldFile locates a world data file with the given extension under
+// savedir/worlds_local. Valheim has changed the on-disk layout of world
+// files across versions (e.g. worlds_local/<world>.fwl vs
+// worlds_local/<world>/_main.0.fwl2), so rather than hardcoding a single
+// path, glob for candidates and pick the best match.
+func findWorldFile(savedir, world, ext string) (string, error) {
+	flat, err := filepath.Glob(filepath.Join(savedir, "worlds_local", world+"."+ext+"*"))
+	if err != nil {
+		return "", err
+	}
+	candidates := append([]string{}, flat...)
+
+	nested, err := filepath.Glob(filepath.Join(savedir, "worlds_local", world, "*."+ext+"*"))
+	if err != nil {
+		return "", err
+	}
+	candidates = append(candidates, nested...)
+
+	if len(candidates) == 0 {
+		return "", fmt.Errorf("unable to find world %s .%s file in %s", world, ext, savedir)
+	}
+
+	return candidates[0], nil
+}
+
 func OpenFWL(savedir, world string) (io.ReadCloser, error) {
-	return os.Open(filepath.Join(savedir, "worlds_local", world+".fwl"))
+	path, err := findWorldFile(savedir, world, "fwl")
+	if err != nil {
+		return nil, err
+	}
+
+	return os.Open(path)
 }
 
 func OpenDB(savedir, world string) (io.ReadCloser, error) {
-	return os.Open(filepath.Join(savedir, "worlds_local", world+".db"))
+	path, err := findWorldFile(savedir, world, "db")
+	if err != nil {
+		return nil, err
+	}
+
+	return os.Open(path)
 }
 
 func ReadWorldSeed(savedir, world string) (string, error) {
